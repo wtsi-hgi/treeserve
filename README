@@ -1,0 +1,1 @@
+generate tree structure from the mpistat output and allow querying of it via a rest api
