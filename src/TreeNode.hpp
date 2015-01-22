@@ -1,16 +1,19 @@
+#ifndef __TREE_NODE_HPP__
+#define __TREE_NODE_HPP__
+
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <cstdint>
 #include <limits>
 #include <sstream>
 #include <utility>
 
 
 class TreeNode {
+
     public :
 
-        TreeNode(std::string n, TreeNode *p) : name(n), parent(p), size(0), children() {
+        TreeNode(std::string n, TreeNode *p=0) : name(n), parent(p), size(0.0), children() {
             if (parent != 0) {
                 depth=(parent->depth)+1;
                 parent->addChild(this);
@@ -22,7 +25,8 @@ class TreeNode {
         std::string  getName() {
             return name;
         }
-        void  incrSize(int s) {
+        
+        void  incrSize(double s) {
             size += s;
         }    
 
@@ -30,19 +34,19 @@ class TreeNode {
             children.insert(std::make_pair(c->getName(),c));
         }
 
-        bool hasChild(std::string n) {
+        TreeNode* getChild(std::string n) {
             std::unordered_map< std::string, TreeNode* >::const_iterator got = children.find(n);
             if (got==children.end()) {
-                return false;
+                return 0;
             } else {
-                return true;
+                return (*got).second;
             }
         }
 
-        std::string toJson(uint64_t d=std::numeric_limits<uint64_t>::max()) {
+        std::string toJSON(uint64_t d=std::numeric_limits<uint64_t>::max()) {
             std::stringstream oss;
             std::string space="";
-            for (int i=0; i<depth; i++) {
+            for (uint64_t i=0; i<depth; i++) {
                 space += " ";
             }
             oss << space << "{" << std::endl;
@@ -50,7 +54,7 @@ class TreeNode {
             if (depth<d) {
                 std::unordered_map< std::string, TreeNode* >::iterator it;
                 for (it=children.begin(); it != children.end(); it++) {
-                    oss << ((*it).second)->toJson();
+                    oss << ((*it).second)->toJSON();
                 }
             }
             oss << space << "}" << std::endl;
@@ -59,9 +63,11 @@ class TreeNode {
 
     
     private:
-        TreeNode *parent;
-        uint64_t depth;
         std::string name;
-        uint64_t size;
+        TreeNode *parent;   
+        double size;
         std::unordered_map<std::string,TreeNode*> children;
+        uint64_t depth;
 };
+
+#endif
