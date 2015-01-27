@@ -47,10 +47,32 @@ class Tree {
             current->incrSize(size);
         }
 
-        std::string toJSON(uint64_t d=std::numeric_limits<uint64_t>::max()) {
-            return root->toJSON(d);
+        TreeNode* getNodeAt(std::string path) {
+            // turn the path into a vector of names
+            std::vector<std::string> names;
+            boost::split(names, path, boost::is_any_of("/"));
+            TreeNode *current=root;
+            std::vector<std::string>::iterator it=names.begin();
+            ++it;
+            for (;it<names.end();it++) {
+                current=current->getChild(*it);
+                if (current==0) {
+                    return 0;
+                }
+            }
+            return current;
         }
-        
+
+        std::string toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
+            TreeNode *tmp=getNodeAt(path);
+            return tmp->toJSON(d,0);
+        }
+        std::string toJSON(uint64_t d) {
+            return root->toJSON(d,0);
+        }
+        std::string toJSON() {
+            return root->toJSON(std::numeric_limits<uint64_t>::max(),0);
+        }    
     private:
         TreeNode *root;
 };

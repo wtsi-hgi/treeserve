@@ -15,34 +15,16 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
-// other libraries
-#include <microhttpd.h>
+// 3rd party local headers
+#include "fossa.h"
 
-// local headers
+// my local headers
 #include "Tree.hpp"
 #include "base64.h"
 
 #define PORT 6666
 
 Tree *tree;
-
-static int answer_to_connection (void *cls, struct MHD_Connection *connection,
-                      const char *url, const char *method,
-                      const char *version, const char *upload_data,
-                      size_t *upload_data_size, void **con_cls)
-{
-    const char *page = "<html><body>Hello, browser!</body></html>";
-    struct MHD_Response *response;
-    int ret;
-
-    response =
-        MHD_create_response_from_buffer (strlen (page), (void *) page,
-        MHD_RESPMEM_PERSISTENT);
-    ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-    MHD_destroy_response (response);
-
-    return ret;
-}
 
 int main(int argc, char **argv) {
 
@@ -53,7 +35,7 @@ int main(int argc, char **argv) {
     }
     
     // set up the gzip streaming
-    // bzip2 compresses things a bit smaller but is much slowere
+    // bzip2 compresses things a bit smaller but is much slower
     std::ifstream file(argv[1], std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> gz;
     gz.push(boost::iostreams::gzip_decompressor());
@@ -87,21 +69,12 @@ int main(int argc, char **argv) {
         } 
     }
 
-    // set up a httpd server listening on port 6666
-    // to allow querying the in-memory tree via a
-    // rest api
-    struct MHD_Daemon *daemon;
-    daemon = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION, PORT, NULL, NULL,
-                             &answer_to_connection, NULL, MHD_OPTION_END);
-    if (NULL == daemon) {
-        std::cerr << "failed to create server: " << strerror(errno) << std::endl;;
-        return 1;
-    }
+    // print out json for the tree...
+    std::cout << tree->toJSON("lustre/scratch113/admin/hb5");
+    std::cout << tree->toJSON("lustre/scratch113/admin",2);
+    std::cout << tree->toJSON(4);
 
-    while(1) {
-        pause;
-    }
-    MHD_stop_daemon (daemon);
+    // print out the json for a tree rooted at a particular path
 
     // clean up
     delete tree;

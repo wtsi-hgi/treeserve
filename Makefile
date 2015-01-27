@@ -1,7 +1,7 @@
 CFLAGS=-std=gnu++11 -O3
-LIBS=-lboost_iostreams -lmicrohttpd
+LIBS=-lboost_iostreams
 
-all : bin/lstatTree bin/testHttpd
+all : bin/lstatTree
 
 bin/lstatTree : src/lstatTree.o src/base64.o
 	g++ -o bin/lstatTree src/lstatTree.o src/base64.o $(LIBS)
@@ -21,5 +21,4 @@ src/testHttpd.o : src/testHttpd.cpp
 clean :
 	touch src/tmp.o
 	rm src/*.o
-	touch bin/tmp
-	rm bin/*
+	rm bin/lstatTree

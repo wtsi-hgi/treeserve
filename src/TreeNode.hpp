@@ -43,18 +43,20 @@ class TreeNode {
             }
         }
 
-        std::string toJSON(uint64_t d=std::numeric_limits<uint64_t>::max()) {
+        std::string toJSON(uint64_t d, uint64_t s=0) {
             std::stringstream oss;
             std::string space="";
-            for (uint64_t i=0; i<depth; i++) {
-                space += " ";
+            for (int i=0; i<s; i++) {
+                space+=" ";
             }
+            ++s;
             oss << space << "{" << std::endl;
-            oss << space << " " << "\"" << name << "\"" << " : " << size << std::endl;
-            if (depth<d) {
+            oss << space << "\"" << name << "\"" << " : " << size << std::endl;
+            --d;
+            if (d>0) {
                 std::unordered_map< std::string, TreeNode* >::iterator it;
                 for (it=children.begin(); it != children.end(); it++) {
-                    oss << ((*it).second)->toJSON();
+                    oss << ((*it).second)->toJSON(d,s);
                 }
             }
             oss << space << "}" << std::endl;
