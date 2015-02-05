@@ -2,9 +2,10 @@ CFLAGS=-std=gnu++11 -O3
 LIBS=-lboost_iostreams
 
 all : bin/lstatTree
+#all : bin/testTree
 
-bin/lstatTree : src/lstatTree.o src/base64.o
-	g++ -o bin/lstatTree src/lstatTree.o src/base64.o $(LIBS)
+bin/lstatTree : src/lstatTree.o src/base64.o src/fossa.o
+	g++ -o bin/lstatTree src/lstatTree.o src/base64.o src/fossa.o $(LIBS)
 
 bin/testHttpd: src/testHttpd.o
 	g++ -o bin/testHttpd src/testHttpd.o $(LIBS)
@@ -17,6 +18,10 @@ src/base64.o : src/base64.cpp src/base64.h
 
 src/testHttpd.o : src/testHttpd.cpp
 	g++ -c $(CFLAGS) -o src/testHttpd.o src/testHttpd.cpp
+
+src/fossa.o : src/fossa.c
+	g++ -c $(CFLAGS) -o src/fossa.o src/fossa.c
+
 
 clean :
 	touch src/tmp.o

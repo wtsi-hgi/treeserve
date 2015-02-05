@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "TreeNode.hpp"
 
@@ -16,8 +17,7 @@ class Tree {
         ~Tree() {delete root;}
         
         void addNode(std::string path, double size) {
-            // path will be a string of form a/b/c/d
-            // i.e. it mustn't start with a / but with a real name
+            // path will be a string of form (/)a/b/c/d(/)
             // need to create any nodes that don't exist
             // e.g. for the above path, if we are adding to an empty tree
             // will need to create the 'a' node, then create 'b' as a child, then 'c'
@@ -28,6 +28,7 @@ class Tree {
             
             // turn the path into a vector of names
             std::vector<std::string> names;
+            boost::trim_if(path, boost::is_any_of("/"));
             boost::split(names, path, boost::is_any_of("/"));            
             if (root==0) {
                 root=new TreeNode(names[0]);
@@ -50,6 +51,7 @@ class Tree {
         TreeNode* getNodeAt(std::string path) {
             // turn the path into a vector of names
             std::vector<std::string> names;
+            boost::trim_if(path, boost::is_any_of("/"));
             boost::split(names, path, boost::is_any_of("/"));
             TreeNode *current=root;
             std::vector<std::string>::iterator it=names.begin();
@@ -63,11 +65,24 @@ class Tree {
             return current;
         }
 
+        TreeNode* getRoot() {
+            return root;
+        }
+        
+        // once we've finished a tree, want to add  a child to each node to represent *.*
+        // i.e. size of files within the directory itself. this will be calculated by
+        // summing the sizes of all children and subtracting from the size of the node
+        void finalize() {
+            root->finalize();
+        }
+        
         std::string toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
+            if (d==0) d=1;
             TreeNode *tmp=getNodeAt(path);
             return tmp->toJSON(d,0);
         }
         std::string toJSON(uint64_t d) {
+            if (d==0) d=1;
             return root->toJSON(d,0);
         }
         std::string toJSON() {
