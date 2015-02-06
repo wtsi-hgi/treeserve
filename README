@@ -1,1 +1,5 @@
-generate tree structure from the mpistat output and allow querying of it via a rest api
+Generate tree structure from the mpistat output and allow querying of it via a rest api.
+
+Dependencies :
+* Needs fossa.c and fossa.h from https://github.com/cesanta/fossa
+* Boost
