@@ -2,6 +2,10 @@ To Do
 -----
 Ideas for code improvements / enhancements
 
+* make it get the current timestamp when it starts to generate reasonably accurate cost values
+
+* add the full list of attributes (cost, file suffix etc.)
+
 * write a buffered writer so that it can chunk up the json instead of creating the big string and sending the whole lot out.
 
 * go through the code looking for places where I should add const's

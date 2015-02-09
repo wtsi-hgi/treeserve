@@ -182,11 +182,12 @@ int main(int argc, char **argv) {
         
         // get gid
         uint64_t gid=boost::lexical_cast<uint64_t>(tokens[4]);
+	std::string gid_str=gid_lookup(gid);
         oss.str("");
-        oss << "size_by_gid_" << gid;
+        oss << "size_by_gid_" << gid_str;
         im.addItem(oss.str(), size);
         oss.str("");
-        oss << "size_by_gid_uid_" << gid << "_" << uid_str;
+        oss << "size_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(), size);
         
         // get the ctime
