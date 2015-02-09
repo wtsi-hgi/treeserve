@@ -35,7 +35,6 @@
 Tree *tree;
 
 // stuff for the http server
-static const char *s_http_port = "8000";
 static struct ns_serve_http_opts s_http_server_opts;
 
 // maps for cacheing uid and gid lookups
@@ -137,8 +136,8 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
 int main(int argc, char **argv) {
 
     // get the filename argument
-    if (argc != 2) {
-        std::cerr << "Usage : lstatTree <data.gz>" << std::endl;
+    if (argc != 3) {
+        std::cerr << "Usage : lstatTree <port> <data.gz>" << std::endl;
         return 1;
     }
     
@@ -147,7 +146,7 @@ int main(int argc, char **argv) {
     
     // set up the gzip streaming
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
-    std::ifstream file(argv[1], std::ios_base::in | std::ios_base::binary);
+    std::ifstream file(argv[2], std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> gz;
     gz.push(boost::iostreams::gzip_decompressor());
     gz.push(file);
@@ -221,12 +220,12 @@ int main(int argc, char **argv) {
     int i;
 
     ns_mgr_init(&mgr, NULL);
-    nc = ns_bind(&mgr, s_http_port, ev_handler);
+    nc = ns_bind(&mgr, argv[1], ev_handler);
     ns_set_protocol_http_websocket(nc);
     s_http_server_opts.document_root = ".";
 
 
-    printf("Starting RESTful server on port %s\n", s_http_port);
+    printf("Starting RESTful server on port %s\n", argv[1];
     for (;;) {
       ns_mgr_poll(&mgr, 1000);
     }
