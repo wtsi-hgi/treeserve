@@ -2,9 +2,7 @@ To Do
 -----
 Ideas for code improvements / enhancements
 
-* make it get the current timestamp when it starts to generate reasonably accurate cost values
-
-* add the full list of attributes (cost, file suffix etc.)
+* add file suffix handling to get breakdown by various files (bam, cram etc.)
 
 * write a buffered writer so that it can chunk up the json instead of creating the big string and sending the whole lot out.
 
@@ -19,3 +17,7 @@ Ideas for code improvements / enhancements
 * look into adding a lustre log listener thread which can modify the tree as live filesystem changes come through. That will free us from having to regenerate a static tree each day.
 
 * make the code more robust - more error checking etc. Probably won't add exceptions as they hurt performance which is critical in this app.
+
+* DRY and tidy up the lstatTree main program
+
+* put api information in bin/index.html to make it "self-documenting"
