@@ -68,6 +68,23 @@ std::string uid_lookup(uint64_t uid) {
 // convert a gid into it's text equivalent
 // retrieve from the map if it's there, otherwise do a syscall and cache it
 std::string gid_lookup(uint64_t gid) {
+    // is the gid in the map ?
+    std::unordered_map<uint64_t, std::string>::const_iterator got = gid_map.find(gid);
+    if (got == gid_map.end()) {
+        struct group *grp=getgrgid(gid);
+        if (grp) {
+            std::string grp_str(grp->gr_name);
+            gid_map.insert(std::make_pair(gid,grp_str));
+            return grp_str;
+        } else {
+            // gid not in the db, just return the gid
+            std::string grp_str=boost::lexical_cast<std::string>(gid);
+            gid_map.insert(std::make_pair(gid,grp_str));
+            return grp_str;
+        }
+    } else {
+        return gid_map[gid];
+    }
 }
 
 static void handle_sum_call(struct ns_connection *nc, struct http_message *hm) {
