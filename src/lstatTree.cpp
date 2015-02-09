@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
+#include <time.h>
 
 // boost headers
 #include <boost/algorithm/string.hpp>
@@ -143,7 +144,7 @@ int main(int argc, char **argv) {
     }
     
     // get the current timestamp in epoch seconds
-    uint64_t now=1423494859;
+    uint64_t now=time(0);
     
     // set up the gzip streaming
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
@@ -227,7 +228,7 @@ int main(int argc, char **argv) {
     s_http_server_opts.document_root = ".";
 
 
-    printf("Starting RESTful server on port %s\n", argv[1]);
+    std::cout << "Starting RESTful server on port " << argv[1] << " after " << time(0)-now << " seconds" << std::endl;
     for (;;) {
       ns_mgr_poll(&mgr, 1000);
     }
