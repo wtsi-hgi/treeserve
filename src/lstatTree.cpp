@@ -11,6 +11,7 @@
 // linux syscalls
 #include <unistd.h>
 #include <pwd.h>
+#include <grp.h>
 
 // boost headers
 #include <boost/algorithm/string.hpp>
@@ -225,7 +226,7 @@ int main(int argc, char **argv) {
     s_http_server_opts.document_root = ".";
 
 
-    printf("Starting RESTful server on port %s\n", argv[1];
+    printf("Starting RESTful server on port %s\n", argv[1]);
     for (;;) {
       ns_mgr_poll(&mgr, 1000);
     }
