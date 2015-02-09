@@ -182,17 +182,18 @@ int main(int argc, char **argv) {
         std::string uid_str=uid_lookup(uid);
         oss << "size_by_uid_" << uid_str;
         im.addItem(oss.str(), size);
-        
+        oss.str("");
+ 
         // get gid
         uint64_t gid=boost::lexical_cast<uint64_t>(tokens[4]);
         std::string gid_str=gid_lookup(gid);
-        oss.str("");
         oss << "size_by_gid_" << gid_str;
         im.addItem(oss.str(), size);
         oss.str("");
         oss << "size_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(), size);
-        
+        oss.str("");
+ 
         // get the ctime and calculate ctime cost
         uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[4]);
         double size_tb=size/(1024.0*1024.0*1024.0*1024.0);
@@ -207,6 +208,7 @@ int main(int argc, char **argv) {
         oss.str();
         oss << "ctime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),ctime_cost);
+	oss.str("");
 
         // get the atime
         uint64_t atime=boost::lexical_cast<uint64_t>(tokens[4]);       
@@ -221,6 +223,7 @@ int main(int argc, char **argv) {
         oss.str();
         oss << "atime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),atime_cost);
+	oss.str("");
 
         // get the mtime
         uint64_t mtime=boost::lexical_cast<uint64_t>(tokens[4]);       
@@ -235,6 +238,7 @@ int main(int argc, char **argv) {
         oss.str();
         oss << "mtime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),mtime_cost);
+	oss.str("");
 
         // get the file type
         std::string file_type=tokens[8];
