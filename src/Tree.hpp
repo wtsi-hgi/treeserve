@@ -16,15 +16,15 @@ class Tree {
 
         ~Tree() {delete root;}
         
-        void addNode(std::string path, double size) {
+        void addNode(std::string path, IndexedMap& im) {
             // path will be a string of form (/)a/b/c/d(/)
             // need to create any nodes that don't exist
             // e.g. for the above path, if we are adding to an empty tree
             // will need to create the 'a' node, then create 'b' as a child, then 'c'
             // as a child of 'b' then add the leaf 'd' as a child of 'c'
-            // also need to increment the size on each node as we descend down
+            // also need to combine the indexed map on each node as we descend down
             // we may not need to actually make any nodes if all the ones in the path exist,
-            // but we need to increment the size on each node in the path
+            // but we need to combine the map in the path
             
             // turn the path into a vector of names
             std::vector<std::string> names;
@@ -37,7 +37,7 @@ class Tree {
             std::vector<std::string>::iterator it=names.begin();
             ++it;
             for (;it<names.end();it++) {
-                current->incrSize(size);
+                current->combine(im);
                 TreeNode *tmp=current->getChild(*it);
                 if (tmp == 0) {
                     current=new TreeNode(*it,current);
@@ -45,7 +45,7 @@ class Tree {
                     current=tmp;
                 }
             }
-            current->incrSize(size);
+            current->combine(im);
         }
 
         TreeNode* getNodeAt(std::string path) {
