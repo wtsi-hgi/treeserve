@@ -144,8 +144,10 @@ int main(int argc, char **argv) {
     }
     
     // get the current timestamp in epoch seconds
+    // and seconds in a year
     uint64_t now=time(0);
-    
+    uint64_t seconds_in_year=60*60*24*365;
+
     // set up the gzip streaming
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
     std::ifstream file(argv[2], std::ios_base::in | std::ios_base::binary);
@@ -183,7 +185,7 @@ int main(int argc, char **argv) {
         
         // get gid
         uint64_t gid=boost::lexical_cast<uint64_t>(tokens[4]);
-	std::string gid_str=gid_lookup(gid);
+        std::string gid_str=gid_lookup(gid);
         oss.str("");
         oss << "size_by_gid_" << gid_str;
         im.addItem(oss.str(), size);
@@ -191,12 +193,48 @@ int main(int argc, char **argv) {
         oss << "size_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(), size);
         
-        // get the ctime
+        // get the ctime and calculate ctime cost
         uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[4]);
+        double size_tb=size/(1024.0*1024.0*1024.0*1024.0);
+        double ctime_cost=size_tb*(now-ctime)/seconds_in_year;
+        im.addItem("ctime_cost", ctime_cost);
+        oss.str();
+        oss << "ctime_cost_by_uid_" << uid_str;
+        im.addItem(oss.str(),ctime_cost);
+        oss.str();
+        oss << "ctime_cost_by_gid_" << gid_str;
+        im.addItem(oss.str(),ctime_cost);
+        oss.str();
+        oss << "ctime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
+        im.addItem(oss.str(),ctime_cost);
 
         // get the atime
-        
+        uint64_t atime=boost::lexical_cast<uint64_t>(tokens[4]);       
+        double atime_cost=size_tb*(now-atime)/seconds_in_year;
+        im.addItem("atime_cost", atime_cost);
+        oss.str();
+        oss << "atime_cost_by_uid_" << uid_str;
+        im.addItem(oss.str(),atime_cost);
+        oss.str();
+        oss << "atime_cost_by_gid_" << gid_str;
+        im.addItem(oss.str(),atime_cost);
+        oss.str();
+        oss << "atime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
+        im.addItem(oss.str(),atime_cost);
+
         // get the mtime
+        uint64_t mtime=boost::lexical_cast<uint64_t>(tokens[4]);       
+        double mtime_cost=size_tb*(now-mtime)/seconds_in_year;
+        im.addItem("mtime_cost", mtime_cost);
+        oss.str();
+        oss << "mtime_cost_by_uid_" << uid_str;
+        im.addItem(oss.str(),mtime_cost);
+        oss.str();
+        oss << "mtime_cost_by_gid_" << gid_str;
+        im.addItem(oss.str(),mtime_cost);
+        oss.str();
+        oss << "mtime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
+        im.addItem(oss.str(),mtime_cost);
 
         // get the file type
         std::string file_type=tokens[8];
