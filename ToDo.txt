@@ -1,0 +1,17 @@
+To Do
+-----
+Ideas for code improvements / enhancements
+
+* write a buffered writer so that it can chunk up the json instead of creating the big string and sending the whole lot out.
+
+* go through the code looking for places where I should add const's
+
+* "pointers are evil" look into replacing the Datum* with Datum and using references.
+
+* add an 'attributes' parameter to the api to allow choosing one or more seperate attributes to send out (including path as that has to be there) instead of the whole lot.
+
+* replace the recursive toJSON functions with non-recursive functions that manage their own stack to avoid kernel stack overflows and having to use ulimt -s
+
+* look into adding a lustre log listener thread which can modify the tree as live filesystem changes come through. That will free us from having to regenerate a static tree each day.
+
+* make the code more robust - more error checking etc. Probably won't add exceptions as they hurt performance which is critical in this app.
