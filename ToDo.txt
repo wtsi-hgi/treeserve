@@ -21,3 +21,5 @@ Ideas for code improvements / enhancements
 * DRY and tidy up the lstatTree main program
 
 * put api information in bin/index.html to make it "self-documenting"
+
+* take the webserver code out the main program and wrap it in a class
