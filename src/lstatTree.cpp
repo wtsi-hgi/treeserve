@@ -5,9 +5,12 @@
 #include <fstream>
 #include <cstring>
 #include <cerrno>
+#include <sstream>
+#include <unordered_map>
 
 // linux syscalls
 #include <unistd.h>
+#include <pwd.h>
 
 // boost headers
 #include <boost/algorithm/string.hpp>
@@ -21,17 +24,51 @@
 // fossa network library
 #include "fossa.h"
 
-// fast tokenizer
-#include "strtk.hpp"
-
 // my local headers
 #include "Tree.hpp"
+#include "IndexedMap.hpp"
 #include "base64.h"
 
+// globals
+
+// the tree structure
 Tree *tree;
 
+// stuff for the http server
 static const char *s_http_port = "8000";
 static struct ns_serve_http_opts s_http_server_opts;
+
+// maps for cacheing uid and gid lookups
+std::unordered_map<uint64_t, std::string> uid_map;
+std::unordered_map<uint64_t, std::string> gid_map;
+
+
+// convert a uid into it's text equivalent
+// retrieve from the map if it's there, otherwise do a syscall and cache it
+std::string uid_lookup(uint64_t uid) {
+    // is the uid in the map ?
+    std::unordered_map<uint64_t, std::string>::const_iterator got = uid_map.find(uid);
+    if (got == uid_map.end()) {
+        struct passwd *pwd=getpwuid(uid);
+        if (pwd) {
+            std::string uid_str(pwd->pw_name);
+            uid_map.insert(std::make_pair(uid,uid_str));
+            return uid_str;
+        } else {
+            // uid not in the db, just return the uid
+            std::string uid_str=boost::lexical_cast<std::string>(uid);
+            uid_map.insert(std::make_pair(uid,uid_str));
+            return uid_str;
+        }
+    } else {
+        return uid_map[uid];
+    }
+}
+
+// convert a gid into it's text equivalent
+// retrieve from the map if it's there, otherwise do a syscall and cache it
+std::string gid_lookup(uint64_t gid) {
+}
 
 static void handle_sum_call(struct ns_connection *nc, struct http_message *hm) {
     char path[4*1024];
@@ -89,7 +126,7 @@ int main(int argc, char **argv) {
     }
     
     // get the current timestamp in epoch seconds
-    uint64_t now=123456789;
+    uint64_t now=1423494859;
     
     // set up the gzip streaming
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
@@ -105,22 +142,36 @@ int main(int argc, char **argv) {
 
         // tokenize the line
         std::vector<std::string> tokens;
-        strtk::parse( line, "\t", tokens );
-        //boost::split(tokens, line, boost::is_any_of("\t"));
-        //tokenize(line,tokens,"\t",true);
+        boost::split(tokens, line, boost::is_any_of("\t"));
 
+        // create an IndexedMap object
+        IndexedMap im;
+
+        // oss for building up attribute names
+        std::ostringstream oss;
+                
         // get the path
         std::string path=base64_decode(tokens[1]);
 
         // get the size
         uint64_t size=boost::lexical_cast<uint64_t>(tokens[2]);
+        im.addItem("size",size);
         
         // get the uid
         uint64_t uid=boost::lexical_cast<uint64_t>(tokens[3]);
-
+        std::string uid_str=uid_lookup(uid);
+        oss << "size_by_uid_" << uid_str;
+        im.addItem(oss.str(), size);
+        
         // get gid
         uint64_t gid=boost::lexical_cast<uint64_t>(tokens[4]);
-                
+        oss.str("");
+        oss << "size_by_gid_" << gid;
+        im.addItem(oss.str(), size);
+        oss.str("");
+        oss << "size_by_gid_uid_" << gid << "_" << uid_str;
+        im.addItem(oss.str(), size);
+        
         // get the ctime
         uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[4]);
 
@@ -132,15 +183,15 @@ int main(int argc, char **argv) {
         std::string file_type=tokens[8];
 
         if (file_type == "d") {
-            tree->addNode(path,size);
+            tree->addNode(path,im);
         } else if (file_type == "f") {
             // find last / in the path
             size_t pos=path.find_last_of("/");
             path=path.substr(0,pos);
-            tree->addNode(path,size);
+            tree->addNode(path,im);
         } 
     }
-    tree->finalize();
+    //tree->finalize();
 
     // print out json for the tree...
     //std::cout << tree->toJSON("lustre/scratch113/admin/hb5");
@@ -148,21 +199,21 @@ int main(int argc, char **argv) {
     //std::cout << tree->toJSON(4);
     
     // start the api server
-  struct ns_mgr mgr;
-  struct ns_connection *nc;
-  int i;
+    struct ns_mgr mgr;
+    struct ns_connection *nc;
+    int i;
 
-  ns_mgr_init(&mgr, NULL);
-  nc = ns_bind(&mgr, s_http_port, ev_handler);
-  ns_set_protocol_http_websocket(nc);
-  s_http_server_opts.document_root = ".";
+    ns_mgr_init(&mgr, NULL);
+    nc = ns_bind(&mgr, s_http_port, ev_handler);
+    ns_set_protocol_http_websocket(nc);
+    s_http_server_opts.document_root = ".";
 
 
-  printf("Starting RESTful server on port %s\n", s_http_port);
-  for (;;) {
-    ns_mgr_poll(&mgr, 1000);
-  }
-  ns_mgr_free(&mgr);
+    printf("Starting RESTful server on port %s\n", s_http_port);
+    for (;;) {
+      ns_mgr_poll(&mgr, 1000);
+    }
+    ns_mgr_free(&mgr);
   
     // clean up
     delete tree;

@@ -4,8 +4,8 @@ LIBS=-lboost_iostreams
 all : bin/lstatTree
 #all : bin/testTree
 
-bin/lstatTree : src/lstatTree.o src/base64.o src/fossa.o
-	g++ -o bin/lstatTree src/lstatTree.o src/base64.o src/fossa.o $(LIBS)
+bin/lstatTree : src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o
+	g++ -o bin/lstatTree src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o $(LIBS)
 
 bin/testHttpd: src/testHttpd.o
 	g++ -o bin/testHttpd src/testHttpd.o $(LIBS)
@@ -22,6 +22,8 @@ src/testHttpd.o : src/testHttpd.cpp
 src/fossa.o : src/fossa.c
 	g++ -c $(CFLAGS) -o src/fossa.o src/fossa.c
 
+src/IndexedMap.o : src/IndexedMap.hpp src/IndexedMap.cpp
+	g++ -c $(CFLAGS) -o src/IndexedMap.o src/IndexedMap.cpp
 
 clean :
 	touch src/tmp.o
