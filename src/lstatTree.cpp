@@ -224,8 +224,8 @@ int main(int argc, char **argv) {
 
         // size related
         addAttribute(im,"size",size);
-        addAttribute(im,"size",size,owner);
-        addAttribute(im,"size",size,grp,owner);
+        addAttribute(im,"size_",size,owner);
+        addAttribute(im,"size_",size,grp,owner);
         
         // atime related
         double atime_cost=cost_per_tib_year*tib*atime_years;
