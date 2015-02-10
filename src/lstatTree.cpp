@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
     std::cout << "Building tree..." <<std::endl;
     for (std::string line; std::getline(in, line);) {
         linecount++;
-        if (linecount %250000) {
+        if (linecount %250000 == 0) {
             std::cout << "Processed " << linecount << " lines" << std::endl;
         }
         // tokenize the line
