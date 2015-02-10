@@ -55,6 +55,30 @@ class Datum {
                 u.i += d.u.i;
             }
         }
+
+        void sub(uint64_t v) {
+            u.i -= v;
+        }
+        
+        void sub(double v) {
+            u.f -= v;
+        }
+        
+        void sub(const Datum &d) {
+            if (d.is_double) {
+                u.f -= d.u.f;
+            } else {
+                u.i -= d.u.i;
+            }
+        }
+
+        bool isZero() {
+            if (is_double) {
+                return (u.f == 0 ? true : false);
+            } else {
+                return (u.i == 0 ? true : false);
+            }
+        }
         
         std::string toString() {
             if (is_double) {

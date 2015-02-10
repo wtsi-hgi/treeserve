@@ -38,6 +38,11 @@ int main(int argc, char **argv) {
     std::cout << im1.toJSON() << std::endl;
     std::cout << std::endl;
 
+    // subtracting im1 from itself should give an empty
+    im1.subtract(im1);
+    std::cout << "im1 should be empty now..." << std::endl;
+    std::cout << im1.toJSON() << std::endl;
+ 
     // print out the static indexing map
     std::cout << "indexing map : " << std::endl;
     std::cout << im1.getIndex() << std::endl;

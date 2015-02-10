@@ -18,6 +18,18 @@ int main(int argc, char **argv) {
     for (it=datums.begin(); it < datums.end(); it++) {
         std::cout << (*it).toString() << std::endl;
     }
+
+    // test the sub method
+    datums[1].sub(datums[3]);
+    std::cout << datums[1].toString() << std::endl;
+   
+    // remove a datum from itself, should be zero
+    datums[1].sub(datums[1]);
+    if (datums[1].isZero()) {
+        std::cout << "datums[1] is zero" << std::endl;
+    } else {
+        std::cout << "datums[1] is zero" << std::endl;
+    }
     return 0;
 }
 

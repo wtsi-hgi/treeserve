@@ -31,7 +31,7 @@ class TreeNode {
             return name;
         }
         
-        void  combine(IndexedMap &other_map) {
+        void combine(IndexedMap &other_map) {
             data.combine(other_map);
         }    
 
@@ -109,14 +109,18 @@ class TreeNode {
         void finalize() {
             // only finalize if the node has children
             if (!children.empty()) {
-                // create an empty indexed map
-                // loop over children and combine all their maps into it
+                // create an clone of the current indexed map
+                IndexedMap im(data);
+                // loop over children and subtract all their maps from it
                 for (auto it : children) {
-                    //((*it).second)->finalize();
+                    im.subtract(it.second->data);
                 }
-                // now create another map which is the difference of the parent map
-                // and the combined child map and create a "*.*" map containing this
-                // difference map
+                // create the *.* child if the resultant map is not empty
+                if (!im.empty()) {
+                    TreeNode *child=new TreeNode("*.*",this);
+                    child->combine(im);
+                    addChild(child);
+                }
             }
         }
     

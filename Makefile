@@ -1,4 +1,5 @@
-CFLAGS=-std=gnu++11 -O3
+#CFLAGS=-std=gnu++11 -O3
+CFLAGS=-std=gnu++11 -O0 -ggdb -pg
 LIBS=-lboost_iostreams
 
 all : bin/lstatTree
