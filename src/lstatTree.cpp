@@ -190,6 +190,7 @@ int main(int argc, char **argv) {
         oss << "size_by_gid_" << gid_str;
         im.addItem(oss.str(), size);
         oss.str("");
+
         oss << "size_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(), size);
         oss.str("");
@@ -199,13 +200,15 @@ int main(int argc, char **argv) {
         double size_tb=size/(1024.0*1024.0*1024.0*1024.0);
         double ctime_cost=size_tb*(now-ctime)/seconds_in_year;
         im.addItem("ctime_cost", ctime_cost);
-        oss.str();
+
         oss << "ctime_cost_by_uid_" << uid_str;
         im.addItem(oss.str(),ctime_cost);
-        oss.str();
+        oss.str("");
+
         oss << "ctime_cost_by_gid_" << gid_str;
         im.addItem(oss.str(),ctime_cost);
-        oss.str();
+        oss.str("");
+
         oss << "ctime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),ctime_cost);
 	oss.str("");
@@ -214,13 +217,15 @@ int main(int argc, char **argv) {
         uint64_t atime=boost::lexical_cast<uint64_t>(tokens[4]);       
         double atime_cost=size_tb*(now-atime)/seconds_in_year;
         im.addItem("atime_cost", atime_cost);
-        oss.str();
+
         oss << "atime_cost_by_uid_" << uid_str;
         im.addItem(oss.str(),atime_cost);
-        oss.str();
+        oss.str("");
+
         oss << "atime_cost_by_gid_" << gid_str;
         im.addItem(oss.str(),atime_cost);
-        oss.str();
+        oss.str("");
+
         oss << "atime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),atime_cost);
 	oss.str("");
@@ -229,13 +234,15 @@ int main(int argc, char **argv) {
         uint64_t mtime=boost::lexical_cast<uint64_t>(tokens[4]);       
         double mtime_cost=size_tb*(now-mtime)/seconds_in_year;
         im.addItem("mtime_cost", mtime_cost);
-        oss.str();
+
         oss << "mtime_cost_by_uid_" << uid_str;
         im.addItem(oss.str(),mtime_cost);
         oss.str();
+
         oss << "mtime_cost_by_gid_" << gid_str;
         im.addItem(oss.str(),mtime_cost);
         oss.str();
+
         oss << "mtime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),mtime_cost);
 	oss.str("");
