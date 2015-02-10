@@ -237,11 +237,11 @@ int main(int argc, char **argv) {
 
         oss << "mtime_cost_by_uid_" << uid_str;
         im.addItem(oss.str(),mtime_cost);
-        oss.str();
+        oss.str("");
 
         oss << "mtime_cost_by_gid_" << gid_str;
         im.addItem(oss.str(),mtime_cost);
-        oss.str();
+        oss.str("");
 
         oss << "mtime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
         im.addItem(oss.str(),mtime_cost);
