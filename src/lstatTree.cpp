@@ -184,12 +184,12 @@ int main(int argc, char **argv) {
 
     // process lines to build the tree    
     tree=new Tree();
-    uint64_t linecount=0
+    uint64_t linecount=0;
     std::cout << "Building tree..." <<std::endl;
     for (std::string line; std::getline(in, line);) {
         linecount++;
         if (linecount %250000) {
-            std::cout << "Processed " << linecount << lines << std::endl;
+            std::cout << "Processed " << linecount << " lines" << std::endl;
         }
         // tokenize the line
         std::vector<std::string> tokens;
