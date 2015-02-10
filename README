@@ -3,3 +3,18 @@ Generate tree structure from the mpistat output and allow querying of it via a r
 Dependencies :
 * Needs fossa.c and fossa.h from https://github.com/cesanta/fossa
 * Boost
+
+Format of fields in the data file are :
+
+* a prefix (the lustre volume number)
+* base64 encoding of the path (to handle unprintable characters in paths)
+* size of the object
+* owner
+* group
+* atime
+* mtime
+* ctime
+* object type (dir, normal file, symlink etc.)
+* inode #
+* number of hardlinks
+* device id

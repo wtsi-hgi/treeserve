@@ -2,6 +2,8 @@ To Do
 -----
 Ideas for code improvements / enhancements
 
+* add subtract method for IndexedMap to aid in calculating the *.* child attributes if required
+
 * add file suffix handling to get breakdown by various files (bam, cram etc.)
 
 * write a buffered writer so that it can chunk up the json instead of creating the big string and sending the whole lot out.

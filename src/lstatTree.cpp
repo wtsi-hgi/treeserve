@@ -135,6 +135,25 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
   }
 }
 
+template<typename T>
+void addAttribute(IndexedMap &im, std::string attr_name, T attr_val) {
+    im.addItem(attr_name,attr_val);
+}
+
+template<typename T>
+void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string uid_str) {
+    std::ostringstream oss;
+    oss << attr_name << uid_str;
+    im.addItem(oss.str(),attr_val);
+}
+
+template<typename T>
+void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str) {
+    std::ostringstream oss;
+    oss << attr_name << gid_str << "_" << uid_str;
+    im.addItem(oss.str(),attr_val);
+}
+
 int main(int argc, char **argv) {
 
     // get the filename argument
@@ -147,7 +166,14 @@ int main(int argc, char **argv) {
     // and seconds in a year
     uint64_t now=time(0);
     uint64_t seconds_in_year=60*60*24*365;
+    double cost_per_tib_year=150.0;
 
+    // conversion into tebibytes...
+    uint64_t TiB=1024;
+    TiB *=1024;
+    TiB *=1024;
+    TiB *=1024;
+        
     // set up the gzip streaming
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
     std::ifstream file(argv[2], std::ios_base::in | std::ios_base::binary);
@@ -167,92 +193,66 @@ int main(int argc, char **argv) {
         // create an IndexedMap object
         IndexedMap im;
 
-        // oss for building up attribute names
-        std::ostringstream oss;
-                
         // get the path
         std::string path=base64_decode(tokens[1]);
 
-        // get the size
+        // get the size and calc in TiB
         uint64_t size=boost::lexical_cast<uint64_t>(tokens[2]);
-        im.addItem("size",size);
-        
-        // get the uid
+        double tib=1.0*size/TiB;
+
+        // get the owner
         uint64_t uid=boost::lexical_cast<uint64_t>(tokens[3]);
-        std::string uid_str=uid_lookup(uid);
-        oss << "size_by_uid_" << uid_str;
-        im.addItem(oss.str(), size);
-        oss.str("");
+        std::string owner=uid_lookup(uid);
  
-        // get gid
+        // get group
         uint64_t gid=boost::lexical_cast<uint64_t>(tokens[4]);
-        std::string gid_str=gid_lookup(gid);
-        oss << "size_by_gid_" << gid_str;
-        im.addItem(oss.str(), size);
-        oss.str("");
+        std::string grp=gid_lookup(gid);
 
-        oss << "size_by_gid_uid_" << gid_str << "_" << uid_str;
-        im.addItem(oss.str(), size);
-        oss.str("");
- 
-        // get the ctime and calculate ctime cost
-        uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[4]);
-        double size_tb=size/(1024.0*1024.0*1024.0*1024.0);
-        double ctime_cost=size_tb*(now-ctime)/seconds_in_year;
-        im.addItem("ctime_cost", ctime_cost);
+        // get the atime and calc in years
+        uint64_t atime=boost::lexical_cast<uint64_t>(tokens[5]);
+        double atime_years=1.0*(now-atime)/seconds_in_year;
 
-        oss << "ctime_cost_by_uid_" << uid_str;
-        im.addItem(oss.str(),ctime_cost);
-        oss.str("");
+        // get the mtime and calc in years
+        uint64_t mtime=boost::lexical_cast<uint64_t>(tokens[6]);
+        double mtime_years=1.0*(now-mtime)/seconds_in_year;
 
-        oss << "ctime_cost_by_gid_" << gid_str;
-        im.addItem(oss.str(),ctime_cost);
-        oss.str("");
+        // get the ctime and calc in years
+        uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[7]);
+        double ctime_years=1.0*(now-ctime)/seconds_in_year;
 
-        oss << "ctime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
-        im.addItem(oss.str(),ctime_cost);
-	oss.str("");
+        // add atributes to the im...
 
-        // get the atime
-        uint64_t atime=boost::lexical_cast<uint64_t>(tokens[4]);       
-        double atime_cost=size_tb*(now-atime)/seconds_in_year;
-        im.addItem("atime_cost", atime_cost);
+        // size related
+        addAttribute(im,"size",size);
+        addAttribute(im,"size",size,owner);
+        addAttribute(im,"size",size,grp,owner);
+        
+        // atime related
+        double atime_cost=cost_per_tib_year*tib*atime_years;
+        addAttribute(im,"atime_cost",atime_cost);
+        addAttribute(im,"atime_cost_by uid_",atime_cost,owner);
+        addAttribute(im,"atime_cost_by_gid_uid_",atime_cost,grp,owner);
 
-        oss << "atime_cost_by_uid_" << uid_str;
-        im.addItem(oss.str(),atime_cost);
-        oss.str("");
+        // mtime related
+        double mtime_cost=cost_per_tib_year*tib*mtime_years;
+        addAttribute(im,"mtime_cost",atime_cost);
+        addAttribute(im,"mtime_cost_by uid_",atime_cost,owner);
+        addAttribute(im,"mtime_cost_by_gid_uid_",atime_cost,grp,owner);
 
-        oss << "atime_cost_by_gid_" << gid_str;
-        im.addItem(oss.str(),atime_cost);
-        oss.str("");
+        // ctime related
+        double ctime_cost=cost_per_tib_year*tib*ctime_years;
+        addAttribute(im,"ctime_cost",ctime_cost);
+        addAttribute(im,"ctime_cost_by uid_",ctime_cost,owner);
+        addAttribute(im,"ctime_cost_by_gid_uid_",ctime_cost,grp,owner);
 
-        oss << "atime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
-        im.addItem(oss.str(),atime_cost);
-	oss.str("");
-
-        // get the mtime
-        uint64_t mtime=boost::lexical_cast<uint64_t>(tokens[4]);       
-        double mtime_cost=size_tb*(now-mtime)/seconds_in_year;
-        im.addItem("mtime_cost", mtime_cost);
-
-        oss << "mtime_cost_by_uid_" << uid_str;
-        im.addItem(oss.str(),mtime_cost);
-        oss.str("");
-
-        oss << "mtime_cost_by_gid_" << gid_str;
-        im.addItem(oss.str(),mtime_cost);
-        oss.str("");
-
-        oss << "mtime_cost_by_gid_uid_" << gid_str << "_" << uid_str;
-        im.addItem(oss.str(),mtime_cost);
-	oss.str("");
+        // TODO : file suffix related (bams, vcfs etc)
 
         // get the file type
         std::string file_type=tokens[8];
 
         if (file_type == "d") {
             tree->addNode(path,im);
-        } else if (file_type == "f") {
+        } else if (file_type == "f" || file_type == "l") {
             // find last / in the path
             size_t pos=path.find_last_of("/");
             path=path.substr(0,pos);
