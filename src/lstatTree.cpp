@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
     std::cout << "Building tree..." <<std::endl;
     for (std::string line; std::getline(in, line);) {
         linecount++;
-        if (linecount %250000 == 0) {
+        if (linecount % 10000 == 0) {
             std::cout << "Processed " << linecount << " lines" << std::endl;
         }
         // tokenize the line
@@ -270,7 +270,8 @@ int main(int argc, char **argv) {
             tree->addNode(path,im);
         } 
     }
-    tree->finalize();
+    //tree->finalize();
+	std::cout << tree->toJSON();
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
     // tidy up and stop - want to bail out here to gperf the tree construction

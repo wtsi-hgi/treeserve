@@ -29,7 +29,6 @@ class Datum {
             is_double=true;
         }
 
-
         // copy constructor
         Datum(const Datum &d) {
             is_double=d.is_double;

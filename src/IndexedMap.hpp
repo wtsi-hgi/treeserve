@@ -29,6 +29,20 @@ class IndexedMap {
     public :
         // default constructor - just creates an empty map ready to fill
         IndexedMap() : datumMap() {}
+		~IndexedMap() {
+            std::unordered_map<uint64_t, Datum*>::iterator it;
+			for (it=datumMap.begin(); it != datumMap.end(); it++) {
+				delete it->second;
+			}
+			datumMap.clear();
+		}
+
+		// copy constructor
+		IndexedMap(const IndexedMap& im) : datumMap() {
+			for (auto it : im.datumMap) {
+				datumMap.insert(std::make_pair(it.first, new Datum(*(it.second))));
+			}
+		}
 
         template <typename T>
         void addItem(std::string key, T val) {
@@ -44,7 +58,7 @@ class IndexedMap {
                 
                 // add entry to the instance map with the key being the
                 // index into the static map
-                datumMap.insert(std::make_pair(keyCounter,Datum(val)));
+                datumMap.insert(std::make_pair(keyCounter,new Datum(val)));
 
                 // increment the static key counter
                 keyCounter++;
@@ -54,13 +68,13 @@ class IndexedMap {
                 uint64_t index=(*got).second;
 
                 // is it part of this instance map ?                
-                std::unordered_map<uint64_t, Datum>::iterator got = datumMap.find(index);
+                std::unordered_map<uint64_t, Datum*>::iterator got = datumMap.find(index);
                 if (got==datumMap.end()) {
                     // if not add it with this inital datum
-                    datumMap.insert(std::make_pair(index,Datum(val)));
+                    datumMap.insert(std::make_pair(index,new Datum(val)));
                 } else {
                     // if so increment the datum with the value
-                    (*got).second.add(val);
+                    (*got).second->add(val);
                 }
             }
         }
@@ -68,13 +82,13 @@ class IndexedMap {
         template <typename T>
         void addItem(uint64_t index, T val) {
             // does the index exist in the current map
-            std::unordered_map<uint64_t, Datum>::const_iterator got = datumMap.find(index);
+            std::unordered_map<uint64_t, Datum*>::const_iterator got = datumMap.find(index);
             if (got == datumMap.end()) {
                 // add the datum with the specified index
-                datumMap.insert(std::make_pair(index,Datum(val)));
+                datumMap.insert(std::make_pair(index,new Datum(val)));
             } else {
                 // index already in the map so need to combine datums 
-                (*got).second.add(val);
+                (*got).second->add(val);
             }
         }
 
@@ -83,36 +97,33 @@ class IndexedMap {
                 uint64_t index=it.first;
 
                 // does the index exist in this map
-                std::unordered_map<uint64_t, Datum>::iterator got = datumMap.find(index);
+                std::unordered_map<uint64_t, Datum*>::iterator got = datumMap.find(index);
                 if (got==datumMap.end()) {                
                     // no, so create a new entry
-                    datumMap.insert(std::make_pair(index,Datum(it.second)));
+                    datumMap.insert(std::make_pair(index,new Datum(*(it.second))));
                 } else {
                     // yes, so add datum to the current value
-                    (*got).second.add(it.second);    
+                    (*got).second->add(*(it.second));    
                 }
             }
         }
 
         void subtract(IndexedMap& other) {
-            // loop over datums in this map
-            for (auto it : datumMap) {
 
+            // loop over datums in this map
+ 			std::unordered_map<uint64_t, Datum*>::iterator it;
+            for (it=datumMap.begin(); it != datumMap.end(); it++) {
                 // get the index and datum
-                uint64_t index=it.first;
+                uint64_t index=it->first;
 
                 // does the index exist in the other map?
-                std::unordered_map<uint64_t, Datum>::const_iterator got = other.datumMap.find(index);
-                if (got==datumMap.end()) {
-                    // no - nothing to do
-                    continue;
-                } else {
-                    // yes, so subtract other datums value from the current value
-                    it.second.sub((*got).second);
-                    if (it.second.isZero()) {
-                        // if the new value is zero then can remove the datum completely
-                        datumMap.erase(index);
-                    }
+                std::unordered_map<uint64_t, Datum*>::iterator got = other.datumMap.find(index);
+                if (got!=datumMap.end()) {
+                    it->second->sub(*(got->second));
+					if (it->second->isZero()) {
+						delete it->second;
+						datumMap.erase(it);
+					}
                 }
             }
         }
@@ -121,7 +132,7 @@ class IndexedMap {
             std::ostringstream oss;
             std::string comma="";
             for (auto it : datumMap) {
-                oss << comma << "\"" << valueLookup[it.first]<< "\" : " << it.second.toString();
+                oss << comma << "\"" << valueLookup[it.first]<< "\" : " << it.second->toString();
                 comma=", ";
             }
             return oss.str();
@@ -130,7 +141,7 @@ class IndexedMap {
         std::string toJSON(std::string item) {
             std::ostringstream oss;
             uint64_t index=keyLookup[item];
-            oss << "\"" << item << "\" : " << datumMap.at(index).toString();
+            oss << "\"" << item << "\" : " << datumMap.at(index)->toString();
             return oss.str();
         }
         
@@ -163,6 +174,6 @@ class IndexedMap {
         static std::unordered_map<std::string, uint64_t> keyLookup;
         static std::unordered_map<uint64_t, std::string> valueLookup;
         static uint64_t keyCounter;
-        std::unordered_map<uint64_t, Datum> datumMap;
+        std::unordered_map<uint64_t, Datum*> datumMap;
 };
 #endif

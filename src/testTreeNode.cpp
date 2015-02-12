@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
     tree->combine(im1);
     TreeNode *tmp=new TreeNode("b",tree);
     tmp->combine(im2);
-    std::cout << tree->toJSON(2,0) << std::endl; 
+    std::cout << tree->toJSON(2,0) << std::endl;
+	tree->finalize();
+	delete tree;
     return 0;
 }

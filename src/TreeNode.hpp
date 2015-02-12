@@ -26,6 +26,12 @@ class TreeNode {
                 depth=0;
             }
         }
+		~TreeNode() {
+			std::unordered_map<std::string,TreeNode*>::iterator it;
+			for (it=children.begin(); it != children.end(); it++) {
+				delete it->second;
+			}
+		}
 
         std::string getName() {
             return name;

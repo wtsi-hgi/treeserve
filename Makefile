@@ -1,12 +1,12 @@
-#CFLAGS=-std=gnu++11 -O3
-CFLAGS=-std=gnu++11 -O0 -ggdb -pg
+CFLAGS=-std=gnu++11 -O0 -g 
+#CFLAGS=-std=gnu++11 -O0 -ggdb -pg
 LIBS=-lboost_iostreams
 
 all : bin/lstatTree
 #all : bin/testTree
 
 bin/lstatTree : src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o
-	g++ -o bin/lstatTree src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o $(LIBS)
+	g++ $(CFLAGS) -o bin/lstatTree src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o $(LIBS)
 
 bin/testHttpd: src/testHttpd.o
 	g++ -o bin/testHttpd src/testHttpd.o $(LIBS)
