@@ -109,7 +109,8 @@ class IndexedMap {
         }
 
         void subtract(IndexedMap& other) {
-
+			// remove vector
+			std::vector<std::unordered_map<uint64_t, Datum*>::iterator> remove;
             // loop over datums in this map
  			std::unordered_map<uint64_t, Datum*>::iterator it;
             for (it=datumMap.begin(); it != datumMap.end(); it++) {
@@ -118,14 +119,17 @@ class IndexedMap {
 
                 // does the index exist in the other map?
                 std::unordered_map<uint64_t, Datum*>::iterator got = other.datumMap.find(index);
-                if (got!=datumMap.end()) {
+                if (got != other.datumMap.end()) {
                     it->second->sub(*(got->second));
 					if (it->second->isZero()) {
-						delete it->second;
-						datumMap.erase(it);
+						remove.push_back(it);
 					}
                 }
             }
+			for (auto it : remove) {
+				delete it->second;
+				datumMap.erase(it);
+			}
         }
 
         std::string toJSON() {

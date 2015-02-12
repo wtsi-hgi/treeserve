@@ -1,5 +1,5 @@
 // comment line below to enable debug mode
-//#define NDEBUG
+#define NDEBUG
 
 // standard library headers
 #include <iostream>
@@ -270,10 +270,12 @@ int main(int argc, char **argv) {
             tree->addNode(path,im);
         } 
     }
-    //tree->finalize();
-	std::cout << tree->toJSON();
+    tree->finalize();
+
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
+	std::cout << "in debug section, printing out tree and exiting" << std::endl;
+    std::cout << tree->toJSON();
     // tidy up and stop - want to bail out here to gperf the tree construction
     // top optimize it and to make sure it passes valgrind without issue
     delete tree;

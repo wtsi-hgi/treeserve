@@ -123,6 +123,9 @@ class TreeNode {
                 }
                 // create the *.* child if the resultant map is not empty
                 if (!im.empty()) {
+#ifndef NDEBUG
+					std::cout << "creating *.* child at " << getPath() << std::endl;
+#endif
                     TreeNode *child=new TreeNode("*.*",this);
                     child->combine(im);
                     addChild(child);
