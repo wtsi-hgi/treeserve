@@ -86,7 +86,7 @@ class TreeNode {
             }
             ++s;
             oss << space << "{" << std::endl;
-            oss << space << "\"path\": \"" << getPath() << "\", "<< data.toJSON() << std::endl;
+	    oss << space << "\"name\": \"" << name << "\", " << "\"path\": \"" << getPath() << "\", " << data.toJSON() << std::endl;
             --d;
             if ( d > 0 && (!children.empty()) ) {
                 oss << space << ", \"children\": [" << std::endl;
