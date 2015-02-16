@@ -115,7 +115,7 @@ static void handle_sum_call(struct ns_connection *nc, struct http_message *hm) {
     std::string result=tree->toJSON(std::string(path),d+1);
 
     /* Send headers */
-    ns_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    ns_printf(nc, "%s", "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nTransfer-Encoding: chunked\r\n\r\n");
     
     // send json
     ns_printf_http_chunk(nc, "%s", result.c_str());
