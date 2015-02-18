@@ -136,7 +136,7 @@ class IndexedMap {
             std::ostringstream oss;
             std::string comma="";
             for (auto it : datumMap) {
-                oss << comma << "\"" << valueLookup[it.first]<< "\" : " << it.second->toString();
+                oss << comma << "\"" << valueLookup[it.first]<< "\": " << it.second->toString();
                 comma=", ";
             }
             return oss.str();
@@ -145,14 +145,14 @@ class IndexedMap {
         std::string toJSON(std::string item) {
             std::ostringstream oss;
             uint64_t index=keyLookup[item];
-            oss << "\"" << item << "\" : " << datumMap.at(index)->toString();
+            oss << "\"" << item << "\": " << datumMap.at(index)->toString();
             return oss.str();
         }
         
         std::string getIndex() {
             std::ostringstream oss;
             for (auto it : keyLookup) {
-                oss << it.first << " : " << it.second << std::endl;
+                oss << it.first << ": " << it.second << std::endl;
             }
             return oss.str();
         }

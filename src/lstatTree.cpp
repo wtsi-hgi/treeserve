@@ -232,28 +232,29 @@ int main(int argc, char **argv) {
 
         // size related
         addAttribute(im,"size",size);
-        addAttribute(im,"size_",size,owner);
-        addAttribute(im,"size_",size,grp,owner);
+        addAttribute(im,"size_by_uid_",size,owner);
+        addAttribute(im,"size_by_gid_",size,grp);
+        addAttribute(im,"size_by_gid_uid_",size,grp,owner);
         
         // atime related
         double atime_cost=cost_per_tib_year*tib*atime_years;
         addAttribute(im,"atime_cost",atime_cost);
-        addAttribute(im,"atime_cost_by uid_",atime_cost,owner);
-        addAttribute(im,"atime_cost_by gid_",atime_cost,grp);
+        addAttribute(im,"atime_cost_by_uid_",atime_cost,owner);
+        addAttribute(im,"atime_cost_by_gid_",atime_cost,grp);
         addAttribute(im,"atime_cost_by_gid_uid_",atime_cost,grp,owner);
 
         // mtime related
         double mtime_cost=cost_per_tib_year*tib*mtime_years;
         addAttribute(im,"mtime_cost",atime_cost);
-        addAttribute(im,"mtime_cost_by uid_",atime_cost,owner);
-        addAttribute(im,"mtime_cost_by gid_",atime_cost,grp);
+        addAttribute(im,"mtime_cost_by_uid_",atime_cost,owner);
+        addAttribute(im,"mtime_cost_by_gid_",atime_cost,grp);
         addAttribute(im,"mtime_cost_by_gid_uid_",atime_cost,grp,owner);
 
         // ctime related
         double ctime_cost=cost_per_tib_year*tib*ctime_years;
         addAttribute(im,"ctime_cost",ctime_cost);
-        addAttribute(im,"ctime_cost_by uid_",ctime_cost,owner);
-        addAttribute(im,"ctime_cost_by gid_",ctime_cost,grp);
+        addAttribute(im,"ctime_cost_by_uid_",ctime_cost,owner);
+        addAttribute(im,"ctime_cost_by_gid_",ctime_cost,grp);
         addAttribute(im,"ctime_cost_by_gid_uid_",ctime_cost,grp,owner);
 
         // TODO : file suffix related (bams, vcfs etc)
