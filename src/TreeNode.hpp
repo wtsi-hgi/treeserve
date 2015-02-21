@@ -119,6 +119,7 @@ class TreeNode {
                 IndexedMap im(data);
                 // loop over children and subtract all their maps from it
                 for (auto it : children) {
+		    it.second->finalize();
                     im.subtract(it.second->data);
                 }
                 // create the *.* child if the resultant map is not empty
