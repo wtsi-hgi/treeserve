@@ -89,7 +89,7 @@ class TreeNode {
 	    oss << space << "\"name\": \"" << name << "\", " << "\"path\": \"" << getPath() << "\", " << data.toJSON() << std::endl;
             --d;
             if ( d > 0 && (!children.empty()) ) {
-                oss << space << ", \"children\": [" << std::endl;
+                oss << space << ", \"child_dirs\": [" << std::endl;
                 bool sep=false;
                 std::unordered_map< std::string, TreeNode* >::iterator it;
                 for (it=children.begin(); it != children.end(); it++) {
