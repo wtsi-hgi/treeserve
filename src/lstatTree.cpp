@@ -271,7 +271,7 @@ int main(int argc, char **argv) {
             tree->addNode(path,im);
         } 
     }
-    if ( (in.rdstate() & std::ifstream::failbit) != 0) {
+    if ( !in.eof() && in.fail() ) {
       std::cerr << "failed reading input stream: " << strerror(errno) << std::endl;
       return 1;
     }
