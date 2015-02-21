@@ -73,7 +73,9 @@ class Tree {
         // i.e. size of files within the directory itself. this will be calculated by
         // summing the sizes of all children and subtracting from the size of the node
         void finalize() {
-            root->finalize();
+	    if (root != NULL) {
+	      root->finalize();
+	    }
         }
         
         std::string toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {

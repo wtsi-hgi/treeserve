@@ -271,8 +271,12 @@ int main(int argc, char **argv) {
             tree->addNode(path,im);
         } 
     }
+    if ( (in.rdstate() & std::ifstream::failbit) != 0) {
+      std::cerr << "failed reading input stream: " << strerror(errno) << std::endl;
+      return 1;
+    }
     tree->finalize();
-
+    
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
 	std::cout << "in debug section, printing out tree and exiting" << std::endl;
