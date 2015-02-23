@@ -103,25 +103,26 @@ class TreeNode {
         // don't have to call this server side - it might be better to let
         // the client side work it all out purely from the JSON
         void finalize() {
-            // only finalize if the node has children
-            if (!children.empty()) {
-                // create an clone of the current indexed map
-                IndexedMap im(data);
-                // loop over children and subtract all their maps from it
-                for (auto it : children) {
-		    it.second->finalize();
-                    im.subtract(it.second->data);
-                }
-                // create the *.* child if the resultant map is not empty
-                if (!im.empty()) {
+	  // create an clone of the current indexed map
+	  IndexedMap im(data);
+	  
+	  if (!children.empty()) {
+	    // loop over children and subtract all their maps from it
+	    for (auto it : children) {
+	      it.second->finalize();
+	      im.subtract(it.second->data);
+	    }
+	  }
+
+	  if (! im.empty() ) {
 #ifndef NDEBUG
-					std::cout << "creating *.* child at " << getPath() << std::endl;
+	    std::cout << "creating *.* child at " << getPath() << std::endl;
 #endif
-                    TreeNode *child=new TreeNode("*.*",this);
-                    child->combine(im);
-                    addChild(child);
-                }
-            }
+	    TreeNode *child = new TreeNode("*.*", this);
+	    child->combine(im);
+	    addChild(child);
+	  } 
+	  
         }
     
     private:
