@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
     std::ifstream file(argv[2], std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> gz;
-    gz.push(boost::iostreams::gzip_decompressor());
+    gz.push(boost::iostreams::gzip_decompressor(15,256*1024*1024)); // set buffer to 16M, first parameter is default 'window bits'
     gz.push(file);
     std::istream in(&gz);
 
@@ -230,6 +230,12 @@ int main(int argc, char **argv) {
 
         // add atributes to the im...
 
+        // inode counts
+        addAttribute(im,"count",static_cast<uint64_t>(1));
+        addAttribute(im,"count_by_uid_",static_cast<uint64_t>(1),owner);
+        addAttribute(im,"count_by_gid_",static_cast<uint64_t>(1),grp);
+        addAttribute(im,"count_by_gid_uid_",static_cast<uint64_t>(1),grp,owner);
+
         // size related
         addAttribute(im,"size",size);
         addAttribute(im,"size_by_uid_",size,owner);
@@ -245,10 +251,10 @@ int main(int argc, char **argv) {
 
         // mtime related
         double mtime_cost=cost_per_tib_year*tib*mtime_years;
-        addAttribute(im,"mtime_cost",atime_cost);
-        addAttribute(im,"mtime_cost_by_uid_",atime_cost,owner);
-        addAttribute(im,"mtime_cost_by_gid_",atime_cost,grp);
-        addAttribute(im,"mtime_cost_by_gid_uid_",atime_cost,grp,owner);
+        addAttribute(im,"mtime_cost",mtime_cost);
+        addAttribute(im,"mtime_cost_by_uid_",mtime_cost,owner);
+        addAttribute(im,"mtime_cost_by_gid_",mtime_cost,grp);
+        addAttribute(im,"mtime_cost_by_gid_uid_",mtime_cost,grp,owner);
 
         // ctime related
         double ctime_cost=cost_per_tib_year*tib*ctime_years;
