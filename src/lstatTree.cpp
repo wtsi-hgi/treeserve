@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
 	std::cout << "in debug section, printing out tree and exiting" << std::endl;
-    std::cout << tree->toJSON();
+	std::cout << std::setw(2) << tree->toJSON() << std::endl;
     // tidy up and stop - want to bail out here to gperf the tree construction
     // top optimize it and to make sure it passes valgrind without issue
     delete tree;
