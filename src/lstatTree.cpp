@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
         // add atributes to the im...
 
         // inode counts
-        addAttribute(im,"count",size);
+        addAttribute(im,"count",static_cast<uint64_t>(1));
         addAttribute(im,"count_by_uid_",static_cast<uint64_t>(1),owner);
         addAttribute(im,"count_by_gid_",static_cast<uint64_t>(1),grp);
         addAttribute(im,"count_by_gid_uid_",static_cast<uint64_t>(1),grp,owner);
