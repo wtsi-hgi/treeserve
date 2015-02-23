@@ -13,7 +13,7 @@ bin/testHttpd: src/testHttpd.o
 	g++ -o bin/testHttpd src/testHttpd.o $(LIBS)
 
 src/lstatTree.o : src/lstatTree.cpp src/TreeNode.hpp src/Tree.hpp
-	g++ -c $(CFLAGS) -o src/lstatTree.o src/lstatTree.cpp
+	g++ -c $(CFLAGS) -Ijson/src -o src/lstatTree.o src/lstatTree.cpp
 
 src/base64.o : src/base64.cpp src/base64.h
 	g++ -c $(CFLAGS) -o src/base64.o src/base64.cpp
