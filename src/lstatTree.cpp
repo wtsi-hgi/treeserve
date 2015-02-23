@@ -112,13 +112,13 @@ static void handle_sum_call(struct ns_connection *nc, struct http_message *hm) {
     std::cout << "path=" << path << ", depth=" << d << std::endl;
     
     // get JSON
-    std::string result=tree->toJSON(std::string(path),d+1);
+    json result = tree->toJSON(std::string(path), d+1);
 
     /* Send headers */
     ns_printf(nc, "%s", "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nTransfer-Encoding: chunked\r\n\r\n");
     
-    // send json
-    ns_printf_http_chunk(nc, "%s", result.c_str());
+    // send json -- pretty printed with 2 spaces per indent level
+    ns_printf_http_chunk(nc, "%s", result.dump(2).c_str()); 
     ns_send_http_chunk(nc, "", 0);  /* Send empty chunk, the end of response */
 }
 

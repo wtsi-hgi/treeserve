@@ -8,9 +8,6 @@
 
 #include "TreeNode.hpp"
 
-#include "json.hpp"
-using json = nlohmann::json;
-
 class Tree {
     
     public :
@@ -81,23 +78,22 @@ class Tree {
 	    }
         }
         
-        std::string toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
+        json toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
 	    json j;
             if (d==0) d=1;
             TreeNode *tmp=getNodeAt(path);
 	    if (tmp == NULL) {
 	      j =  json::object();
 	    } else {
-	      j = json::parse(tmp->toJSON(d,0));
+	      j = tmp->toJSON(d,0);
 	    }
-	    // pretty print json with 2 spaces per indent level
-	    return j.dump(2);
+	    return j;
         }
-        std::string toJSON(uint64_t d) {
+        json toJSON(uint64_t d) {
             if (d==0) d=1;
             return root->toJSON(d,0);
         }
-        std::string toJSON() {
+        json toJSON() {
             return root->toJSON(std::numeric_limits<uint64_t>::max(),0);
         }    
     private:

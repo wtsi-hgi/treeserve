@@ -14,6 +14,10 @@
 #include "IndexedMap.hpp"
 #include "Datum.hpp"
 
+// nlohmann's json source library
+#include "json.hpp"
+using json = nlohmann::json;
+
 class TreeNode {
 
     public :
@@ -78,7 +82,7 @@ class TreeNode {
             return tmp;
         }
         
-        std::string toJSON(uint64_t d, uint64_t s=0) {
+        json toJSON(uint64_t d, uint64_t s=0) {
             std::stringstream oss;
             std::string space="";
             for (int i=0; i<s; i++) {
@@ -103,7 +107,7 @@ class TreeNode {
                 oss << space << "]" << std::endl;
             }
             oss << space << "}" << std::endl;
-            return oss.str();       
+            return json::parse(oss.str());
         }
 
         // adds a *.* to the children of a node
