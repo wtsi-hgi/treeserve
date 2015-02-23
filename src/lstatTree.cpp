@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
     // (bzip2 compresses things a bit smaller but is much slower to decompress)
     std::ifstream file(argv[2], std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> gz;
-    gz.push(boost::iostreams::gzip_decompressor(15,16*1024*1024)); // set buffer to 16M, first parameter is default 'window bits'
+    gz.push(boost::iostreams::gzip_decompressor(15,256*1024*1024)); // set buffer to 16M, first parameter is default 'window bits'
     gz.push(file);
     std::istream in(&gz);
 
