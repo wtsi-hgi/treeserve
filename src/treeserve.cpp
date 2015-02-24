@@ -30,24 +30,24 @@ int main(int argc, char **argv) {
 
     // pint help and quit if passed
     if (vm.count("help") || argc < 2) {
-        std::cout << desc << std::endl;
-        return 0;
+        std::cerr << desc << std::endl;
+        return 1;
     }
 
     // make sure we have an lstat or a serial
     if (!(!vm.count("lstat") != !vm.count("serial"))) { // this is an exclusive-or
-        std::cout << "you must specify an lstat file OR a serial file" << std::endl;
+        std::cerr << "you must specify an lstat file OR a serial file" << std::endl;
         return 1;
     }
     
     // check option consistency for initializing from an lstat file
     if (vm.count("lstat")) {
         if (vm.count("serial")) {
-            std::cout << "you must either specify an lstat file or a serial file, not both" << std::endl;
+            std::cerr << "you must either specify an lstat file or a serial file, not both" << std::endl;
             return 1;
         } else {
             if (!vm.count("dump")) {
-                std::cout << "you need to specify a dump file if using an lstat file" << std::endl;
+                std::cerr << "you need to specify a dump file if using an lstat file" << std::endl;
                 return 1;
             }
             // if here, create a tree from the lstat file and then dump it to a file when built
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     // check option consistency if initializing from a previously serialized tree
     if (vm.count("serial")) {
         if (vm.count("dump")) {
-            std::cout << "do not specify a dump file if using a serial file" << std::endl;
+            std::cerr << "do not specify a dump file if using a serial file" << std::endl;
             return 1;
         }
         // if here, build a tree from the supplied serial file
