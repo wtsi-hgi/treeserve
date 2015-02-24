@@ -10,6 +10,8 @@
 #include <utility>
 #include <iostream>
 
+#include <boost/algorithm/string.hpp>
+
 #include "Datum.hpp"
 
 // nlohmann's json source library
@@ -139,8 +141,15 @@ class IndexedMap {
         json toJSON() {
 	    json j;
             for (auto it : datumMap) {
-	      std::string key = valueLookup[it.first];
-	      j[key] = it.second->toString();
+	        std::string key = valueLookup[it.first];
+		std::vector<std::string> splitKey;
+		boost::split(splitKey, key, boost::is_any_of("$"));
+		std::vector<std::string>::iterator keyParts=splitKey.begin();
+		std::string dataType = *keyParts++;
+		std::string group = *keyParts++;
+		std::string user = *keyParts++;
+		assert(keyParts == splitKey.end());
+		j[dataType][group][user] = it.second->toString();
             }
             return j;
         }
