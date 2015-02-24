@@ -42,9 +42,9 @@ class TreeBuilder {
             delete tree;
         }
 
+        Tree* from_lstat(std::vector<std::string>& lstat_file, std::string& dump_file, uin64_t gzip_buf_size=0);
 
-        Tree *from_lstat(std::string &lstat_file, std::string &dump_file);
-        Tree *from_serial(std::string &serial_file);
+        Tree* from_serial(std::string &serial_file);
 
     private:
 
@@ -53,14 +53,14 @@ class TreeBuilder {
         std::string gid_lookup(uint64_t gid);
 
         template<typename T>
-        void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str, std::string property) {
+        void addAttribute(IndexedMap& im, std::string& attr_name, T attr_val, std::string& gid_str, std::string& uid_str, std::string& property) {
             std::ostringstream oss;
             oss << attr_name << "$" << gid_str << "$" << uid_str << "$" << property;
             addAttribute(im, oss.str(),attr_val);
         }
 
         template<typename T>
-        void addAttributes(IndexedMap &im, std::string attr_name, T attr_val, std::string grp, std::string usr, std::string property) {
+        void addAttributes(IndexedMap& im, std::string attr_name, T attr_val, std::string& grp, std::string& usr, std::string& property) {
             addAttribute(im, attr_name, attr_val, "*", "*", property);
             addAttribute(im, attr_name, attr_val, grp, "*", property);
             addAttribute(im, attr_name, attr_val, "*", usr, property);
@@ -68,7 +68,7 @@ class TreeBuilder {
         }
 
         // The tree being built
-        Tree *tree;
+        Tree* tree;
 
         // maps for cacheing uid and gid lookups
         std::unordered_map<uint64_t, std::string> uid_map;
