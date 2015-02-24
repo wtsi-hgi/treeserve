@@ -35,20 +35,20 @@ class IndexedMap {
     public :
         // default constructor - just creates an empty map ready to fill
         IndexedMap() : datumMap() {}
-		~IndexedMap() {
+                ~IndexedMap() {
             std::unordered_map<uint64_t, Datum*>::iterator it;
-			for (it=datumMap.begin(); it != datumMap.end(); it++) {
-				delete it->second;
-			}
-			datumMap.clear();
-		}
+                        for (it=datumMap.begin(); it != datumMap.end(); it++) {
+                                delete it->second;
+                        }
+                        datumMap.clear();
+                }
 
-		// copy constructor
-		IndexedMap(const IndexedMap& im) : datumMap() {
-			for (auto it : im.datumMap) {
-				datumMap.insert(std::make_pair(it.first, new Datum(*(it.second))));
-			}
-		}
+                // copy constructor
+                IndexedMap(const IndexedMap& im) : datumMap() {
+                        for (auto it : im.datumMap) {
+                                datumMap.insert(std::make_pair(it.first, new Datum(*(it.second))));
+                        }
+                }
 
         template <typename T>
         void addItem(std::string key, T val) {
@@ -115,10 +115,10 @@ class IndexedMap {
         }
 
         void subtract(IndexedMap& other) {
-			// remove vector
-			std::vector<std::unordered_map<uint64_t, Datum*>::iterator> remove;
+                        // remove vector
+                        std::vector<std::unordered_map<uint64_t, Datum*>::iterator> remove;
             // loop over datums in this map
- 			std::unordered_map<uint64_t, Datum*>::iterator it;
+                         std::unordered_map<uint64_t, Datum*>::iterator it;
             for (it=datumMap.begin(); it != datumMap.end(); it++) {
                 // get the index and datum
                 uint64_t index=it->first;
@@ -127,37 +127,39 @@ class IndexedMap {
                 std::unordered_map<uint64_t, Datum*>::iterator got = other.datumMap.find(index);
                 if (got != other.datumMap.end()) {
                     it->second->sub(*(got->second));
-					if (it->second->isZero()) {
-						remove.push_back(it);
-					}
+                                        if (it->second->isZero()) {
+                                                remove.push_back(it);
+                                        }
                 }
             }
-			for (auto it : remove) {
-				delete it->second;
-				datumMap.erase(it);
-			}
+                        for (auto it : remove) {
+                                delete it->second;
+                                datumMap.erase(it);
+                        }
         }
 
         json toJSON() {
-	    json j;
+            json j;
             for (auto it : datumMap) {
-	        std::string key = valueLookup[it.first];
-		std::vector<std::string> splitKey;
-		boost::split(splitKey, key, boost::is_any_of("$"));
-		std::vector<std::string>::iterator keyParts=splitKey.begin();
-		std::string dataType = *keyParts++;
-		std::string group = *keyParts++;
-		std::string user = *keyParts++;
-		assert(keyParts == splitKey.end());
-		j[dataType][group][user] = it.second->toString();
+                std::string key = valueLookup[it.first];
+                std::vector<std::string> splitKey;
+                boost::split(splitKey, key, boost::is_any_of("$"));
+                std::vector<std::string>::iterator keyParts=splitKey.begin();
+                std::string dataType = *keyParts++;
+                std::string group = *keyParts++;
+                std::string user = *keyParts++;
+                std::string property = *keyParts++;
+                //std::cerr << "toJSON:" << key << " ==> " << dataType << "," << group << "," << user << "," << property << "!" << std::endl;
+                assert(keyParts == splitKey.end());
+                j[dataType][group][user][property] = it.second->toString();
             }
             return j;
         }
         
         json toJSON(std::string item) {
-	    json j;
-	    uint64_t index=keyLookup[item];
-	    j[item] = datumMap.at(index)->toString();
+            json j;
+            uint64_t index=keyLookup[item];
+            j[item] = datumMap.at(index)->toString();
             return j;
         }
         
@@ -170,7 +172,7 @@ class IndexedMap {
         }
         
         json keysJSON() {
-	    json j;
+            json j;
             j["attributes"] = keyLookup;
             return j;
         }        

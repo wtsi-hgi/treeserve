@@ -26,12 +26,12 @@ class TreeNode {
                 depth=0;
             }
         }
-		~TreeNode() {
-			std::unordered_map<std::string,TreeNode*>::iterator it;
-			for (it=children.begin(); it != children.end(); it++) {
-				delete it->second;
-			}
-		}
+                ~TreeNode() {
+                        std::unordered_map<std::string,TreeNode*>::iterator it;
+                        for (it=children.begin(); it != children.end(); it++) {
+                                delete it->second;
+                        }
+                }
 
         std::string getName() {
             return name;
@@ -79,21 +79,21 @@ class TreeNode {
         }
         
         json toJSON(uint64_t d, uint64_t s=0) {
-	  json j;
+          json j;
 
-	  j["name"] = name;
-	  j["path"] = getPath();
-	  j["data"] = data.toJSON();
-	  
-	  if ( d > 0 && (!children.empty()) ) {
-	    json child_dirs;
-	    std::unordered_map< std::string, TreeNode* >::iterator it;
-	    for (it=children.begin(); it != children.end(); it++) {
-	      child_dirs.push_back(((*it).second)->toJSON(d-1,s));
-	    }
-	    j["child_dirs"] = child_dirs;
-	  }
-	  return j;
+          j["name"] = name;
+          j["path"] = getPath();
+          j["data"] = data.toJSON();
+          
+          if ( d > 0 && (!children.empty()) ) {
+            json child_dirs;
+            std::unordered_map< std::string, TreeNode* >::iterator it;
+            for (it=children.begin(); it != children.end(); it++) {
+              child_dirs.push_back(((*it).second)->toJSON(d-1,s));
+            }
+            j["child_dirs"] = child_dirs;
+          }
+          return j;
         }
   
         // adds a *.* to the children of a node
@@ -103,26 +103,26 @@ class TreeNode {
         // don't have to call this server side - it might be better to let
         // the client side work it all out purely from the JSON
         void finalize() {
-	  // create an clone of the current indexed map
-	  IndexedMap im(data);
-	  
-	  if (!children.empty()) {
-	    // loop over children and subtract all their maps from it
-	    for (auto it : children) {
-	      it.second->finalize();
-	      im.subtract(it.second->data);
-	    }
-	  }
+          // create an clone of the current indexed map
+          IndexedMap im(data);
+          
+          if (!children.empty()) {
+            // loop over children and subtract all their maps from it
+            for (auto it : children) {
+              it.second->finalize();
+              im.subtract(it.second->data);
+            }
+          }
 
-	  if (! im.empty() ) {
+          if (! im.empty() ) {
 #ifndef NDEBUG
-	    std::cout << "creating *.* child at " << getPath() << std::endl;
+            std::cout << "creating *.* child at " << getPath() << std::endl;
 #endif
-	    TreeNode *child = new TreeNode("*.*", this);
-	    child->combine(im);
-	    addChild(child);
-	  } 
-	  
+            TreeNode *child = new TreeNode("*.*", this);
+            child->combine(im);
+            addChild(child);
+          } 
+          
         }
     
     private:

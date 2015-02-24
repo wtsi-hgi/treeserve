@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     // print out the static indexing map
     std::cout << "indexing map : " << std::endl;
     std::cout << im1->getIndex() << std::endl;
-	delete im1;
-	delete im2;
+        delete im1;
+        delete im2;
     return 0;
 }
