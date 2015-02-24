@@ -65,8 +65,6 @@ int main(int argc, char **argv) {
         std::cout << "will de-serialize a previously serialized tree from " << serial_file << std::endl;
     }
 
-
-
     // start the http server if 'port' option is set
     if (vm.count("port")) {
         // start server listening on 'port'
