@@ -78,34 +78,24 @@ class TreeNode {
             return tmp;
         }
         
-        std::string toJSON(uint64_t d, uint64_t s=0) {
-            std::stringstream oss;
-            std::string space="";
-            for (int i=0; i<s; i++) {
-                space+="  ";
-            }
-            ++s;
-            oss << space << "{" << std::endl;
-	    oss << space << "\"name\": \"" << name << "\", " << "\"path\": \"" << getPath() << "\", " << data.toJSON() << std::endl;
-            --d;
-            if ( d > 0 && (!children.empty()) ) {
-                oss << space << ", \"child_dirs\": [" << std::endl;
-                bool sep=false;
-                std::unordered_map< std::string, TreeNode* >::iterator it;
-                for (it=children.begin(); it != children.end(); it++) {
-                    if (sep) {
-                        oss << space << "," << std::endl;;
-                        sep=true;
-                    }
-                    oss << ((*it).second)->toJSON(d,s);
-                    sep=",";
-                }
-                oss << space << "]" << std::endl;
-            }
-            oss << space << "}" << std::endl;
-            return oss.str();       
-        }
+        json toJSON(uint64_t d, uint64_t s=0) {
+	  json j;
 
+	  j["name"] = name;
+	  j["path"] = getPath();
+	  j["data"] = data.toJSON();
+	  
+	  if ( d > 0 && (!children.empty()) ) {
+	    json child_dirs;
+	    std::unordered_map< std::string, TreeNode* >::iterator it;
+	    for (it=children.begin(); it != children.end(); it++) {
+	      child_dirs.push_back(((*it).second)->toJSON(d-1,s));
+	    }
+	    j["child_dirs"] = child_dirs;
+	  }
+	  return j;
+        }
+  
         // adds a *.* to the children of a node
         // this calculates an indexed map which is the combination of
         // all the child indexed maps, and gives the result of subtracting

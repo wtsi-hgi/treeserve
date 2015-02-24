@@ -78,20 +78,22 @@ class Tree {
 	    }
         }
         
-        std::string toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
+        json toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
+	    json j;
             if (d==0) d=1;
             TreeNode *tmp=getNodeAt(path);
 	    if (tmp == NULL) {
-	      return "{}";
+	      j =  json::object();
 	    } else {
-	      return tmp->toJSON(d,0);
+	      j = tmp->toJSON(d,0);
 	    }
+	    return j;
         }
-        std::string toJSON(uint64_t d) {
+        json toJSON(uint64_t d) {
             if (d==0) d=1;
             return root->toJSON(d,0);
         }
-        std::string toJSON() {
+        json toJSON() {
             return root->toJSON(std::numeric_limits<uint64_t>::max(),0);
         }    
     private:

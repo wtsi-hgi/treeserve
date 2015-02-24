@@ -10,7 +10,13 @@
 #include <utility>
 #include <iostream>
 
+#include <boost/algorithm/string.hpp>
+
 #include "Datum.hpp"
+
+// nlohmann's json source library
+#include "json.hpp"
+using json = nlohmann::json;
 
 // indexed map
 // since there will be a lot of repeated strings in maps throughout the
@@ -132,21 +138,27 @@ class IndexedMap {
 			}
         }
 
-        std::string toJSON() {
-            std::ostringstream oss;
-            std::string comma="";
+        json toJSON() {
+	    json j;
             for (auto it : datumMap) {
-                oss << comma << "\"" << valueLookup[it.first]<< "\": " << it.second->toString();
-                comma=", ";
+	        std::string key = valueLookup[it.first];
+		std::vector<std::string> splitKey;
+		boost::split(splitKey, key, boost::is_any_of("$"));
+		std::vector<std::string>::iterator keyParts=splitKey.begin();
+		std::string dataType = *keyParts++;
+		std::string group = *keyParts++;
+		std::string user = *keyParts++;
+		assert(keyParts == splitKey.end());
+		j[dataType][group][user] = it.second->toString();
             }
-            return oss.str();
+            return j;
         }
         
-        std::string toJSON(std::string item) {
-            std::ostringstream oss;
-            uint64_t index=keyLookup[item];
-            oss << "\"" << item << "\": " << datumMap.at(index)->toString();
-            return oss.str();
+        json toJSON(std::string item) {
+	    json j;
+	    uint64_t index=keyLookup[item];
+	    j[item] = datumMap.at(index)->toString();
+            return j;
         }
         
         std::string getIndex() {
@@ -157,16 +169,10 @@ class IndexedMap {
             return oss.str();
         }
         
-        std::string keysJSON() {
-            std::ostringstream oss;
-            oss << "{ \"attributes\": [";
-            std::string comma="";
-            for (auto it : keyLookup) {
-                oss << comma << "\"" << it.first << "\"";
-                comma=",";
-            }
-            oss << "]}";
-            return oss.str();
+        json keysJSON() {
+	    json j;
+            j["attributes"] = keyLookup;
+            return j;
         }        
 
         bool empty() {

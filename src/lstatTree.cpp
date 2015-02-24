@@ -112,13 +112,13 @@ static void handle_sum_call(struct ns_connection *nc, struct http_message *hm) {
     std::cout << "path=" << path << ", depth=" << d << std::endl;
     
     // get JSON
-    std::string result=tree->toJSON(std::string(path),d+1);
+    json result = tree->toJSON(std::string(path), d+1);
 
     /* Send headers */
     ns_printf(nc, "%s", "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nTransfer-Encoding: chunked\r\n\r\n");
     
-    // send json
-    ns_printf_http_chunk(nc, "%s", result.c_str());
+    // send json -- pretty printed with 2 spaces per indent level
+    ns_printf_http_chunk(nc, "%s", result.dump(2).c_str()); 
     ns_send_http_chunk(nc, "", 0);  /* Send empty chunk, the end of response */
 }
 
@@ -144,17 +144,18 @@ void addAttribute(IndexedMap &im, std::string attr_name, T attr_val) {
 }
 
 template<typename T>
-void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string uid_str) {
+void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str) {
     std::ostringstream oss;
-    oss << attr_name << uid_str;
+    oss << attr_name << "$" << gid_str << "$" << uid_str;
     im.addItem(oss.str(),attr_val);
 }
 
 template<typename T>
-void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str) {
-    std::ostringstream oss;
-    oss << attr_name << gid_str << "_" << uid_str;
-    im.addItem(oss.str(),attr_val);
+void addAttributes(IndexedMap &im, std::string attr_name, T attr_val, std::string grp, std::string usr) {
+    addAttribute(im, attr_name, attr_val, "*", "*");
+    addAttribute(im, attr_name, attr_val, "*", usr);
+    addAttribute(im, attr_name, attr_val, grp, "*");
+    addAttribute(im, attr_name, attr_val, grp, usr);
 }
 
 int main(int argc, char **argv) {
@@ -231,37 +232,22 @@ int main(int argc, char **argv) {
         // add atributes to the im...
 
         // inode counts
-        addAttribute(im,"count",static_cast<uint64_t>(1));
-        addAttribute(im,"count_by_uid_",static_cast<uint64_t>(1),owner);
-        addAttribute(im,"count_by_gid_",static_cast<uint64_t>(1),grp);
-        addAttribute(im,"count_by_gid_uid_",static_cast<uint64_t>(1),grp,owner);
+        addAttributes(im, "count", static_cast<uint64_t>(1), grp, owner);
 
         // size related
-        addAttribute(im,"size",size);
-        addAttribute(im,"size_by_uid_",size,owner);
-        addAttribute(im,"size_by_gid_",size,grp);
-        addAttribute(im,"size_by_gid_uid_",size,grp,owner);
+        addAttributes(im, "size", size, grp, owner);
         
         // atime related
         double atime_cost=cost_per_tib_year*tib*atime_years;
-        addAttribute(im,"atime_cost",atime_cost);
-        addAttribute(im,"atime_cost_by_uid_",atime_cost,owner);
-        addAttribute(im,"atime_cost_by_gid_",atime_cost,grp);
-        addAttribute(im,"atime_cost_by_gid_uid_",atime_cost,grp,owner);
+        addAttributes(im, "atime", atime_cost, grp, owner);
 
         // mtime related
         double mtime_cost=cost_per_tib_year*tib*mtime_years;
-        addAttribute(im,"mtime_cost",mtime_cost);
-        addAttribute(im,"mtime_cost_by_uid_",mtime_cost,owner);
-        addAttribute(im,"mtime_cost_by_gid_",mtime_cost,grp);
-        addAttribute(im,"mtime_cost_by_gid_uid_",mtime_cost,grp,owner);
+        addAttributes(im, "mtime", mtime_cost, grp, owner);
 
         // ctime related
         double ctime_cost=cost_per_tib_year*tib*ctime_years;
-        addAttribute(im,"ctime_cost",ctime_cost);
-        addAttribute(im,"ctime_cost_by_uid_",ctime_cost,owner);
-        addAttribute(im,"ctime_cost_by_gid_",ctime_cost,grp);
-        addAttribute(im,"ctime_cost_by_gid_uid_",ctime_cost,grp,owner);
+        addAttributes(im, "ctime", ctime_cost, grp, owner);
 
         // TODO : file suffix related (bams, vcfs etc)
 
@@ -286,7 +272,7 @@ int main(int argc, char **argv) {
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
 	std::cout << "in debug section, printing out tree and exiting" << std::endl;
-    std::cout << tree->toJSON();
+	std::cout << std::setw(2) << tree->toJSON() << std::endl;
     // tidy up and stop - want to bail out here to gperf the tree construction
     // top optimize it and to make sure it passes valgrind without issue
     delete tree;

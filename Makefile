@@ -13,7 +13,7 @@ bin/testHttpd: src/testHttpd.o
 	g++ -o bin/testHttpd src/testHttpd.o $(LIBS)
 
 src/lstatTree.o : src/lstatTree.cpp src/TreeNode.hpp src/Tree.hpp
-	g++ -c $(CFLAGS) -o src/lstatTree.o src/lstatTree.cpp
+	g++ -c $(CFLAGS) -Ijson/src -o src/lstatTree.o src/lstatTree.cpp
 
 src/base64.o : src/base64.cpp src/base64.h
 	g++ -c $(CFLAGS) -o src/base64.o src/base64.cpp
@@ -25,7 +25,7 @@ src/fossa.o : src/fossa.c
 	g++ -c $(CFLAGS) -o src/fossa.o src/fossa.c
 
 src/IndexedMap.o : src/IndexedMap.hpp src/IndexedMap.cpp src/Datum.hpp
-	g++ -c $(CFLAGS) -o src/IndexedMap.o src/IndexedMap.cpp
+	g++ -c $(CFLAGS) -Ijson/src -o src/IndexedMap.o src/IndexedMap.cpp
 
 clean :
 	touch src/tmp.o
