@@ -23,6 +23,7 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 
 // 3rd party local headers
 
@@ -46,6 +47,18 @@ static struct ns_serve_http_opts s_http_server_opts;
 std::unordered_map<uint64_t, std::string> uid_map;
 std::unordered_map<uint64_t, std::string> gid_map;
 
+// map for defining "properties" by regex
+// TODO: load property definitions from a configuration file 
+// rather than hardcoding them
+static std::unordered_map<std::string, boost::regex> path_property_regexes {
+    {"cram", boost::regex (".*[.]cram$")},
+    {"bam", boost::regex (".*[.]bam$")},
+    {"index", boost::regex (".*[.](crai|bai|sai|fai|csi)$")},
+    {"compressed", boost::regex (".*[.](bzip2|gz|tgz|zip|xz|bgz|bcf)$")},
+    {"uncompressed", boost::regex (".*([.]sam|[.]fasta|[.]fastq|[.]fa|[.]fq|[.]vcf|[.]csv|[.]tsv|[.]txt|[.]text|README|[.]o|[.]e|[.]oe|[.]dat)$")},
+    {"checkpoint", boost::regex (".*jobstate[.]context$")},
+    {"temporary", boost::regex (".*(tmp|TMP|temp|TEMP).*")},
+};
 
 // convert a uid into it's text equivalent
 // retrieve from the map if it's there, otherwise do a syscall and cache it
@@ -144,18 +157,18 @@ void addAttribute(IndexedMap &im, std::string attr_name, T attr_val) {
 }
 
 template<typename T>
-void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str) {
+void addAttribute(IndexedMap &im, std::string attr_name, T attr_val, std::string gid_str, std::string uid_str, std::string property) {
     std::ostringstream oss;
-    oss << attr_name << "$" << gid_str << "$" << uid_str;
-    im.addItem(oss.str(),attr_val);
+    oss << attr_name << "$" << gid_str << "$" << uid_str << "$" << property;
+    addAttribute(im, oss.str(),attr_val);
 }
 
 template<typename T>
-void addAttributes(IndexedMap &im, std::string attr_name, T attr_val, std::string grp, std::string usr) {
-    addAttribute(im, attr_name, attr_val, "*", "*");
-    addAttribute(im, attr_name, attr_val, "*", usr);
-    addAttribute(im, attr_name, attr_val, grp, "*");
-    addAttribute(im, attr_name, attr_val, grp, usr);
+void addAttributes(IndexedMap &im, std::string attr_name, T attr_val, std::string grp, std::string usr, std::string property) {
+    addAttribute(im, attr_name, attr_val, "*", "*", property);
+    addAttribute(im, attr_name, attr_val, grp, "*", property);
+    addAttribute(im, attr_name, attr_val, "*", usr, property);
+    addAttribute(im, attr_name, attr_val, grp, usr, property);
 }
 
 int main(int argc, char **argv) {
@@ -229,30 +242,60 @@ int main(int argc, char **argv) {
         uint64_t ctime=boost::lexical_cast<uint64_t>(tokens[7]);
         double ctime_years=1.0*(now-ctime)/seconds_in_year;
 
-        // add atributes to the im...
-
-        // inode counts
-        addAttributes(im, "count", static_cast<uint64_t>(1), grp, owner);
-
-        // size related
-        addAttributes(im, "size", size, grp, owner);
-        
-        // atime related
-        double atime_cost=cost_per_tib_year*tib*atime_years;
-        addAttributes(im, "atime", atime_cost, grp, owner);
-
-        // mtime related
-        double mtime_cost=cost_per_tib_year*tib*mtime_years;
-        addAttributes(im, "mtime", mtime_cost, grp, owner);
-
-        // ctime related
-        double ctime_cost=cost_per_tib_year*tib*ctime_years;
-        addAttributes(im, "ctime", ctime_cost, grp, owner);
-
-        // TODO : file suffix related (bams, vcfs etc)
-
         // get the file type
         std::string file_type=tokens[8];
+
+        // create properties vector
+        std::vector<std::string> properties;
+
+        // check what regex-based properties (e.g. suffix match, compressed/uncompressed) apply
+        std::unordered_map<std::string, boost::regex>::iterator iter;
+        for (iter=path_property_regexes.begin(); iter != path_property_regexes.end(); iter++) {
+            if(regex_match(path, iter->second)) {
+                properties.push_back(iter->first);
+            }
+        }
+
+        // if no regex-based properties applied, assign to "other"
+        if (properties.size() < 1) {
+            properties.push_back("other");
+        }
+
+        // every entry has '*' property
+        properties.push_back("*");
+
+        // add property based on file type
+        if (file_type == "d") {
+          properties.push_back("directory");
+        } else if (file_type == "f") {
+          properties.push_back("file");
+        } else if (file_type == "l") {
+          properties.push_back("link");
+        } else {
+          properties.push_back("type_" + file_type);
+        }
+
+        for (std::vector<std::string>::iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+            std::string property = *iter;
+
+            // inode counts
+            addAttributes(im, "count", static_cast<uint64_t>(1), grp, owner, property);
+
+            // size related
+            addAttributes(im, "size", size, grp, owner, property);
+
+            // atime related
+            double atime_cost=cost_per_tib_year*tib*atime_years;
+            addAttributes(im, "atime", atime_cost, grp, owner, property);
+
+            // mtime related
+            double mtime_cost=cost_per_tib_year*tib*mtime_years;
+            addAttributes(im, "mtime", mtime_cost, grp, owner, property);
+
+            // ctime related
+            double ctime_cost=cost_per_tib_year*tib*ctime_years;
+            addAttributes(im, "ctime", ctime_cost, grp, owner, property);
+        }
 
         if (file_type == "d") {
             tree->addNode(path,im);
@@ -271,8 +314,8 @@ int main(int argc, char **argv) {
     
     std::cout << "Built tree in " << time(0)-now << " seconds" << std::endl;
 #ifndef NDEBUG
-	std::cout << "in debug section, printing out tree and exiting" << std::endl;
-	std::cout << std::setw(2) << tree->toJSON() << std::endl;
+        std::cout << "in debug section, printing out tree and exiting" << std::endl;
+        std::cout << std::setw(2) << tree->toJSON() << std::endl;
     // tidy up and stop - want to bail out here to gperf the tree construction
     // top optimize it and to make sure it passes valgrind without issue
     delete tree;
