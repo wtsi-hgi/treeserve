@@ -2,8 +2,12 @@
 #define __DATUM_HPP__
 
 #include <string>
+#include <fstream>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+//#include <boost/serialization/base_object.hpp>
 
 // Datum class
 // Holds a unit64_t (sizes in bytes) or a double (cost in pounds)  in a union
@@ -18,7 +22,10 @@ union {
 
 class Datum {
     public :
-    
+        friend class boost::serialization::access;
+
+        Datum() :  is_double(true){u.f=0;}
+
         Datum(uint64_t v) {
             u.i=v;
             is_double=false;
@@ -84,6 +91,16 @@ class Datum {
                 return boost::lexical_cast<std::string>(u.f);
             } else {
                 return boost::lexical_cast<std::string>(u.i);
+            }
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            ar & is_double;
+            if (is_double) {
+                ar & u.f;
+            } else {
+                ar & u.i;
             }
         }
 
