@@ -152,19 +152,19 @@ static void ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
 }
 
 template<typename T>
-void addAttribute(IndexedMap &im, const std::string& attr_name, T attr_val) {
+inline void addAttribute(IndexedMap &im, const std::string& attr_name, T attr_val) {
     im.addItem(attr_name,attr_val);
 }
 
 template<typename T>
-void addAttribute(IndexedMap &im, const std::string& attr_name, T attr_val, const std::string& gid_str, const std::string& uid_str, const std::string& property) {
+inline void addAttribute(IndexedMap &im, const std::string& attr_name, T attr_val, const std::string& gid_str, const std::string& uid_str, const std::string& property) {
     std::ostringstream oss;
     oss << attr_name << "$" << gid_str << "$" << uid_str << "$" << property;
     addAttribute(im, oss.str(),attr_val);
 }
 
 template<typename T>
-void addAttributes(IndexedMap &im,const  std::string& attr_name, T attr_val, const std::string& grp, const std::string& usr, const std::string& property) {
+inline void addAttributes(IndexedMap &im,const  std::string& attr_name, T attr_val, const std::string& grp, const std::string& usr, const std::string& property) {
     addAttribute(im, attr_name, attr_val, "*", "*", property);
     addAttribute(im, attr_name, attr_val, grp, "*", property);
     addAttribute(im, attr_name, attr_val, "*", usr, property);
