@@ -1,15 +1,6 @@
-#ifndef __TREE_BUILDER_HPP__
-#define __TREE_BUILDER_HPP__
-
-// standard library headers
-#include <iostream>
-#include <string>
-#include <cstdlib>
-#include <fstream>
-#include <cstring>
-#include <cerrno>
-#include <sstream>
-#include <unordered_map>
+// Copyright (C)  2015, Wellcome Trust Sanger Institute
+#ifndef SRC_TREEBUILDER_HPP_
+#define SRC_TREEBUILDER_HPP_
 
 // linux syscalls
 #include <unistd.h>
@@ -23,6 +14,13 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
+
+// standard library headers
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <regex>
 
 #include "Tree.hpp"
 #include "IndexedMap.hpp"
@@ -31,48 +29,59 @@
 // from a previously serialised tree
 
 class TreeBuilder {
+ public:
+    TreeBuilder() {
+        tree = new Tree();
+    }
 
-    public:
+    ~TreeBuilder() {
+        delete tree;
+    }
 
-        TreeBuilder() {
-            tree=new Tree();
-        }
+    Tree* from_lstat(const std::vector<std::string>& lstat_file,
+                const std::string& dump_file);
 
-        ~TreeBuilder() {
-            delete tree;
-        }
+    Tree* from_serial(const std::string& serial_file);
 
-        Tree* from_lstat(std::vector<std::string>& lstat_file, std::string& dump_file, uin64_t gzip_buf_size=0);
+ private:
+    // methods for group and user lookups
+    std::string uid_lookup(uint64_t uid);
+    std::string gid_lookup(uint64_t gid);
 
-        Tree* from_serial(std::string &serial_file);
+    template<typename T>
+    inline void addAttribute(IndexedMap *im,
+                const std::string& attr_name, T attr_val) {
+       im->addItem(attr_name, attr_val);
+    }
 
-    private:
+    template<typename T>
+    void addAttribute(IndexedMap* im, const std::string& attr_name,
+                T attr_val, const std::string& gid_str,
+                const std::string& uid_str, const std::string& property) {
+        std::ostringstream oss;
+        oss << attr_name << "$" << gid_str << "$" << uid_str << "$" << property;
+        addAttribute(im, oss.str(), attr_val);
+    }
 
-        // methods for group and user lookups
-        std::string uid_lookup(uint64_t uid);
-        std::string gid_lookup(uint64_t gid);
+    template<typename T>
+    void addAttributes(IndexedMap* im, const std::string& attr_name,
+                T attr_val, const std::string& grp, const std::string& usr,
+                const std::string& property) {
+        addAttribute(im, attr_name, attr_val, "*", "*", property);
+        addAttribute(im, attr_name, attr_val, grp, "*", property);
+        addAttribute(im, attr_name, attr_val, "*", usr, property);
+        addAttribute(im, attr_name, attr_val, grp, usr, property);
+    }
 
-        template<typename T>
-        void addAttribute(IndexedMap& im, std::string& attr_name, T attr_val, std::string& gid_str, std::string& uid_str, std::string& property) {
-            std::ostringstream oss;
-            oss << attr_name << "$" << gid_str << "$" << uid_str << "$" << property;
-            addAttribute(im, oss.str(),attr_val);
-        }
+    // The tree being built
+    Tree* tree;
 
-        template<typename T>
-        void addAttributes(IndexedMap& im, std::string attr_name, T attr_val, std::string& grp, std::string& usr, std::string& property) {
-            addAttribute(im, attr_name, attr_val, "*", "*", property);
-            addAttribute(im, attr_name, attr_val, grp, "*", property);
-            addAttribute(im, attr_name, attr_val, "*", usr, property);
-            addAttribute(im, attr_name, attr_val, grp, usr, property);
-        }
+    // maps for cacheing uid and gid lookups
+    std::unordered_map<uint64_t, std::string> uid_map;
+    std::unordered_map<uint64_t, std::string> gid_map;
 
-        // The tree being built
-        Tree* tree;
-
-        // maps for cacheing uid and gid lookups
-        std::unordered_map<uint64_t, std::string> uid_map;
-        std::unordered_map<uint64_t, std::string> gid_map;
+    // regexes for path properties
+    static std::unordered_map<std::string, boost::regex> path_property_regexes;
 };
 
-#endif
+#endif  // SRC_TREEBUILDER_HPP_

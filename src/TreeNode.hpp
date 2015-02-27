@@ -37,7 +37,7 @@ class TreeNode {
             return name;
         }
         
-        void combine(IndexedMap &other_map) {
+        void combine(const IndexedMap &other_map) {
             data.combine(other_map);
         }    
 
@@ -96,41 +96,37 @@ class TreeNode {
           return j;
         }
   
-        // adds a *.* to the children of a node
-        // this calculates an indexed map which is the combination of
-        // all the child indexed maps, and gives the result of subtracting
-        // the child combination from the parents
-        // don't have to call this server side - it might be better to let
-        // the client side work it all out purely from the JSON
-        void finalize() {
-          // create an clone of the current indexed map
-          IndexedMap im(data);
-          
-          if (!children.empty()) {
-            // loop over children and subtract all their maps from it
-            for (auto it : children) {
-              it.second->finalize();
-              im.subtract(it.second->data);
-            }
-          }
+    // adds a *.* to the children of a node
+    // this calculates an indexed map which is the combination of
+    // all the child indexed maps, and gives the result of subtracting
+    // the child combination from the parents
+    // don't have to call this server side - it might be better to let
+    // the client side work it all out purely from the JSON
+    void finalize() {
+        // create an clone of the current indexed map
+        IndexedMap im(data);
 
-          if (! im.empty() ) {
-#ifndef NDEBUG
-            std::cout << "creating *.* child at " << getPath() << std::endl;
-#endif
+        if (!children.empty()) {
+        // loop over children and subtract all their maps from it
+        for (auto it : children) {
+            it.second->finalize();
+            im.subtract(it.second->data);
+            }
+        }
+
+        if (!im.empty()) {
             TreeNode *child = new TreeNode("*.*", this);
             child->combine(im);
             addChild(child);
-          } 
-          
         }
-    
-    private:
-        std::string name;
-        TreeNode *parent;   
-        IndexedMap data;
-        std::unordered_map<std::string,TreeNode*> children;
-        uint64_t depth;
+    }
+
+ private:
+    std::string name;
+    TreeNode *parent;
+    IndexedMap data;
+    std::unordered_map<std::string, TreeNode*> children;
+    uint64_t depth;
 };
 
 #endif
