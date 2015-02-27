@@ -61,10 +61,10 @@ class Tree {
         boost::trim_if(path, boost::is_any_of("/"));
         boost::split(names, path, boost::is_any_of("/"));
         TreeNode *current = root;
-        std::vector<std::string>::iterator it = names.begin();
-        ++it;
-        for (; it < names.end(); it++) {
-            current = current->getChild(*it);
+        auto iter = names.begin();
+        ++iter;
+        for (; iter < names.end(); iter++) {
+            current = current->getChild(*iter);
             if (current == 0) {
                 return 0;
             }

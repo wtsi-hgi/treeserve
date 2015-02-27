@@ -1,6 +1,6 @@
 #CFLAGS=-std=gnu++11 -O0 -g 
 #CFLAGS=-std=gnu++11 -O0 -ggdb -pg
-CFLAGS=-std=gnu++11 -O2 -Ijson/src
+CFLAGS=-std=gnu++11 -Wall -Weffc++ -O2 -Ijson/src
 LIBS=-lboost_iostreams -lboost_regex -lgflags -lglog
 
 all : bin/treeserve

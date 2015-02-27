@@ -1,13 +1,12 @@
+// Copyright (C)  2015, Wellcome Trust Sanger Institute
 #ifndef __DATUM_HPP__
 #define __DATUM_HPP__
 
-#include <string>
-#include <fstream>
-
 #include <boost/lexical_cast.hpp>
 #include <boost/serialization/serialization.hpp>
-#include <boost/serialization/vector.hpp>
-//#include <boost/serialization/base_object.hpp>
+
+#include <string>
+#include <fstream>
 
 // Datum class
 // Holds a unit64_t (sizes in bytes) or a double (cost in pounds)  in a union
@@ -15,45 +14,35 @@
 // but doing it this way saves dev time and complexity
 // also avoids the overhead of virtual functions
 // and saves a bit of ram due to the union
-union {
+union uif {
     uint64_t i;
     double   f;
-} typedef uif;
+    uif() : i(0UL) {}
+    uif(uint64_t v) : i(v) {}
+    uif(double v) : f(v) {}
+};
 
 class Datum {
-    public :
-        friend class boost::serialization::access;
+ public :
+    friend class boost::serialization::access;
 
-        Datum() :  is_double(true){u.f=0;}
+    Datum() : u(), is_double(false) {}
 
-        Datum(uint64_t v) {
-            u.i=v;
-            is_double=false;
-        }
-        
-        Datum(double v) {
-            u.f=v;
-            is_double=true;
-        }
+    explicit Datum(uint64_t v) : u(v), is_double(false) {}
 
-        // copy constructor
-        Datum(const Datum &d) {
-            is_double=d.is_double;
-            if (is_double) {
-                u.f=d.u.f;
-            } else {
-                u.i=d.u.i;
-            }
-        }
-    
+    explicit Datum(double v) : u(v), is_double(true) {}
+
+    // copy constructor
+    Datum(const Datum &d) : u(d.u), is_double(d.is_double) {}
+
         void add(uint64_t v) {
             u.i += v;
         }
-        
+
         void add(double v) {
             u.f += v;
         }
-        
+
         void add(const Datum &d) {
             if (d.is_double) {
                 u.f += d.u.f;
@@ -65,11 +54,11 @@ class Datum {
         void sub(uint64_t v) {
             u.i -= v;
         }
-        
+
         void sub(double v) {
             u.f -= v;
         }
-        
+
         void sub(const Datum &d) {
             if (d.is_double) {
                 u.f -= d.u.f;
@@ -85,7 +74,7 @@ class Datum {
                 return (u.i == 0 ? true : false);
             }
         }
-        
+
         std::string toString() {
             if (is_double) {
                 return boost::lexical_cast<std::string>(u.f);
@@ -95,7 +84,7 @@ class Datum {
         }
 
         template<class Archive>
-        void serialize(Archive & ar, const unsigned int version) {
+        void serialize(const Archive& ar, const unsigned int version) {
             ar & is_double;
             if (is_double) {
                 ar & u.f;
@@ -104,9 +93,9 @@ class Datum {
             }
         }
 
-    private :
-        uif u;
-        bool is_double;
+ private :
+    uif u;
+    bool is_double;
 };
 #endif
 

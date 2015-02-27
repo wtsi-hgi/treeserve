@@ -139,11 +139,11 @@ class IndexedMap {
 
     json toJSON() {
         json j;
-        for (auto it : datumMap) {
-            std::string key = valueLookup[it.first];
+        for (auto iter : datumMap) {
+            std::string key = valueLookup[iter.first];
             std::vector<std::string> splitKey;
             boost::split(splitKey, key, boost::is_any_of("$"));
-            std::vector<std::string>::iterator keyParts = splitKey.begin();
+            auto keyParts = splitKey.begin();
             std::string dataType = *keyParts++;
             std::string group = *keyParts++;
             std::string user = *keyParts++;
@@ -152,7 +152,7 @@ class IndexedMap {
             //    << group << "," << user << "," << property << "!"
             //    << std::endl;
             assert(keyParts == splitKey.end());
-            j[dataType][group][user][property] = it.second->toString();
+            j[dataType][group][user][property] = (iter.second)->toString();
         }
         return j;
     }
