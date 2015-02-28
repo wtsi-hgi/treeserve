@@ -151,7 +151,7 @@ class IndexedMap {
                 std::string property = *keyParts++;
                 //std::cerr << "toJSON:" << key << " ==> " << dataType << "," << group << "," << user << "," << property << "!" << std::endl;
                 assert(keyParts == splitKey.end());
-                j[dataType][group][user][property] = it.second->toString();
+                j[dataType][group][user][property] = it.second->toJSON();
             }
             return j;
         }

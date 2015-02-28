@@ -5,6 +5,10 @@
 
 #include <boost/lexical_cast.hpp>
 
+// nlohmann's json source library
+#include "json.hpp"
+using json = nlohmann::json;
+
 // Datum class
 // Holds a unit64_t (sizes in bytes) or a double (cost in pounds)  in a union
 // yes this could be done with templates / polymorphism etc.
@@ -86,6 +90,16 @@ class Datum {
                 return boost::lexical_cast<std::string>(u.i);
             }
         }
+
+    json toJSON() {
+        json j;
+        if (is_double) {
+            j = u.f;
+        } else {
+            j = u.i;
+        }
+        return j;
+    }
 
     private :
         uif u;
