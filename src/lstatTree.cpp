@@ -1,6 +1,3 @@
-// comment line below to enable debug mode
-#define NDEBUG
-
 // standard library headers
 #include <iostream>
 #include <string>
@@ -330,7 +327,6 @@ int main(int argc, char **argv) {
     // start the api server
     struct ns_mgr mgr;
     struct ns_connection *nc;
-    int i;
 
     ns_mgr_init(&mgr, NULL);
     nc = ns_bind(&mgr, argv[1], ev_handler);
