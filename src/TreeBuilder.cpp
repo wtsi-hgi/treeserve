@@ -8,10 +8,12 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <fstream>
+#include <iostream>
 
 #include "TreeBuilder.hpp"
 #include "Tree.hpp"
-#include "base64.h"
+#include "base64.hpp"
 
 DEFINE_uint64(gzip_buf, 0, "size of gzip buffer in kb");
 DEFINE_uint64(line_freq, 10000, "print a message each <line_freq> lines for an"

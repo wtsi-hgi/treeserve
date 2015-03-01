@@ -1,27 +1,38 @@
 #CFLAGS=-std=gnu++11 -O0 -g 
 #CFLAGS=-std=gnu++11 -O0 -ggdb -pg
-CFLAGS=-std=gnu++11 -Wall -Weffc++ -O2 -Ijson/src
-LIBS=-lboost_iostreams -lboost_regex -lgflags -lglog
+#CFLAGS=-std=gnu++11 -Wall -Weffc++ -O2 -Ijson/src 
+CFLAGS=-std=gnu++11 -O2 -Ijson/src 
+LIBS=-lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
 
-all : bin/treeserve
+CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o
+PROGRAM_OBJECTS=src/treeserve.o src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
+#PROGRAM_OBJECTS=src/treeserve.o
 
-bin/treeserve : src/treeserve.o src/TreeBuilder.o src/base64.o src/fossa.o src/IndexedMap.o
-	g++ $(CFLAGS) -o bin/treeserve src/treeserve.o src/TreeBuilder.o src/base64.o src/fossa.o src/IndexedMap.o $(LIBS)
+all : bin/treeserve bin/testDatum bin/testIndexedMap bin/testTreeNode bin/testTreeBuilder
 
-src/treeserve.o : src/treeserve.cpp src/TreeNode.hpp src/Tree.hpp src/IndexedMap.hpp src/Datum.hpp
-	g++ -c $(CFLAGS) -o src/treeserve.o src/treeserve.cpp
+bin/treeserve : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/treeserve  src/treeserve.o $(CLASS_OBJECTS) $(LIBS)
 
-src/TreeBuilder.o : src/TreeBuilder.cpp src/TreeBuilder.hpp
-	g++ -c $(CFLAGS) -o src/TreeBuilder.o src/TreeBuilder.cpp
+bin/testDatum : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testDatum  src/testDatum.o
 
-src/base64.o : src/base64.cpp src/base64.h
-	g++ -c $(CFLAGS) -o src/base64.o src/base64.cpp
+bin/testIndexedMap : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testIndexedMap  src/testIndexedMap.o src/IndexedMap.o
 
-src/fossa.o : src/fossa.c src/fossa.h
-	g++ -c $(CFLAGS) -o src/fossa.o src/fossa.c
+bin/testTreeNode : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTreeNode  src/testTreeNode.o src/IndexedMap.o
 
-src/IndexedMap.o : src/IndexedMap.hpp src/IndexedMap.cpp src/Datum.hpp
-	g++ -c $(CFLAGS)  -o src/IndexedMap.o src/IndexedMap.cpp
+bin/testTree : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTree src/testTree.o src/IndexedMap.o
+
+bin/testTreeBuilder : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTreeBuilder src/testTreeBuilder.o src/TreeBuilder.o src/base64.o src/IndexedMap.o -lboost_iostreams -lboost_regex -lgflags -lglog
+
+$(CLASS_OBJECTS): %.o: %.cpp %.hpp
+	g++ $(CFLAGS) -c -o $@  $<
+
+$(PROGRAM_OBJECTS): %.o: %.cpp
+	g++ $(CFLAGS) -c -o $@  $<
 
 clean :
 	touch src/tmp.o

@@ -31,7 +31,7 @@
 class TreeBuilder {
  public:
     TreeBuilder() {
-        tree = new Tree();
+        tree=new Tree();
     }
 
     ~TreeBuilder() {

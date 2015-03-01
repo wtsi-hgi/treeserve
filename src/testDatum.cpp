@@ -2,8 +2,6 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/serialization.hpp>
 
 #include <iostream>
 #include <vector>
@@ -38,27 +36,6 @@ int main(int argc, char **argv) {
         std::cout << "datums[1] is zero" << std::endl;
     }
 
-    // test serialization
-    {
-        std::ofstream ofs("datums.ar");
-        boost::archive::binary_oarchive oa(ofs);
-        oa << datums;
-    }
-    std::vector<Datum> datums1;
-    {
-        std::ifstream ifs("datums.ar");
-        boost::archive::binary_iarchive ia(ifs);
-        ia >> datums1;
-    }
-
-    std::cout << "before..." << std::endl;
-    for (auto it : datums) {
-        std::cout << it.toString() << std::endl;
-    }
-    std::cout << "after..." << std::endl;
-    for (auto it : datums) {
-        std::cout << it.toString() << std::endl;
-    }
     return 0;
 }
 
