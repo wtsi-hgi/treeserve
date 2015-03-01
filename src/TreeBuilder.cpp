@@ -1,7 +1,5 @@
 // Copyright (C)  2015, Wellcome Trust Sanger Institute
 
-#include "base64.h"
-
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
@@ -13,18 +11,20 @@
 
 #include "TreeBuilder.hpp"
 #include "Tree.hpp"
+#include "base64.h"
 
 DEFINE_uint64(gzip_buf, 0, "size of gzip buffer in kb");
-DEFINE_uint64(line_freq, 10000, "print a message each <line_freq> lines for an idea of progress");
+DEFINE_uint64(line_freq, 10000, "print a message each <line_freq> lines for an"
+    "idea of progress");
 
 std::unordered_map<std::string, boost::regex> TreeBuilder::path_property_regexes {
-    {"cram", boost::regex (".*[.]cram$")},
-    {"bam", boost::regex (".*[.]bam$")},
-    {"index", boost::regex (".*[.](crai|bai|sai|fai|csi)$")},
-    {"compressed", boost::regex (".*[.](bzip2|gz|tgz|zip|xz|bgz|bcf)$")},
-    {"uncompressed", boost::regex (".*([.]sam|[.]fasta|[.]fastq|[.]fa|[.]fq|[.]vcf|[.]csv|[.]tsv|[.]txt|[.]text|README|[.]o|[.]e|[.]oe|[.]dat)$")},
-    {"checkpoint", boost::regex (".*jobstate[.]context$")},
-    {"temporary", boost::regex (".*(tmp|TMP|temp|TEMP).*")},
+    {"cram", boost::regex(".*[.]cram$")},
+    {"bam", boost::regex(".*[.]bam$")},
+    {"index", boost::regex(".*[.](crai|bai|sai|fai|csi)$")},
+    {"compressed", boost::regex(".*[.](bzip2|gz|tgz|zip|xz|bgz|bcf)$")},
+    {"uncompressed", boost::regex(".*([.]sam|[.]fasta|[.]fastq|[.]fa|[.]fq|[.]vcf|[.]csv|[.]tsv|[.]txt|[.]text|README|[.]o|[.]e|[.]oe|[.]dat)$")},
+    {"checkpoint", boost::regex(".*jobstate[.]context$")},
+    {"temporary", boost::regex(".*(tmp|TMP|temp|TEMP).*")},
 };
 
 // build a tree from an lstat gzipped file
@@ -35,7 +35,7 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
     uint64_t now = time(0);
     uint64_t seconds_in_year = 60*60*24*365;
     double cost_per_tib_year = 150.0;
-    uint64_t TiB=1UL*1024*1024*1024*1024;
+    uint64_t TiB = 1024UL*1024UL*1024UL*1024UL;
 
     // iterate over the lstat files
     uint64_t linecount = 0;
