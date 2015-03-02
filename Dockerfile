@@ -1,6 +1,6 @@
 FROM mercury/proxygen
 
-RUN apt-get install git gcc-4.9-base
+RUN apt-get install git
 
 ADD . /docker/treeserve
 WORKDIR /docker/treeserve
