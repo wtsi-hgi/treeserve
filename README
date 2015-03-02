@@ -1,8 +1,15 @@
 Generate tree structure from the mpistat output and allow querying of it via a rest api.
 
-Dependencies :
-* Needs fossa.c and fossa.h from https://github.com/cesanta/fossa
+Dependencies (not complete):
+* Needs facebooks proxygen http server library
 * Boost
+
+Using proxygen brings in the google logging and command-line options libraries.
+These give a lot of extra command-line options. Use --help to list them.
+
+A good commandline to use would be something like...
+
+bin/treeserve -lstat bin/114_1.dat.gz -dump=bin/tree.bin -logtostderr -gzip_buf 64 -port 8000
 
 Format of fields in the data file are :
 

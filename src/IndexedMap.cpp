@@ -1,3 +1,4 @@
+// Copyright (C)  2015, Wellcome Trust Sanger Institute
 #include <unordered_map>
 #include <string>
 #include <cstdint>

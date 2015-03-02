@@ -1,27 +1,27 @@
+// Copyright (C)  2015, Wellcome Trust Sanger Institute
 #include <iostream>
 
 #include "IndexedMap.hpp"
 #include "Datum.hpp"
 
 int main(int argc, char **argv) {
-
     // create 2 IndexedMap instances
-    IndexedMap *im1=new IndexedMap();
-    IndexedMap *im2=new IndexedMap();
+    IndexedMap *im1 = new IndexedMap();
+    IndexedMap *im2 = new IndexedMap();
 
     // create some values
-    uint64_t ival_1=1234;
-    double fval_1=2.2;
+    uint64_t ival_1 = 1234;
+    double fval_1 = 2.2;
 
-    uint64_t ival_2=3456;
-    double fval_2=1.1;
-    
+    uint64_t ival_2 = 3456;
+    double fval_2 = 1.1;
+
     // add them to the maps
-    im1->addItem("size",ival_1);
-    im1->addItem("cost",fval_1);
-    im2->addItem("timestamp",ival_2);
-    im2->addItem("cost",fval_2);
-    
+    im1->addItem("size$hgi$user$other", ival_1);
+    im1->addItem("cost$hgi$user$other", fval_1);
+    im2->addItem("timestamp$hgi$user$other", ival_2);
+    im2->addItem("cost$hgi$user$other", fval_2);
+
     // print out the map instances
     std::cout << "im1..." << std::endl;
     std::cout << im1->toJSON() << std::endl;
@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     im1->subtract(*im1);
     std::cout << "im1 should be empty now..." << std::endl;
     std::cout << im1->toJSON() << std::endl;
- 
+
     // print out the static indexing map
     std::cout << "indexing map : " << std::endl;
     std::cout << im1->getIndex() << std::endl;

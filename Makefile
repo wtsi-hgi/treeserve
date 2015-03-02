@@ -1,42 +1,50 @@
-CXXFLAGS = -std=gnu++11 -Wall -Werror -Wextra
+
+CXXFLAGS = -std=gnu++11 -Wall -Werror -Wextra -Weffc++
 CFLAGS = -Wall -Werror -Wextra
-LIBS = -lboost_iostreams -lboost_regex
+LIBS = -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
+
+CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o
+PROGRAM_OBJECTS=src/treeserve.o src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
 
 .PHONY: all profile debug test clean
 
 all: CXXFLAGS += -O2 -DNDEBUG
-all: bin/lstatTree
+all: bin/treeserve
 
 profile: CXXFLAGS += -O2 -DNDEBUG -g -fno-omit-frame-pointer -pg -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls 
-profile: bin/lstatTree
+profile: bin/treeserve
 
 debug: CXXFLAGS += -std=gnu++11 -O0 -DDEBUG -ggdb -fno-omit-frame-pointer
-debug: bin/lstatTree
+debug: bin/treeserve
 
-test: bin/testTree
+test: bin/testDatum bin/testIndexedMap bin/testTreeNode bin/testTree bin/testTreeBuilder bin/testProxygen
 
-bin/lstatTree: src/lstatTree.o src/base64.o src/fossa.o src/IndexedMap.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+bin/treeserve : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/treeserve  src/treeserve.o $(CLASS_OBJECTS) $(LIBS)
 
-bin/testHttpd: src/testHttpd.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+bin/testDatum : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testDatum  src/testDatum.o
 
-src/lstatTree.o: src/lstatTree.cpp src/TreeNode.hpp src/Tree.hpp src/IndexedMap.hpp src/Datum.hpp
-	$(CXX) $(CXXFLAGS) -c -Ijson/src -o src/lstatTree.o src/lstatTree.cpp
+bin/testIndexedMap : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testIndexedMap  src/testIndexedMap.o src/IndexedMap.o
 
-src/base64.o: src/base64.cpp src/base64.h
-	$(CXX) $(CXXFLAGS) -c -o src/base64.o src/base64.cpp
+bin/testTreeNode : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTreeNode  src/testTreeNode.o src/IndexedMap.o
 
-src/testHttpd.o: src/testHttpd.cpp
-	$(CXX) $(CXXFLAGS) -c -o src/testHttpd.o src/testHttpd.cpp
+bin/testTree : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTree src/testTree.o src/IndexedMap.o
 
-src/fossa.o: src/fossa.c
-	$(CC) -c -o src/fossa.o src/fossa.c
+bin/testTreeBuilder : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
+	g++ -o bin/testTreeBuilder src/testTreeBuilder.o src/TreeBuilder.o src/base64.o src/IndexedMap.o -lboost_iostreams -lboost_regex -lgflags -lglog
 
-src/IndexedMap.o: src/IndexedMap.hpp src/IndexedMap.cpp src/Datum.hpp
-	$(CXX) $(CXXFLAGS) -c -Ijson/src -o src/IndexedMap.o src/IndexedMap.cpp
+$(CLASS_OBJECTS): %.o: %.cpp %.hpp
+	g++ $(CFLAGS) -c -o $@  $<
+
+$(PROGRAM_OBJECTS): %.o: %.cpp
+	g++ $(CFLAGS) -c -o $@  $<
 
 clean:
 	touch src/tmp.o
+	touch bin/treeserve
 	rm src/*.o
-	rm bin/lstatTree
+	rm bin/treeserve
