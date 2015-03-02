@@ -77,7 +77,10 @@ class Datum {
 
         bool isZero() {
             if (is_double) {
-                return (u.f == 0 ? true : false);
+                // assumes all negative numbers should be zero
+                // threshold on cost would ignore a single file of 1 byte that is less than ~6.5h old
+                // or a 23148 byte file that is 1s old
+                return (u.f < 1e-13 ? true : false);
             } else {
                 return (u.i == 0 ? true : false);
             }
