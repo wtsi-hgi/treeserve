@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
     // Initialize Google's logging library.
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
-    google::InstallFailureSignalHandler();
 
     // make sure we have an lstat or a serial
     // this is an exclusive-or
@@ -87,6 +86,7 @@ int main(int argc, char **argv) {
 
     // start the http server if 'port' option is set
     if (FLAGS_port != -1) {
+        google::InstallFailureSignalHandler();
         // start server listening on 'port'
         std::vector<proxygen::HTTPServer::IPConfig> IPs = {
             {folly::SocketAddress(FLAGS_ip, FLAGS_port, true), proxygen::HTTPServer::Protocol::HTTP}
