@@ -1,5 +1,5 @@
 
-CXXFLAGS = -std=gnu++11 -Wall -Werror -Wextra -Weffc++
+CXXFLAGS = -std=gnu++11 -Wall -Wextra -Weffc++ -Ijson/src
 LIBS = -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
 
 CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o
