@@ -1,5 +1,4 @@
 // Copyright (C)  2015, Wellcome Trust Sanger Institute
-#define NDEBUG
 #include <folly/io/async/EventBaseManager.h>
 #include <proxygen/httpserver/HTTPServer.h>
 #include <proxygen/httpserver/RequestHandlerFactory.h>
