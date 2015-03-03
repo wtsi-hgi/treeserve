@@ -21,7 +21,7 @@ void TreeserveRouter::onServerStop() noexcept {
 // handler based on URL or something. No, need to save/copy this
 // HTTPMessage. RequestHandler will be given the HTTPMessage in a separate
 // callback.
-proxygen::RequestHandler* TreeserveRouter::onRequest(proxygen::RequestHandler *rh,
-                proxygen::HTTPMessage *msg) noexcept {
+proxygen::RequestHandler* TreeserveRouter::onRequest(proxygen::RequestHandler*,
+                proxygen::HTTPMessage*) noexcept {
     return new TreeserveHandler();
 }

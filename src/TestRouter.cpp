@@ -21,7 +21,7 @@ void TestRouter::onServerStop() noexcept {
 // handler based on URL or something. No, need to save/copy this
 // HTTPMessage. RequestHandler will be given the HTTPMessage in a separate
 // callback.
-proxygen::RequestHandler* TestRouter::onRequest(proxygen::RequestHandler *rh,
-                proxygen::HTTPMessage *msg) noexcept {
+proxygen::RequestHandler* TestRouter::onRequest(proxygen::RequestHandler*,
+                proxygen::HTTPMessage*) noexcept {
     return new TestHandler();
 }

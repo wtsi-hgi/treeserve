@@ -97,6 +97,13 @@ class Tree {
             return root->toJSON(std::numeric_limits<uint64_t>::max(),0);
         }    
     private:
+
+        // private copy constructor and assignment operator
+        // to stop inadverdent copies and to satisfy -Weffc++
+        // see http://jrdodds.blogs.com/blog/2004/04/disallowing_cop.html
+        Tree(const Tree&);
+        Tree& operator=(const Tree&);
+
         TreeNode *root;
 };
 

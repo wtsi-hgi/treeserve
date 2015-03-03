@@ -31,7 +31,7 @@ std::unordered_map<std::string, boost::regex> TreeBuilder::path_property_regexes
 
 // build a tree from an lstat gzipped file
 Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
-                const std::string &dump_file) {
+                const std::string&) {
     // set the current timestamp in epoch seconds,
     // seconds in a year and cost per terabyte per year
     uint64_t now = time(0);
@@ -171,7 +171,8 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
 }
 
 // re-serialize a tree from a previous save
-Tree* TreeBuilder::from_serial(const std::string &serial_file) {
+Tree* TreeBuilder::from_serial(const std::string&) {
+    return 0;
 }
 
 // convert a uid into it's text equivalent

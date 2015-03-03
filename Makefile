@@ -1,9 +1,10 @@
 
 CXXFLAGS = -std=gnu++11 -Wall -Wextra -Weffc++ -Ijson/src
-LIBS = -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
+LIBS = -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
 
 CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o
-PROGRAM_OBJECTS=src/treeserve.o src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
+TEST_OBJECTS=src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
+TREESERVE_OBJECT=src/treeserve.o
 
 .PHONY: all profile debug test clean
 
@@ -18,29 +19,41 @@ debug: bin/treeserve
 
 test: bin/testDatum bin/testIndexedMap bin/testTreeNode bin/testTree bin/testTreeBuilder bin/testProxygen
 
-bin/treeserve : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/treeserve  src/treeserve.o $(CLASS_OBJECTS) $(LIBS)
+bin/treeserve : $(TREESERVE_OBJECT) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/treeserve $(TREESERVE_OBJECT) $(CLASS_OBJECTS) $(LIBS)
 
-bin/testDatum : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/testDatum  src/testDatum.o
+bin/testDatum : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/testDatum  src/testDatum.o -lboost_serialization
 
-bin/testIndexedMap : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/testIndexedMap  src/testIndexedMap.o src/IndexedMap.o
+bin/testIndexedMap : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/testIndexedMap  src/testIndexedMap.o src/IndexedMap.o -lboost_serialization
 
-bin/testTreeNode : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/testTreeNode  src/testTreeNode.o src/IndexedMap.o
+bin/testTreeNode :$(TEST_OBJECTS) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/testTreeNode  src/testTreeNode.o src/IndexedMap.o -lboost_serialization
 
-bin/testTree : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/testTree src/testTree.o src/IndexedMap.o
+bin/testTree : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/testTree src/testTree.o src/IndexedMap.o -lboost_serialization
 
-bin/testTreeBuilder : $(PROGRAM_OBJECTS) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/testTreeBuilder src/testTreeBuilder.o src/TreeBuilder.o src/base64.o src/IndexedMap.o -lboost_iostreams -lboost_regex -lgflags -lglog
+bin/testTreeBuilder : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/testTreeBuilder src/testTreeBuilder.o src/TreeBuilder.o src/base64.o src/IndexedMap.o -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog
+
+bin/testProxygen : $(TEST_OBJECTS) $(CLASS_OBJECTS) src/TestHandler.o src/TestRouter.o
+	$(CXX) $(CXXFLAGS) -o bin/testProxygen src/testProxygen.o src/IndexedMap.o src/TestHandler.o src/TestRouter.o -lboost_serialization -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
 
 $(CLASS_OBJECTS): %.o: %.cpp %.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@  $<
 
-$(PROGRAM_OBJECTS): %.o: %.cpp
+$(TEST_OBJECTS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@  $<
+
+$(TREESERVE_OBJECT): %.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@  $<
+
+src/TestHandler.o: src/TestHandler.cpp src/TestHandler.hpp
+	$(CXX) $(CXXFLAGS) -c -o src/TestHandler.o src/TestHandler.cpp
+
+src/TestRouter.o: src/TestRouter.cpp src/TestRouter.hpp
+	$(CXX) $(CXXFLAGS) -c -o src/TestRouter.o src/TestRouter.cpp
 
 clean:
 	touch src/tmp.o

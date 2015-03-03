@@ -30,7 +30,7 @@
 
 class TreeBuilder {
  public:
-    TreeBuilder() {
+    TreeBuilder() : tree(0),uid_map(), gid_map() {
         tree=new Tree();
     }
 
@@ -44,6 +44,12 @@ class TreeBuilder {
     Tree* from_serial(const std::string& serial_file);
 
  private:
+    // private copy constructor and assignment operator
+    // to stop inadverdent copies and to satisfy -Weffc++
+    // see http://jrdodds.blogs.com/blog/2004/04/disallowing_cop.html
+    TreeBuilder(const TreeBuilder&);
+    TreeBuilder& operator=(const TreeBuilder&);
+
     // methods for group and user lookups
     std::string uid_lookup(uint64_t uid);
     std::string gid_lookup(uint64_t gid);

@@ -4,7 +4,7 @@
 #include "IndexedMap.hpp"
 #include "Datum.hpp"
 
-int main(int argc, char **argv) {
+int main() {
     // create 2 IndexedMap instances
     IndexedMap *im1 = new IndexedMap();
     IndexedMap *im2 = new IndexedMap();

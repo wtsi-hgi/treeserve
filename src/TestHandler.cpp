@@ -42,7 +42,7 @@ void TestHandler::onEOM() noexcept {
 }
 
 // Invoked when the session has been upgraded to a different protocol
-void TestHandler::onUpgrade(proxygen::UpgradeProtocol proto) noexcept {
+void TestHandler::onUpgrade(proxygen::UpgradeProtocol) noexcept {
     // handler doesn't support upgrades
 }
 
@@ -60,7 +60,7 @@ void TestHandler::requestComplete() noexcept {
 // NOTE: Can be invoked at any time (except for before onRequest).
 // No more callbacks will be invoked after this. You should clean up after
 // yourself.
-void TestHandler::onError(proxygen::ProxygenError err) noexcept {
+void TestHandler::onError(proxygen::ProxygenError) noexcept {
     delete this;
 }
 

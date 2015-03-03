@@ -10,8 +10,7 @@
 
 // Invoked when we have successfully fetched headers from client. This will
 // always be the first callback invoked on your handler.
-void TreeserveHandler::onRequest(std::unique_ptr<proxygen::HTTPMessage>
-                r) noexcept {
+void TreeserveHandler::onRequest(std::unique_ptr<proxygen::HTTPMessage> r) noexcept {
     request_ = std::move(r);
 }
 
@@ -45,6 +44,7 @@ void TreeserveHandler::onEOM() noexcept {
         proxygen::ResponseBuilder(downstream_)
             .status(200, "OK")
             .header("Access-Control-Allow-Origin", "*")
+            .header("Content-Encoding", "gzip")
             .body(result.dump(2))
             .sendWithEOM();
     } else {
@@ -68,7 +68,7 @@ void TreeserveHandler::requestComplete() noexcept {
 }
 
 // Invoked when the session has been upgraded to a different protocol
-void TreeserveHandler::onUpgrade(proxygen::UpgradeProtocol proto) noexcept {
+void TreeserveHandler::onUpgrade(proxygen::UpgradeProtocol) noexcept {
     // handler doesn't support upgrades
 }
 
@@ -77,7 +77,7 @@ void TreeserveHandler::onUpgrade(proxygen::UpgradeProtocol proto) noexcept {
 // NOTE: Can be invoked at any time (except for before onRequest).
 // No more callbacks will be invoked after this. You should clean up after
 // yourself.
-void TreeserveHandler::onError(proxygen::ProxygenError err) noexcept {
+void TreeserveHandler::onError(proxygen::ProxygenError) noexcept {
     delete this;
 }
 

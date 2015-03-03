@@ -12,7 +12,7 @@
 
 class TreeserveHandler : public proxygen::RequestHandler {
  public:
-    TreeserveHandler() {}
+    TreeserveHandler() : body_(), request_() {}
 
     // Invoked when we have successfully fetched headers from client. This will
     // always be the first callback invoked on your handler.

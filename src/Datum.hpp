@@ -2,12 +2,12 @@
 #define __DATUM_HPP__
 
 #include <string>
+#include <fstream>
 
 #include <boost/lexical_cast.hpp>
-
-// nlohmann's json source library
-#include "json.hpp"
-using json = nlohmann::json;
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+//#include <boost/serialization/base_object.hpp>
 
 // Datum class
 // Holds a unit64_t (sizes in bytes) or a double (cost in pounds)  in a union
@@ -15,33 +15,28 @@ using json = nlohmann::json;
 // but doing it this way saves dev time and complexity
 // also avoids the overhead of virtual functions
 // and saves a bit of ram due to the union
-union {
+union uif {
+
     uint64_t i;
     double   f;
-} typedef uif;
+
+    uif() : i(0UL) {}
+    uif(uint64_t v) : i(v) {}
+    uif(double v) : f(v) {}
+};
 
 class Datum {
     public :
-    
-        Datum(uint64_t v) {
-            u.i=v;
-            is_double=false;
-        }
+        friend class boost::serialization::access;
+
+        Datum() : is_double(false), u(0UL) {}
+
+        Datum(uint64_t v) : is_double(false), u(v) {}
         
-        Datum(double v) {
-            u.f=v;
-            is_double=true;
-        }
+        Datum(double v) : is_double(true), u(v) {}
 
         // copy constructor
-        Datum(const Datum &d) {
-            is_double=d.is_double;
-            if (is_double) {
-                u.f=d.u.f;
-            } else {
-                u.i=d.u.i;
-            }
-        }
+        Datum(const Datum &d) : is_double(d.is_double), u(d.u) {}
     
         void add(uint64_t v) {
             u.i += v;
@@ -77,10 +72,7 @@ class Datum {
 
         bool isZero() {
             if (is_double) {
-                // assumes all negative numbers should be zero
-                // threshold on cost would ignore a single file of 1 byte that is less than ~6.5h old
-                // or a 23148 byte file that is 1s old
-                return (u.f < 1e-13 ? true : false);
+                return (u.f == 0 ? true : false);
             } else {
                 return (u.i == 0 ? true : false);
             }
@@ -94,20 +86,23 @@ class Datum {
             }
         }
 
-    json toJSON() {
-        json j;
-        if (is_double) {
-            j = u.f;
-        } else {
-            j = u.i;
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version) {
+            if (version==0) {
+                ar & is_double;
+                if (is_double) {
+                    ar & u.f;
+                } else {
+                    ar & u.i;
+                }
+            }
         }
-        return j;
-    }
 
     private :
-        uif u;
         bool is_double;
+        uif u;
 };
+BOOST_CLASS_VERSION(Datum, 0)
 #endif
 
 

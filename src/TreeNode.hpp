@@ -121,6 +121,13 @@ class TreeNode {
     }
 
  private:
+
+    // private copy constructor and assignment operator
+    // to stop inadverdent copies and to satisfy -Weffc++
+    // see http://jrdodds.blogs.com/blog/2004/04/disallowing_cop.html
+    TreeNode(const TreeNode&);
+    TreeNode& operator=(const TreeNode&);
+
     std::string name;
     TreeNode *parent;
     IndexedMap data;

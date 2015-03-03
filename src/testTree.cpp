@@ -6,7 +6,7 @@
 #include "Tree.hpp"
 #include "IndexedMap.hpp"
 
-int main(int argc, char **argv) {
+int main() {
     // create 2 IndexedMap instances
     IndexedMap im1;
     IndexedMap im2;

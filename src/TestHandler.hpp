@@ -10,7 +10,7 @@
 
 class TestHandler : public proxygen::RequestHandler {
  public:
-    TestHandler() {}
+    TestHandler() :body_(), request_() {}
 
     // Invoked when we have successfully fetched headers from client. This will
     // always be the first callback invoked on your handler.

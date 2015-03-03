@@ -1,0 +1,8 @@
+src/*.o
+*~
+bin/testDatum
+bin/testIndexedMap
+bin/testProxygen
+bin/testTree
+bin/testTreeBuilder
+bin/testTreeNode

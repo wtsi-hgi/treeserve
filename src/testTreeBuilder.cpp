@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
     std::vector<std::string> lstat_files;
     lstat_files.push_back(argv[1]);
     Tree *tree = tb->from_lstat(lstat_files, std::string(argv[2]));
+    std::cout << tree->toJSON();
     delete tb;
     google::ShutdownGoogleLogging();
     return 0;
