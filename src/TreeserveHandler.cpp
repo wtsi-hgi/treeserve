@@ -39,13 +39,15 @@ void TreeserveHandler::onEOM() noexcept {
         // tree is a global tree pointer declared in globals.hpp
         // and defined in globals.cpp
         json result = global_tree->toJSON(std::string(path), depth+1);
+        std::string dump=compress(result.dump(2));
 
         // send headers and body
         proxygen::ResponseBuilder(downstream_)
             .status(200, "OK")
             .header("Access-Control-Allow-Origin", "*")
             .header("Content-Encoding", "gzip")
-            .body(result.dump(2))
+            .header("Content-Length", boost::lexical_cast<std::string>(dump.length()))
+            .body(dump)
             .sendWithEOM();
     } else {
         LOG(INFO) << "unhandled URL path : " << request_->getPath() << std::endl;
