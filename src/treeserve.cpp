@@ -17,6 +17,7 @@
 #include "TreeBuilder.hpp"
 #include "Tree.hpp"
 #include "TreeserveRouter.hpp"
+#include "MemLogger.hpp"
 
 //////////////////////////////////////////////////////////////////////
 // define command-line options using the google                     //
@@ -35,6 +36,7 @@ DEFINE_int32(http_threads, 4, "Number of threads to listen on. Numbers <= 0 will
     " the number of cores on this machine.");
 
 int main(int argc, char **argv) {
+    MemLogger ml;
     TreeBuilder *tb = new TreeBuilder();
 
     // Initialize Google's logging library.
