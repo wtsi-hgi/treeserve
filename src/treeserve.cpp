@@ -32,11 +32,10 @@ DEFINE_string(dump, "", "path of dump file - tree is serialized to this file "
     "after construction");
 DEFINE_int32(port, -1, "Port to listen on with HTTP protocol");
 DEFINE_string(ip, "localhost", "IP/Hostname to bind to");
-DEFINE_int32(http_threads, 4, "Number of threads to listen on. Numbers <= 0 will use"
+DEFINE_int32(http_threads, 0, "Number of threads to listen on. Numbers <= 0 will use"
     " the number of cores on this machine.");
 
 int main(int argc, char **argv) {
-    MemLogger ml;
     TreeBuilder *tb = new TreeBuilder();
 
     // Initialize Google's logging library.

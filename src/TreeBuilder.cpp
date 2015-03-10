@@ -62,7 +62,9 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
 
             linecount++;
             if (linecount % FLAGS_line_freq == 0) {
-                LOG(INFO) << "processed " << linecount << " lines" << std::endl;
+                LOG(INFO) << "processed " << linecount << " lines, "
+                	<< "created " << TreeNode::getNodeCount() << " nodes, "
+                	<< MemLogger::get_mem_usage() << "MB used" << std::endl;
             }
 
              // tokenize the line
@@ -168,6 +170,7 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
           return 0;
         }
     }
+    LOG(INFO) << "Finalizing tree after " << time(0)-now << " seconds" << std::endl;
     tree->finalize();
     LOG(INFO) << "Built tree in " << time(0)-now << " seconds" << std::endl;
     LOG(INFO) << TreeNode::getNodeCount() << " nodes created" << std::endl;

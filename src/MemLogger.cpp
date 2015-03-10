@@ -71,6 +71,7 @@ void MemLogger::check_mem(int, siginfo_t*, void*) {
 // get the memory usage (in MB) for the current process
 // from /proc/<pid>/statm
 double MemLogger::get_mem_usage() {
+
 	pid_t pid=getpid();
 	std::string fname="/proc/"+boost::lexical_cast<std::string>(pid)+"/statm";
 	std::ifstream statm_f(fname.c_str());
@@ -81,13 +82,13 @@ double MemLogger::get_mem_usage() {
 	double mem=0.0;
 	if (boost::regex_match(statm_str.c_str(), matches, re_statm)) {
 		long size=boost::lexical_cast<long>(matches[1]);
-		long resident=boost::lexical_cast<long>(matches[2]);
+		//long resident=boost::lexical_cast<long>(matches[2]);
 		//long share=boost::lexical_cast<long>(matches[3]);
 		//long text=boost::lexical_cast<long>(matches[4]);
 		//long lib=boost::lexical_cast<long>(matches[5]);
 		//long data=boost::lexical_cast<long>(matches[6]);
 		//long dt=boost::lexical_cast<long>(matches[7]);
-		mem=1.0*static_cast<double>(size+resident)*4096.0/(1024.0*1024.0);
+		mem=1.0*static_cast<double>(size)*4096.0/(1024.0*1024.0);
 	}
 	return mem;
 }
