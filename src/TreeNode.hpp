@@ -11,8 +11,7 @@
 #include <sstream>
 #include <utility>
 #include <stack>
-
-
+#include <atomic>
 
 #include "IndexedMap.hpp"
 #include "Datum.hpp"
@@ -21,6 +20,7 @@ class TreeNode {
  public :
     explicit TreeNode(std::string n, TreeNode *p = 0) : name(n), parent(p),
                 data(), children(), depth(0) {
+        ++node_count;
         if (parent != 0) {
             depth = (parent->depth)+1;
             parent->addChild(this);
@@ -120,6 +120,10 @@ class TreeNode {
         }
     }
 
+    static uint64_t getNodeCount() {
+        return node_count.load();
+    }
+
  private:
 
     // private copy constructor and assignment operator
@@ -133,6 +137,7 @@ class TreeNode {
     IndexedMap data;
     std::unordered_map<std::string, TreeNode*> children;
     uint64_t depth;
+    static std::atomic<uint64_t> node_count;
 };
 
 #endif  // SRC_TREE_NODE_HPP_

@@ -4,6 +4,7 @@
 #include <glog/logging.h>
 
 #include <boost/regex.hpp>
+#include <boost/lockfree/queue.hpp>
 
 #include <string>
 #include <vector>
@@ -14,6 +15,7 @@
 #include "TreeBuilder.hpp"
 #include "Tree.hpp"
 #include "base64.hpp"
+#include "MemLogger.hpp"
 
 DEFINE_uint64(gzip_buf, 0, "size of gzip buffer in kb");
 DEFINE_uint64(line_freq, 10000, "print a message each <line_freq> lines for an"
@@ -57,9 +59,12 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
 
         // iterate over lines
         for (std::string line; std::getline(in, line);) {
+
             linecount++;
             if (linecount % FLAGS_line_freq == 0) {
-                LOG(INFO) << "processed " << linecount << " lines" << std::endl;
+                LOG(INFO) << "processed " << linecount << " lines, "
+                	<< "created " << TreeNode::getNodeCount() << " nodes, "
+                	<< MemLogger::get_mem_usage() << "MB used" << std::endl;
             }
 
              // tokenize the line
@@ -165,8 +170,11 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
           return 0;
         }
     }
+    LOG(INFO) << "Finalizing tree after " << time(0)-now << " seconds" << std::endl;
     tree->finalize();
     LOG(INFO) << "Built tree in " << time(0)-now << " seconds" << std::endl;
+    LOG(INFO) << TreeNode::getNodeCount() << " nodes created" << std::endl;
+    LOG(INFO) << MemLogger::get_mem_usage() << "MB used" << std::endl;
     return tree;
 }
 
