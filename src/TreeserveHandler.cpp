@@ -44,6 +44,7 @@ void TreeserveHandler::onEOM() noexcept {
         proxygen::ResponseBuilder(downstream_)
             .status(200, "OK")
             .header("Access-Control-Allow-Origin", "*")
+            .header("Cache-Control","max-age=3600")
             .body(result.dump(2))
             .sendWithEOM();
     } else {
