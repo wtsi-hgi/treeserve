@@ -1,8 +1,8 @@
 
 CXXFLAGS = -std=gnu++11 -Wall -Wextra -Weffc++ -Ijson/src
-LIBS = -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread
+LIBS = -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread -lz -lrt
 
-CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o
+CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o src/TreeNode.o src/MemLogger.o
 TEST_OBJECTS=src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
 TREESERVE_OBJECT=src/treeserve.o
 

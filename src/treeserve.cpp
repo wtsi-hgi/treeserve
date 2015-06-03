@@ -17,6 +17,7 @@
 #include "TreeBuilder.hpp"
 #include "Tree.hpp"
 #include "TreeserveRouter.hpp"
+#include "MemLogger.hpp"
 
 //////////////////////////////////////////////////////////////////////
 // define command-line options using the google                     //
@@ -31,7 +32,7 @@ DEFINE_string(dump, "", "path of dump file - tree is serialized to this file "
     "after construction");
 DEFINE_int32(port, -1, "Port to listen on with HTTP protocol");
 DEFINE_string(ip, "localhost", "IP/Hostname to bind to");
-DEFINE_int32(http_threads, 4, "Number of threads to listen on. Numbers <= 0 will use"
+DEFINE_int32(http_threads, 0, "Number of threads to listen on. Numbers <= 0 will use"
     " the number of cores on this machine.");
 
 int main(int argc, char **argv) {
@@ -40,7 +41,6 @@ int main(int argc, char **argv) {
     // Initialize Google's logging library.
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
-        google::InstallFailureSignalHandler();
 
     // make sure we have an lstat or a serial
     // this is an exclusive-or
@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
 
     // start the http server if 'port' option is set
     if (FLAGS_port != -1) {
+        google::InstallFailureSignalHandler();
         // start server listening on 'port'
         std::vector<proxygen::HTTPServer::IPConfig> IPs = {
             {folly::SocketAddress(FLAGS_ip, FLAGS_port, true), proxygen::HTTPServer::Protocol::HTTP}
