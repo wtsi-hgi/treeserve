@@ -1,6 +1,11 @@
 // Copyright (C)  2015, Wellcome Trust Sanger Institute
 #include <iostream>
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/serialization.hpp>
+
 #include "IndexedMap.hpp"
 #include "Datum.hpp"
 
@@ -46,6 +51,24 @@ int main() {
     // print out the static indexing map
     std::cout << "indexing map : " << std::endl;
     std::cout << im1->getIndex() << std::endl;
+
+    // test serialization
+    {
+        std::ofstream ofs("indexedMap.ar");
+        boost::archive::binary_oarchive oa(ofs);
+        oa << *im1;
+    } 
+    IndexedMap im3;
+    {
+        std::ifstream ifs("datums.ar");
+        boost::archive::binary_iarchive ia(ifs);
+        ia >> im3;
+    }
+
+    std::cout << "before serializing..." << std::endl;
+    std::cout << im1->toJSON() << std::endl;
+    std::cout << "after serializing..." << std::endl;
+    std::cout << im3.toJSON() << std::endl;
 
     // cleanup
     delete im1;

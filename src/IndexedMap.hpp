@@ -184,10 +184,13 @@ class IndexedMap {
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version) {
+        if (version==0) {
+            ar & keyLookup;
+            ar & valueLookup;
+            ar & keyCounter;
+            ar & datumMap;
+        }
     }
-
-    static void init() {
-    } 
 
     static void cleanup() {
         delete keyLookup;
@@ -204,4 +207,5 @@ class IndexedMap {
     static uint64_t *keyCounter;
     std::unordered_map<uint64_t, Datum*> datumMap;
 };
+BOOST_CLASS_VERSION(IndexedMap, 0)
 #endif  // SRC_INDEXED_MAP_HPP_
