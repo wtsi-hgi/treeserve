@@ -29,7 +29,7 @@ class Datum {
     public :
         friend class boost::serialization::access;
 
-        Datum() : is_double(false), u(0UL) {}
+        Datum() : is_double(false), u(static_cast<uint64_t>(0UL)) {}
 
         Datum(uint64_t v) : is_double(false), u(v) {}
         

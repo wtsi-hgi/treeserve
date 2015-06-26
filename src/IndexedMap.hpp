@@ -182,10 +182,25 @@ class IndexedMap {
         return datumMap.empty();
     }
 
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version) {
+        if (version==0) {
+            ar & is_double;
+            if (is_double) {
+                ar & u.f;
+            } else {
+                ar & u.i;
+            }
+        }
+    }
+ 
  private :
-    static std::unordered_map<std::string, uint64_t> keyLookup;
-    static std::unordered_map<uint64_t, std::string> valueLookup;
-    static uint64_t keyCounter;
+    // static memebers are pointers to make serializing easier
+    // boost serialization ensures that static pointers are only serialized once
+    // so makes the serialization code trivial
+    static std::unordered_map<std::string, uint64_t> *keyLookup;
+    static std::unordered_map<uint64_t, std::string> *valueLookup;
+    static uint64_t *keyCounter;
     std::unordered_map<uint64_t, Datum*> datumMap;
 };
 #endif  // SRC_INDEXED_MAP_HPP_

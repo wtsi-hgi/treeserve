@@ -1,31 +1,51 @@
 
 CXXFLAGS = -std=gnu++11 -Wall -Wextra -Weffc++ -Ijson/src
-LIBS = -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog -lproxygenhttpserver -lfolly -pthread -lz -lrt
+BUILDER_LIBS = -lboost_serialization -lboost_iostreams -lboost_regex -lgflags -lglog  -lz -lrt
+SERVER_LIBS =-lproxygenhttpserver -lfolly -pthread -lz -lrt
 
-CLASS_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/TreeserveRouter.o src/TreeserveHandler.o src/base64.o src/globals.o src/TreeNode.o src/MemLogger.o
-TEST_OBJECTS=src/testProxygen.o src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
-TREESERVE_OBJECT=src/treeserve.o
+# objects used just for tree building (i.e. no folly / proxygen dependency)
+BUILDER_OBJECTS=src/TreeBuilder.o src/IndexedMap.o src/base64.o src/globals.o src/TreeNode.o src/MemLogger.o
+
+# additional objects used just for tree server
+SERVER_OBJECTS=src/TreeserveRouter.o src/TreeserveHandler.o
+
+# test exectuables objects to do with building tree
+BUILDER_TEST_OBJECTS=src/testTreeNode.o src/testTree.o src/testIndexedMap.o src/testDatum.o src/testTreeBuilder.o
+
+# test exectuables objects to do with building tree
+SERVER_TEST_OBJECTS=src/testProxygen.o
+
+# the tree server executable object
+TREEBUILDER_OBJECT=src/treebuild.o
+
+# the tree server executable object
+TREESERVER_OBJECT=src/treeserve.o
 
 .PHONY: all profile debug test clean
 
 all: CXXFLAGS += -O2 -DNDEBUG
-all: bin/treeserve
+all: bin/treebuild bin/treeserve
 
 profile: CXXFLAGS += -O2 -DNDEBUG -g -fno-omit-frame-pointer -pg -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls 
-profile: bin/treeserve
+profile: bin/treeserve bin/treeserve
 
 debug: CXXFLAGS += -std=gnu++11 -O0 -DDEBUG -ggdb -fno-omit-frame-pointer
-debug: bin/treeserve
+debug: bin/treeserve bin/treeserve
 
-test: bin/testDatum bin/testIndexedMap bin/testTreeNode bin/testTree bin/testTreeBuilder bin/testProxygen
+test : test_builder test_server
+test_builder: bin/testDatum bin/testIndexedMap bin/testTreeNode bin/testTree bin/testTreeBuilder
+test_server: bin/testProxygen
 
-bin/treeserve : $(TREESERVE_OBJECT) $(CLASS_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o bin/treeserve $(TREESERVE_OBJECT) $(CLASS_OBJECTS) $(LIBS)
+bin/treeserve : $(TREESERVER_OBJECT) $(BUILDER_OBJECTS) $(SERVER_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/treeserve $(TREESERVE_OBJECT) $(BUILDER_OBJECTS) $(SERVER_OBJECTS) $(BUILDER_LIBS) $(SERVER_LIBS)
 
-bin/testDatum : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+bin/treebuild : $(TREEBUILDER_OBJECT) $(BUILDER_OBJECTS)
+	$(CXX) $(CXXFLAGS) -o bin/treeserve $(TREESERVE_OBJECT) $(BUILDER_OBJECTS) $(BUILDER_LIBS)
+
+bin/testDatum : src/testDatum.o src/Datum.hpp
 	$(CXX) $(CXXFLAGS) -o bin/testDatum  src/testDatum.o -lboost_serialization
 
-bin/testIndexedMap : $(TEST_OBJECTS) $(CLASS_OBJECTS)
+bin/testIndexedMap : src/testIndexedMap.o src/IndexedMap.o
 	$(CXX) $(CXXFLAGS) -o bin/testIndexedMap  src/testIndexedMap.o src/IndexedMap.o -lboost_serialization
 
 bin/testTreeNode :$(TEST_OBJECTS) $(CLASS_OBJECTS)
@@ -43,9 +63,12 @@ bin/testProxygen : $(TEST_OBJECTS) $(CLASS_OBJECTS) src/TestHandler.o src/TestRo
 $(CLASS_OBJECTS): %.o: %.cpp %.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@  $<
 
-$(TEST_OBJECTS): %.o: %.cpp
+$(SERVER_TEST_OBJECTS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@  $<
 
+$(BUILDER_TEST_OBJECTS) : %.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@  $<
+	
 $(TREESERVE_OBJECT): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@  $<
 
