@@ -54,20 +54,20 @@ class IndexedMap {
     void addItem(const std::string& key, T val) {
         // try to get the index associated with the key from the
         // static map
-        auto got = keyLookup.find(key);
-        if (got == keyLookup.end()) {
+        auto got = keyLookup->find(key);
+        if (got == keyLookup->end()) {
             // key not in static map so add it
-            keyLookup.insert(std::make_pair(key, keyCounter));
+            keyLookup->insert(std::make_pair(key, *keyCounter));
 
             // add to the valueLookup too
-            valueLookup.insert(std::make_pair(keyCounter, key));
+            valueLookup->insert(std::make_pair(*keyCounter, key));
 
             // add entry to the instance map with the key being the
             // index into the static map
-            datumMap.insert(std::make_pair(keyCounter, new Datum(val)));
+            datumMap.insert(std::make_pair(*keyCounter, new Datum(val)));
 
             // increment the static key counter
-            keyCounter++;
+            (*keyCounter)++;
         } else {
             // key is already in the static map, get it's index value
             uint64_t index = (*got).second;
@@ -140,7 +140,7 @@ class IndexedMap {
     json toJSON() {
         json j;
         for (auto iter : datumMap) {
-            std::string key = valueLookup[iter.first];
+            std::string key = (*valueLookup)[iter.first];
             std::vector<std::string> splitKey;
             boost::split(splitKey, key, boost::is_any_of("$"));
             auto keyParts = splitKey.begin();
@@ -159,14 +159,14 @@ class IndexedMap {
 
     json toJSON(std::string item) {
         json j;
-        uint64_t index = keyLookup[item];
+        uint64_t index = (*keyLookup)[item];
         j[item] = datumMap.at(index)->toString();
         return j;
     }
 
     std::string getIndex() {
         std::ostringstream oss;
-        for (auto it : keyLookup) {
+        for (auto it : *keyLookup) {
             oss << it.first << ": " << it.second << std::endl;
         }
         return oss.str();
@@ -184,16 +184,17 @@ class IndexedMap {
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version) {
-        if (version==0) {
-            ar & is_double;
-            if (is_double) {
-                ar & u.f;
-            } else {
-                ar & u.i;
-            }
-        }
     }
- 
+
+    static void init() {
+    } 
+
+    static void cleanup() {
+        delete keyLookup;
+        delete valueLookup;
+        delete keyCounter;
+    }
+
  private :
     // static memebers are pointers to make serializing easier
     // boost serialization ensures that static pointers are only serialized once

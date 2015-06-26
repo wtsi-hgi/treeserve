@@ -46,7 +46,11 @@ int main() {
     // print out the static indexing map
     std::cout << "indexing map : " << std::endl;
     std::cout << im1->getIndex() << std::endl;
-        delete im1;
-        delete im2;
+
+    // cleanup
+    delete im1;
+    delete im2;
+    IndexedMap::cleanup(); // free up static members
+
     return 0;
 }
