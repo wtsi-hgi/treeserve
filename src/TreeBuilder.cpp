@@ -75,34 +75,34 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
             IndexedMap im;
 
             // get the path
-            std::string path = base64_decode(tokens[1]);
+            std::string path = base64_decode(tokens[0]);
 
             // get the size and calc in TiB
-            uint64_t size = boost::lexical_cast<uint64_t>(tokens[2]);
+            uint64_t size = boost::lexical_cast<uint64_t>(tokens[1]);
             double tib = 1.0*size/TiB;
 
             // get the owner
-            uint64_t uid = boost::lexical_cast<uint64_t>(tokens[3]);
+            uint64_t uid = boost::lexical_cast<uint64_t>(tokens[2]);
             std::string owner = uid_lookup(uid);
 
             // get group
-            uint64_t gid = boost::lexical_cast<uint64_t>(tokens[4]);
+            uint64_t gid = boost::lexical_cast<uint64_t>(tokens[3]);
             std::string grp = gid_lookup(gid);
 
             // get the atime and calc in years
-            uint64_t atime = boost::lexical_cast<uint64_t>(tokens[5]);
+            uint64_t atime = boost::lexical_cast<uint64_t>(tokens[4]);
             double atime_years = 1.0*(now-atime)/seconds_in_year;
 
             // get the mtime and calc in years
-            uint64_t mtime = boost::lexical_cast<uint64_t>(tokens[6]);
+            uint64_t mtime = boost::lexical_cast<uint64_t>(tokens[5]);
             double mtime_years = 1.0*(now-mtime)/seconds_in_year;
 
             // get the ctime and calc in years
-            uint64_t ctime = boost::lexical_cast<uint64_t>(tokens[7]);
+            uint64_t ctime = boost::lexical_cast<uint64_t>(tokens[6]);
             double ctime_years = 1.0*(now-ctime)/seconds_in_year;
 
             // get the file type
-            std::string file_type = tokens[8];
+            std::string file_type = tokens[7];
 
             // create properties vector
             std::vector<std::string> properties;
