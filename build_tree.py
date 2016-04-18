@@ -3,6 +3,14 @@ import argparse
 import base64
 import pwd
 import grp
+import lmdb
+
+# build a tree representation of mpistat data in an lmdb database
+# we can only store key->value pairs in the database
+# the key will be the path of the inode
+# value will be a dict. initially will only have three items - the total size
+# below the particular inode, its type and a list of pointers to child
+# directories
 
 
 # parse the command line arguments
@@ -25,17 +33,39 @@ class Lstat:
 
     def __init__(self, line):
         bits = line.split('\t')
-        self.path = base64.b64decode(bits[0]).decode('utf-8')
-        self.size = bits[1]
-        self.user = int(self._get_uname(bits[2]))
-        self.grp = int(self._get_grp(bits[3]))
-        self.atime = bits[4]
-        self.mtime = bits[5]
-        self.ctime = bits[6]
-        self.mode = bits[7]
-        self.ino = bits[8]
-        self.nlink = bits[9]
-        self.dev = bits[10]
+        path = base64.b64decode(bits[0])  # a bytes object not a string
+        size = int(bits[1])
+        # user = int(self._get_uname(bits[2]))
+        # grp = int(self._get_grp(bits[3]))
+        # atime = bits[4]
+        # mtime = bits[5]
+        # ctime = bits[6]
+        mode = bits[7]
+        # ino = bits[8]
+        # nlink = bits[9]
+        # dev = bits[10]
+
+        # get snappy compression of the path to use as the lmdb key
+        # create the 'value' dict
+        value = dict()
+        value['size'] = size
+        value['mode'] = mode[7]
+        if mode == 'd':
+            value['children'] = list()
+
+        # put the value into the db
+        global lmdb_env
+        with lmdb_env.begin(write=True, buffers=True) as txn:
+            txn.put(path, value)
+
+            # if the node is a directory, get the pointer to the data
+            # so that we can add it to the child lists for upstream nodes
+            pointer = txn.get(path)
+
+        # now want to recurse up the path tree
+        # if the node doesn't exist it needs to be created
+        # if the inode is a directory, the parent node needs an item added to
+        # its children list
 
     # get username from uid - cache the answer
     def _get_uname(self, uid):
@@ -66,7 +96,17 @@ class Lstat:
 
 # main program
 if __name__ == '__main__':
+
+    # parse command line arguments
     args = parse_args()
+
+    # create the lmdb database
+    ldmb_env = lmdb.open(args['lmdb_db'],
+                         map_size=50*1024*1024*1024,
+                         writemap=True)
+
+    # loop over the mpistat lines ans create entries
+    # in the database for each line
     with gzip.open(args['infile'], 'rb') as f:
         while True:
             line = f.readline().decode('utf-8')
