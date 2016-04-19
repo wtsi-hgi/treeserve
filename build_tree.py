@@ -1,9 +1,9 @@
 import gzip
-import argparse
 import base64
 import pwd
 import grp
-import lmdb
+import pickle
+import mpistat_config
 
 # build a tree representation of mpistat data in an lmdb database
 # we can only store key->value pairs in the database
@@ -13,54 +13,36 @@ import lmdb
 # directories
 
 
-# parse the command line arguments
-def parse_args():
-    parser = argparse.ArgumentParser(description='''
-Generate tree data structure in lmdb database from mpistat output.''')
-    parser.add_argument('-i', '--infile', help='Path to input file',
-                        required=True, metavar='infile')
-    parser.add_argument('-l', '--lmdb_dir',
-                        help='Directory in which lmdb db is created',
-                        required=True, metavar='lmdb_dir')
-    return vars(parser.parse_args())
-
-
 # class to represent lstat items for a given path
 class Lstat:
 
     _username_cache = dict()
     _group_cache = dict()
 
-    def __init__(self, line):
+    def __init__(self, line, txn):
         bits = line.split('\t')
-        path = base64.b64decode(bits[0])  # a bytes object not a string
-        size = int(bits[1])
-        # user = int(self._get_uname(bits[2]))
-        # grp = int(self._get_grp(bits[3]))
-        # atime = bits[4]
-        # mtime = bits[5]
-        # ctime = bits[6]
-        mode = bits[7]
-        # ino = bits[8]
-        # nlink = bits[9]
-        # dev = bits[10]
-
-        # get snappy compression of the path to use as the lmdb key
-        # create the 'value' dict
+        path = base64.b64decode(bits[0])
         value = dict()
-        value['size'] = size
-        value['mode'] = mode[7]
+        value['size'] = int(bits[1])
+        value['user'] = self._get_uname(int(bits[2]))
+        value['grp'] = self._get_grp((bits[3]))
+        value['atime'] = int(bits[4])
+        value['mtime'] = int(bits[5])
+        value['ctime'] = bits[6]
+        mode = bits[7]
         if mode == 'd':
             value['children'] = list()
+        value['mode'] = mode
+        value['ino'] = bits[8]
+        value['nlink'] = bits[9]
+        value['dev'] = bits[10]
 
         # put the value into the db
-        global lmdb_env
-        with lmdb_env.begin(write=True, buffers=True) as txn:
-            txn.put(path, value)
+        txn.put(path, pickle.dumps(value))
 
-            # if the node is a directory, get the pointer to the data
-            # so that we can add it to the child lists for upstream nodes
-            pointer = txn.get(path)
+        # if the node is a directory, get the pointer to the data
+        # so that we can add it to the child lists for upstream nodes
+        # pointer = txn.get(path)
 
         # now want to recurse up the path tree
         # if the node doesn't exist it needs to be created
@@ -97,20 +79,17 @@ class Lstat:
 # main program
 if __name__ == '__main__':
 
-    # parse command line arguments
-    args = parse_args()
-
-    # create the lmdb database
-    ldmb_env = lmdb.open(args['lmdb_db'],
-                         map_size=50*1024*1024*1024,
-                         writemap=True)
-
-    # loop over the mpistat lines ans create entries
+    # loop over the mpistat lines and create entries
     # in the database for each line
-    with gzip.open(args['infile'], 'rb') as f:
-        while True:
-            line = f.readline().decode('utf-8')
-            if line == '':
-                break
-            l = Lstat(line)
-            print(l.path, l.size, l.user, l.grp, l.atime)
+    count = 0
+    with gzip.open(mpistat_config.args['infile'], 'rb') as f:
+        with mpistat_config.args['lmdb_env'].begin(buffers=True, write=True)\
+                    as txn:
+            while True:
+                count += 1
+                if count % 100000 == 0:
+                    print(count)
+                line = f.readline().decode('utf-8')
+                if line == '':
+                    break
+                Lstat(line[:-1], txn)
