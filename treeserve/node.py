@@ -18,13 +18,22 @@ class Node:
     def name(self):
         return self._name
 
-    @property
-    def node_count(self):
-        return self._node_count
+    @classmethod
+    def get_node_count(cls):
+        return cls._node_count
 
     @property
     def parent(self):
         return self._parent
+
+    @property
+    def path(self):
+        fragments = []
+        current = self
+        while current is not None:
+            fragments.append(current.name)
+            current = current.parent
+        return "/" + "/".join(fragments)
 
     def combine(self, mapping: Mapping):
         self._mapping.combine_with(mapping)
@@ -35,19 +44,11 @@ class Node:
     def get_child(self, name: str):
         return self._children.get(name, None)
 
-    def get_path(self):
-        fragments = []
-        current = self
-        while current is not None:
-            fragments.append(current.name)
-            current = current.parent
-        return "/" + "/".join(fragments)
-
     def to_json(self, depth: int):
         child_dirs = []
         json = {
             "name": self.name,
-            "path": self.get_path(),
+            "path": self.path,
             "data": self._mapping.to_json()
         }
         if depth > 0 and self._children:

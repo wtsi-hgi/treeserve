@@ -39,18 +39,8 @@ class Tree:
         if self._root:
             self._root.finalize()
 
-    def to_json(self, *args):
-        # If possible, this needs refactoring to remove the need for *args.
-        # Possibly don't need the variety with only argument being path
-        if len(args) == 2:
-            path = args[0]
-            depth = args[1]
-            node = self.get_node_at(path)
-        elif len(args) < 2:
-            depth = args[0] if len(args) == 1 else sys.maxsize
-            node = self._root
-        else:
-            raise Exception("too many args to to_json")
+    def to_json(self, *, path: str=None, depth: int=sys.maxsize):
+        node = self.get_node_at(path) if path is not None else self._root
 
         if depth == 0:
             depth = 1

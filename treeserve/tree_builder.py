@@ -39,7 +39,7 @@ class TreeBuilder:
                 for line in file:
                     if linecount % 10000 == 0:
                         print("processed", linecount, "lines,",
-                              "created", Node.node_count, "nodes")
+                              "created", Node.get_node_count(), "nodes")
 
                     mapping = Mapping()
 
@@ -108,7 +108,11 @@ class TreeBuilder:
                         path = "/".join(split[:-1])
                         self._tree.add_node(path, mapping)
 
-                #
+        print("Finalizing tree after", time(0) - now, "seconds")
+        self._tree.finalize()
+        print("Built tree in", time(0) - now, "seconds")
+        print(Node.get_node_count(), "nodes created")
+        return self._tree
 
     def uid_lookup(self, uid: int):
         if uid in self._uid_map:
