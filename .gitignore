@@ -1,3 +1,5 @@
+!sampledata.dat.gz
+
 src/*.o
 *~
 bin/testDatum
