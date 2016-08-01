@@ -10,7 +10,7 @@
 //#include <boost/serialization/base_object.hpp>
 
 // Datum class
-// Holds a unit64_t (sizes in bytes) or a double (cost in pounds)  in a union
+// Holds a uint64_t (sizes in bytes) or a double (cost in pounds)  in a union
 // yes this could be done with templates / polymorphism etc.
 // but doing it this way saves dev time and complexity
 // also avoids the overhead of virtual functions

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import lmdb
 import argparse
 import pickle
@@ -15,9 +17,10 @@ Construct JSON from tree data structure in lmdb database.''')
 if __name__ == '__main__':
     args = parse_args()
     env = lmdb.open(args['lmdb_dir'])
+    nodes = {}
     with env.begin() as txn:
         cursor = txn.cursor()
         while cursor.next():
             k, v = cursor.item()
             value = pickle.loads(v)
-            print(value)
+            print(k.decode('utf-8'), ":", "\n    "+str(value))

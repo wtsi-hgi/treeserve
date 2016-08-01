@@ -28,6 +28,16 @@ Format of fields in the data file are :
 
 LMDB
 ====
-Will rewrite this to use python instead of C++ and to use lmdb to persist the tree data. mpistat is able to take multiple seed directories now so would like to move to a process where only 1 mpistat job is run per day and it puts the info for all volumes into the ##.out files for each worker. Will then have a python multithreaded or multiprocess program that will read in these output files - 1 per thread / process, and build up the tree in the lmdb database as python objects instead of in-memory c++ objects. Finally, will have a mod_wsgi #/ flask python app that serves up the json directly from the lmdb database.
+Will rewrite this to use python instead of C++ and to use lmdb to persist the tree data. mpistat is
+able to take multiple seed directories now so would like to move to a process where only 1 mpistat
+job is run per day and it puts the info for all volumes into the ##.out files for each worker.
+Will then have a python multithreaded or multiprocess program that will read in these output files
+- 1 per thread / process, and build up the tree in the lmdb database as python objects instead of
+in-memory c++ objects. Finally, will have a mod_wsgi #/ flask python app that serves up the json
+directly from the lmdb database.
 
-Will then have 1 mpistat job which collects all the data, one tree-builder which will build an lmdb database and possibly produce some global reports (e.g. table of top 10 most wasteful groups etc.), and then a web app which takes an lmdb database and serves up json. This will make day to day management and swaping over to a new data set much easier and means we will only need to use 1 node for the webapp and don't need to tie up huge amounts of ram since lmdb will do it for us via the OS.
+Will then have 1 mpistat job which collects all the data, one tree-builder which will build an lmdb
+database and possibly produce some global reports (e.g. table of top 10 most wasteful groups etc.),
+and then a web app which takes an lmdb database and serves up json. This will make day to day
+management and swaping over to a new data set much easier and means we will only need to use 1 node
+for the webapp and don't need to tie up huge amounts of ram since lmdb will do it for us via the OS.

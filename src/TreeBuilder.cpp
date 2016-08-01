@@ -33,7 +33,7 @@ std::unordered_map<std::string, boost::regex> TreeBuilder::path_property_regexes
 
 // build a tree from an lstat gzipped file
 Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
-                const std::string&) {
+                              const std::string&) {
     // set the current timestamp in epoch seconds,
     // seconds in a year and cost per terabyte per year
     uint64_t now = time(0);
@@ -136,6 +136,7 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
 
             for (auto property : properties) {
                 // inode counts
+                // this should be a method of the Python equivalent of IndexedMap
                 addAttributes(&im, "count", static_cast<uint64_t>(1), grp,
                     owner, property);
 

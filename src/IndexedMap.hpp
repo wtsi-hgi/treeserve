@@ -28,7 +28,7 @@ using json = nlohmann::json;
 
 // we will want the values of the key-value pairs
 // to be a mix of uint64s and doubles so use a template base class and
-// fully sepcced derived classes
+// fully specced derived classes
 
 class IndexedMap {
  public :
@@ -84,6 +84,7 @@ class IndexedMap {
         }
     }
 
+    // not needed in Python implementation
     template <typename T>
     void addItem(uint64_t index, T val) {
         // does the index exist in the current map
@@ -125,6 +126,7 @@ class IndexedMap {
             // does the index exist in the other map?
             auto got = other.datumMap.find(index);
             if (got != other.datumMap.end()) {
+                // index is in other map
                 it->second->sub(*(got->second));
                 if (it->second->isZero()) {
                     remove.push_back(it);
@@ -157,6 +159,7 @@ class IndexedMap {
         return j;
     }
 
+    // Not needed?
     json toJSON(std::string item) {
         json j;
         uint64_t index = keyLookup[item];

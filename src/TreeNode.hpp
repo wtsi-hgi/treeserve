@@ -56,12 +56,14 @@ class TreeNode {
 
     std::string getPath() {
         // this recurses up the parent links to construct the full path to a
-        // node don't want to store the full path in the node as that will
-        // increase the memory requirements the only time we really need this
-        // is when we output the json if we are only outputting 2 or 3 levels
-        // deep then the cost overhead in terms of cpu will probably be worth
-        // it in terms of the amount of memory saved can revisit this after
-        // seeing how things go....
+        // node
+        // don't want to store the full path in the node as that will
+        // increase the memory requirements
+        // the only time we really need this is when we output the json
+        // if we are only outputting 2 or 3 levels deep then the cost overhead
+        // in terms of cpu will probably be worth it in terms of the amount of
+        // memory saved
+        // can revisit this after seeing how things go....
 
         // stack to store the path fragments
         std::stack<std::string> stck;
@@ -107,11 +109,11 @@ class TreeNode {
         IndexedMap im(data);
 
         if (!children.empty()) {
-        // loop over children and subtract all their maps from it
-        for (auto iter : children) {
-            iter.second->finalize();
-            im.subtract(iter.second->data);
-            }
+            // loop over children and subtract all their maps from it
+            for (auto iter : children) {
+                iter.second->finalize();
+                im.subtract(iter.second->data);
+                }
         }
         if (!im.empty()) {
             TreeNode *child = new TreeNode("*.*", this);

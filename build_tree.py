@@ -1,8 +1,12 @@
+#!/usr/bin/env python3
+
 import gzip
 import base64
 import pwd
 import grp
 import pickle
+from typing import List
+
 import mpistat_config
 
 # build a tree representation of mpistat data in an lmdb database
@@ -29,12 +33,11 @@ class Lstat:
         value['atime'] = int(bits[4])
         value['mtime'] = int(bits[5])
         value['ctime'] = bits[6]
-        mode = bits[7]
-        if mode == 'd':
-            value['children'] = list()
-        value['mode'] = mode
+        value['mode'] = bits[7]
+        if value['mode'] == 'd':
+            value['children'] = list()  # type: List[str]
         value['ino'] = bits[8]
-        value['nlink'] = bits[9]
+        value['hardlinks'] = bits[9]
         value['dev'] = bits[10]
 
         # put the value into the db
@@ -46,50 +49,71 @@ class Lstat:
 
         # now want to recurse up the path tree
         # if the node doesn't exist it needs to be created
-        # if the inode is a directory, the parent node needs an item added to
+        # presumably that directory should be in the input file somewhere, so check for
+        # an existing stub entry before creating each node
+        # if stub exists, add the existing value for `children` instead of replacing it
+        # if this node is a directory, the parent node needs an item added to
         # its children list
+        split = path.split('/')
+        for i in range(len(split)-1, 1, -1):
+            # stop at 1 because the root path is `/lustre`
+            newpath = '/' + '/'.join(split[1:i])
+            parent = txn.get(newpath)
+            if parent is None:
+                txn.put(newpath, )
 
     # get username from uid - cache the answer
-    def _get_uname(self, uid):
+    @staticmethod
+    def _get_uname(uid):
+        """
+        Get a username from a user ID and cache the result.
+        :param uid: a user ID
+        :return: the human-readable username
+        """
         username = str(uid)
         if uid in Lstat._username_cache:
             username = Lstat._username_cache[uid]
         else:
             try:
                 username = pwd.getpwuid(uid)[0]
-                Lstat._username_cache[uid] = username
-            except:
+            except KeyError:
                 pass
+            else:
+                Lstat._username_cache[uid] = username
         return username
 
     # get group from gid - cache the answer
-    def _get_grp(self, gid):
+    @staticmethod
+    def _get_grp(gid):
+        """
+        Get a group name from a group ID and cache the result.
+        :param gid: a group ID
+        :return: the human-readable group name
+        """
         group = str(gid)
         if gid in Lstat._group_cache:
             group = Lstat._group_cache[gid]
         else:
             try:
                 group = grp.getgrgid(gid)[0]
-                Lstat._group_cache[gid] = group
-            except:
+            except KeyError:
                 pass
+            else:
+                Lstat._group_cache[gid] = group
         return group
 
 
 # main program
 if __name__ == '__main__':
-
     # loop over the mpistat lines and create entries
     # in the database for each line
     count = 0
-    with gzip.open(mpistat_config.args['infile'], 'rb') as f:
-        with mpistat_config.args['lmdb_env'].begin(buffers=True, write=True)\
-                    as txn:
-            while True:
+    with gzip.open(mpistat_config.args['infile'], 'rt') as f:
+        with mpistat_config.args['lmdb_env'].begin(buffers=True, write=True) as txn:
+            for line in f:
                 count += 1
-                if count % 100000 == 0:
+                if count % 10000 == 0:
                     print(count)
-                line = f.readline().decode('utf-8')
                 if line == '':
                     break
                 Lstat(line[:-1], txn)

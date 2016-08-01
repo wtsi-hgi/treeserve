@@ -68,7 +68,8 @@ class Tree {
         TreeNode* getRoot() {
             return root;
         }
-        
+
+
         // once we've finished a tree, want to add  a child to each node to represent *.*
         // i.e. size of files within the directory itself. this will be calculated by
         // summing the sizes of all children and subtracting from the size of the node
