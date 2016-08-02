@@ -1,7 +1,7 @@
 import sys
 
-from mapping import Mapping
-from node import Node
+from treeserve.mapping import Mapping
+from treeserve.node import Node
 
 
 class Tree:
@@ -9,7 +9,6 @@ class Tree:
         self._root = None
 
     def add_node(self, path: str, mapping: Mapping):
-
         split_path = path.strip("/").split("/")
         if self._root is None:
             self._root = Node(split_path[0])
