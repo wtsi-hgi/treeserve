@@ -39,5 +39,6 @@ class Mapping(dict):
             group = key[1]
             user = key[2]
             category = key[3]
-            json[data_type][group][user][category] = value
+            # Need to convert numbers to strings - why? Who knows?
+            json[data_type][group][user][category] = str(value)
         return json
