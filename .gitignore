@@ -2,6 +2,7 @@
 
 src/*.o
 *~
+__pycache__/
 bin/testDatum
 bin/testIndexedMap
 bin/testProxygen
