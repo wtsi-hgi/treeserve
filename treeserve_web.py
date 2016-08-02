@@ -15,12 +15,6 @@ def parse_args(args=sys.argv[1:]):
 
 app = Flask(__name__)
 
-if __name__ == "__main__":
-    args = parse_args()
-    app.debug = args.debug
-else:
-    app.debug = False
-
 @app.route("/api")
 def api_call():
     path, depth, errors = get_path_depth(request.args)
@@ -52,13 +46,13 @@ def get_path_depth(args):
             depth = int(depth, 10) # Only accept depth in base 10
         except ValueError:
             depth = 0
-            errors.append("'depth' wasn't an integer")
+            errors.append("'depth' not integer")
     else:
-        errors.append("Didn't recieve integer parameter 'depth'")
+        errors.append("no 'depth'")
     if "path" in args:
         path = args["path"]
     else:
-        errors.append("Didn't recieve parameter 'path'")
+        errors.append("no 'path'")
     return path, depth, errors
 
 def create_tree():
@@ -70,6 +64,8 @@ def create_tree():
     print("Created tree.")
 
 if __name__ == '__main__':
+    args = parse_args()
+    app.debug = args.debug
     if app.debug:
         create_tree = app.before_first_request(create_tree)
     else:
