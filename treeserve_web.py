@@ -1,3 +1,4 @@
+"""Web interface for treeserve written in Python 3"""
 from flask import Flask, request, jsonify
 
 from treeserve.tree_builder import TreeBuilder
@@ -12,25 +13,25 @@ def api_call():
     if errors:
         error_dict = {"errors": errors}
         return jsonify(error_dict)
-        
-    print("API called, path =", path, "depth =",depth)
 
     sample_list = glob.glob("samples/*.dat.gz")
     print("Using samples:", sample_list)
     tree_builder = TreeBuilder()
     tree = tree_builder.from_lstat(sample_list)
-    print(tree)
     print("Created tree.")
     output_dict = tree.to_json(path=path, depth=depth)
     return jsonify(output_dict)
 
 def get_path_depth(args):
-    path=depth=None
+    """Given the args from a request, return the path and depth parameters.
+       If they aren't present or invalid, return errors in json format"""
+    path=depth=None #By default there is no path or depth
+                    #Overwritten if no errors
     errors = []
     if "depth" in args:
         depth = args["depth"]
         try:
-            depth = int(depth, 10)
+            depth = int(depth, 10) # Only accept depth in base 10
         except ValueError:
             depth = 0
             errors.append("'depth' wasn't an integer")
