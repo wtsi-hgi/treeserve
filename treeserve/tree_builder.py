@@ -6,9 +6,9 @@ from re import compile, IGNORECASE
 from time import time
 from typing import Dict, List
 
-from mapping import Mapping
-from node import Node
-from tree import Tree
+from treeserve.mapping import Mapping
+from treeserve.node import Node
+from treeserve.tree import Tree
 
 
 class TreeBuilder:
@@ -37,6 +37,8 @@ class TreeBuilder:
         for filename in files:
             with gzip.open(filename, mode="rt") as file:
                 for line in file:
+                    linecount += 1
+
                     if linecount % 10000 == 0:
                         print("processed", linecount, "lines,",
                               "created", Node.get_node_count(), "nodes")
@@ -68,7 +70,7 @@ class TreeBuilder:
 
                     categories = []
 
-                    for name, regex in self.path_property_regexes:
+                    for name, regex in self.path_property_regexes.items():
                         if regex.match(path) is not None:
                             categories.append(name)
 
@@ -108,9 +110,9 @@ class TreeBuilder:
                         path = "/".join(split[:-1])
                         self._tree.add_node(path, mapping)
 
-        print("Finalizing tree after", time(0) - now, "seconds")
+        print("Finalizing tree after", time() - now, "seconds")
         self._tree.finalize()
-        print("Built tree in", time(0) - now, "seconds")
+        print("Built tree in", time() - now, "seconds")
         print(Node.get_node_count(), "nodes created")
         return self._tree
 
