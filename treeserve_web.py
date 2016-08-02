@@ -21,7 +21,7 @@ def api_call():
     tree = tree_builder.from_lstat(sample_list)
     print(tree)
     print("Created tree.")
-    output_dict = {"tree": tree.to_json(path=path, depth=depth)}
+    output_dict = tree.to_json(path=path, depth=depth)
     return jsonify(output_dict)
 
 def get_path_depth(args):
