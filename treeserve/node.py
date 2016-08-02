@@ -9,7 +9,7 @@ class Node:
     def __init__(self, name: str, parent=None):
         self._name = name
         self._parent = parent
-        self._node_count += 1
+        Node._node_count += 1
         if self._parent is not None:
             self._depth = self._parent.depth + 1
             self._parent.add_child(self)
