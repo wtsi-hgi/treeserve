@@ -47,15 +47,15 @@ def get_path_depth(args):
         errors.append("Didn't recieve parameter 'path'")
     return path, depth, errors
 
+@app.before_first_request
 def create_tree():
+    global tree
     sample_list = glob.glob("samples/*.dat.gz")
     print("Using samples:", sample_list)
     tree_builder = TreeBuilder()
     tree = tree_builder.from_lstat(sample_list)
     print("Created tree.")
-    return tree
 
 if __name__ == '__main__':
-    tree = create_tree()
     app.debug = True
     app.run("0.0.0.0", port=80)
