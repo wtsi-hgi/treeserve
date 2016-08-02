@@ -117,9 +117,9 @@ class TreeBuilder:
         return self._tree
 
     def uid_lookup(self, uid: int) -> str:
-        if uid in self._uid_map:
-            return self._uid_map[uid]
-        else:
+        try:
+            user = self._uid_map[uid]
+        except KeyError:
             try:
                 user = getpwuid(uid)[0]
             except KeyError:
@@ -128,9 +128,9 @@ class TreeBuilder:
         return str(user)
 
     def gid_lookup(self, gid: int) -> str:
-        if gid in self._gid_map:
-            return self._gid_map[gid]
-        else:
+        try:
+            group = self._gid_map[gid]
+        except KeyError:
             try:
                 group = getgrgid(gid)[0]
             except KeyError:
