@@ -27,7 +27,7 @@ class TreeBuilder:
         self._uid_map = {}  # type: Dict[int, str]
         self._gid_map = {}  # type: Dict[int, str]
 
-    def from_lstat(self, files: List[str]):
+    def from_lstat(self, files: List[str]) -> Tree:
         now = time()  # Current time in seconds since epoch
         seconds_in_year = 60 * 60 * 24 * 365
         cost_per_tib_year = 150  # Cost to store 1 TiB for 1 year in pounds
@@ -116,26 +116,24 @@ class TreeBuilder:
         print(Node.get_node_count(), "nodes created")
         return self._tree
 
-    def uid_lookup(self, uid: int):
-        if uid in self._uid_map:
-            return self._uid_map[uid]
-        else:
+    def uid_lookup(self, uid: int) -> str:
+        try:
+            user = self._uid_map[uid]
+        except KeyError:
             try:
                 user = getpwuid(uid)[0]
             except KeyError:
                 user = uid
-            else:
-                self._uid_map[uid] = user
+            self._uid_map[uid] = user
         return str(user)
 
-    def gid_lookup(self, gid: int):
-        if gid in self._gid_map:
-            return self._gid_map[gid]
-        else:
+    def gid_lookup(self, gid: int) -> str:
+        try:
+            group = self._gid_map[gid]
+        except KeyError:
             try:
                 group = getgrgid(gid)[0]
             except KeyError:
                 group = gid
-            else:
-                self._gid_map[gid] = group
+            self._gid_map[gid] = group
         return str(group)
