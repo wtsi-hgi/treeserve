@@ -14,13 +14,17 @@ def api_call():
         error_dict = {"errors": errors}
         return jsonify(error_dict)
 
-    sample_list = glob.glob("samples/*.dat.gz")
-    print("Using samples:", sample_list)
-    tree_builder = TreeBuilder()
-    tree = tree_builder.from_lstat(sample_list)
-    print("Created tree.")
     output_dict = tree.to_json(path=path, depth=depth)
     return jsonify(output_dict)
+
+@app.route("/dummy_api")
+def dummy_api():
+    import random, json
+    sample_list = glob.glob("json/*.json")
+    json_file = open(random.choice(sample_list))
+    rtn = json_file.read()
+    json_file.close()
+    return jsonify(json.loads(rtn))
 
 def get_path_depth(args):
     """Given the args from a request, return the path and depth parameters.
@@ -43,6 +47,15 @@ def get_path_depth(args):
         errors.append("Didn't recieve parameter 'path'")
     return path, depth, errors
 
+def create_tree():
+    sample_list = glob.glob("samples/*.dat.gz")
+    print("Using samples:", sample_list)
+    tree_builder = TreeBuilder()
+    tree = tree_builder.from_lstat(sample_list)
+    print("Created tree.")
+    return tree
+
 if __name__ == '__main__':
+    tree = create_tree()
     app.debug = True
     app.run("0.0.0.0", port=80)
