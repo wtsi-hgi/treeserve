@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import Any, List
+from copy import deepcopy
+from typing import Any
 
 
 class Mapping(dict):
@@ -12,15 +13,16 @@ class Mapping(dict):
 
     def __sub__(self, other):
         to_remove = []
-        for k, v in self.items():
+        temp = deepcopy(self)
+        for k, v in temp.items():
             if k in other:
                 v -= other[k]
                 if v == 0:
                     to_remove.append(k)
         # Can't remove items from dictionary whilst iterating over it.
         for k in to_remove:
-            del self[k]
-        print('type of self after removes:\n', type(self))
+            del temp[k]
+        return temp  # Don't mutate self! `x - y` should not have side-effects.
 
     def add(self, attribute: str, group: str, user: str, category: str, value: Any):
         self[(attribute, group, user, category)] = value
@@ -31,7 +33,7 @@ class Mapping(dict):
                 self.add(attribute, g, u, category, value)
 
     def to_json(self):
-        json = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict)))  # ew
+        json = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]
             group = key[1]

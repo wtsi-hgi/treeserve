@@ -8,7 +8,9 @@ class TestTreeBuilder(unittest.TestCase):
         self.tree_builder = TreeBuilder()
 
     def test_from_lstat(self):
-        self.tree_builder.from_lstat(["../../samples/sampledata.dat.gz"])
+        tree = self.tree_builder.from_lstat(["../../samples/sampledata.dat.gz"])
+        print(tree)
+        print(tree.to_json(depth=0))
 
 
 if __name__ == '__main__':

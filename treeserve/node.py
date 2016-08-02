@@ -19,11 +19,11 @@ class Node:
         self._mapping = Mapping()
 
     @property
-    def depth(self):
+    def depth(self) -> int:
         return self._depth
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
@@ -31,16 +31,16 @@ class Node:
         return self._parent
 
     @property
-    def path(self):
+    def path(self) -> str:
         fragments = []
         current = self
         while current is not None:
             fragments.append(current.name)
             current = current.parent
-        return "/" + "/".join(fragments)
+        return "/" + "/".join(reversed(fragments))
 
     @classmethod
-    def get_node_count(cls):
+    def get_node_count(cls) -> int:
         return cls._node_count
 
     def combine(self, mapping: Mapping):
@@ -55,17 +55,9 @@ class Node:
     def finalize(self):
         # cloned_data = self._mapping.copy()
         cloned_data = deepcopy(self._mapping)
-        assert cloned_data is not None
-        print('cloned data:\n', cloned_data)
         if self._children:
-            assert cloned_data is not None, "aaargh"
-            print('children', self._children)
             for child in self._children.values():
-                print('type of cloned_data before finalizing:\n', cloned_data)
                 child.finalize()
-                print('type of cloned_data:\n', type(cloned_data))
-                print('actual cloned data:\n', cloned_data)
-                print('type of child._mapping:\n', type(child._mapping))
                 cloned_data -= child._mapping
         if cloned_data:
             # If not all data in self._mapping was due to child directories:
