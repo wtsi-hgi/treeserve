@@ -3,7 +3,7 @@ from grp import getgrgid
 import gzip
 from pwd import getpwuid
 from re import compile, IGNORECASE
-from time import time
+from time import strftime, time
 from typing import Dict, List
 
 from treeserve.mapping import Mapping
@@ -40,7 +40,8 @@ class TreeBuilder:
                     linecount += 1
 
                     if linecount % 10000 == 0:
-                        print("processed", linecount, "lines,",
+                        print(strftime("[%H:%M:%S]"),
+                              "Processed", linecount, "lines,",
                               "created", Node.get_node_count(), "nodes")
 
                     mapping = Mapping()
@@ -89,6 +90,8 @@ class TreeBuilder:
                         categories.append("type_" + file_type)
 
                     for category in categories:
+                        # Need to round numbers to sensible precision
+
                         # Inode counts
                         mapping.add_multiple("count", group, user, category, 1)
                         # Size
@@ -110,10 +113,10 @@ class TreeBuilder:
                         path = "/".join(split[:-1])
                         self._tree.add_node(path, mapping)
 
-        print("Finalizing tree after", time() - now, "seconds")
+        print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - now, "seconds")
         self._tree.finalize()
-        print("Built tree in", time() - now, "seconds")
-        print(Node.get_node_count(), "nodes created")
+        print(strftime("[%H:%M:%S]"), "Built tree in", time() - now, "seconds")
+        print(strftime("[%H:%M:%S]"), Node.get_node_count(), "nodes created")
         return self._tree
 
     def uid_lookup(self, uid: int) -> str:
