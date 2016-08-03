@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any
 
@@ -10,12 +10,15 @@ COMBINED_COST = COST_PER_TIB_YEAR / (ONE_TIB * SECONDS_PER_YEAR)
 
 
 class Mapping(dict):
-    def combine_with(self, other):
-        for k, v in other.items():
-            if k in self:
-                self[k] += v
-            else:
-                self[k] = v
+    def update(self, other):
+        if self:
+            for key, count in other.items():
+                self[key] += count
+        else:
+            super().update(other)
+
+    def __missing__(self, key):
+        return 0
 
     def subtract(self, other):
         to_remove = []

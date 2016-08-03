@@ -45,7 +45,7 @@ class Node:
         return cls._node_count
 
     def combine(self, mapping: Mapping):
-        self._mapping.combine_with(mapping)
+        self._mapping.update(mapping)
 
     def add_child(self, node: "Node"):
         self._children[node.name] = node
