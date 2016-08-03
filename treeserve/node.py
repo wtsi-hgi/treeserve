@@ -44,7 +44,7 @@ class Node:
     def get_node_count(cls) -> int:
         return cls._node_count
 
-    def combine(self, mapping: Mapping):
+    def update(self, mapping: Mapping):
         self._mapping.update(mapping)
 
     def add_child(self, node: "Node"):
@@ -62,7 +62,7 @@ class Node:
         if mapping_copy:
             # If not all data in self._mapping was due to child directories:
             child = Node("*.*", parent=self)
-            child.combine(mapping_copy)  # Add the remaining data to child
+            child.update(mapping_copy)  # Add the remaining data to child
 
     def to_json(self, depth: int):
         child_dirs = []
