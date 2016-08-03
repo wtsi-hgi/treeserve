@@ -1,6 +1,7 @@
 from base64 import b64decode
 from grp import getgrgid
 import gzip
+import os
 from pwd import getpwuid
 from re import compile, IGNORECASE
 from time import strftime, time
@@ -88,9 +89,8 @@ class TreeBuilder:
                     if file_type == "d":
                         self._tree.add_node(path, mapping)
                     elif file_type in "fl":
-                        split = path.split("/")
-                        path = "/".join(split[:-1])
-                        self._tree.add_node(path, mapping)
+                        dirname = os.path.dirname(path)
+                        self._tree.add_node(dirname, mapping)
 
         print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - now, "seconds")
         self._tree.finalize()
