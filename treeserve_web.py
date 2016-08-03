@@ -1,10 +1,10 @@
 """Web interface for treeserve written in Python 3"""
 from flask import Flask, request, jsonify
+import glob
+import sys, argparse
 
 from treeserve.tree_builder import TreeBuilder
 
-import glob
-import sys, argparse
 
 def parse_args(args=sys.argv[1:]):
     parser = argparse.ArgumentParser(description='''Enable debug mode? (development only)''')
@@ -70,5 +70,5 @@ if __name__ == '__main__':
         create_tree = app.before_first_request(create_tree)
     else:
         create_tree()
-    
+
     app.run("0.0.0.0", port=80)
