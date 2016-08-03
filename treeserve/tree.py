@@ -8,31 +8,29 @@ class Tree:
     def __init__(self):
         self._root = None
 
-    def add_node(self, path: str, mapping: Mapping):
+    def add_node(self, path: str, is_directory: bool, mapping: Mapping) -> Node:
         split_path = path.strip("/").split("/")
         if self._root is None:
-            self._root = Node(split_path[0])
-        current = self._root
+            self._root = Node(split_path[0], is_directory=True)
+        current_node = self._root
         for fragment in split_path[1:]:
-            # Every step down in the tree gets the new node's values added to it. Refactor this to
-            # postpone this step until tree finalization, with a bottom-up/'bubbling' approach.
-            current.combine(mapping)
-            temp = current.get_child(fragment)
-            if temp is None:
-                current = Node(fragment, current)
+            child_node = current_node.get_child(fragment)
+            if child_node is None:
+                current_node = Node(fragment, is_directory, parent=current_node)
             else:
-                current = temp
-        current.combine(mapping)
+                current_node = child_node
+        current_node.update(mapping)
+        return current_node
 
     def get_node_at(self, path: str) -> Node:
         split_path = path.strip("/").split("/")
-        current = self._root
+        current_node = self._root
         for fragment in split_path[1:]:
-            current = current.get_child(fragment)
-            if current is None:
+            current_node = current_node.get_child(fragment)
+            if current_node is None:
                 # If there is no node with the given path:
                 return None
-        return current
+        return current_node
 
     def finalize(self):
         if self._root:
@@ -41,9 +39,7 @@ class Tree:
     def to_json(self, *, path: str, depth: int) -> Dict:
         node = self.get_node_at(path) if path is not None else self._root
 
-        if depth == 0:
-            depth = 1
         if node is None:
             return {}
         else:
-            return node.to_json(depth)
+            return node.to_json(depth+1)

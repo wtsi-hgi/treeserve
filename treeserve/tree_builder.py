@@ -1,9 +1,7 @@
 from base64 import b64decode
 from grp import getgrgid
 import gzip
-import os
 from pwd import getpwuid
-from re import compile, IGNORECASE
 from time import strftime, time
 from typing import Dict, List
 
@@ -13,14 +11,14 @@ from treeserve.tree import Tree
 
 
 class TreeBuilder:
-    path_property_regexes = {
-        "cram": compile(r".*[.]cram$", IGNORECASE),
-        "bam": compile(r".*[.]bam$", IGNORECASE),
-        "index": compile(r".*[.](crai|bai|sai|fai|csi)$", IGNORECASE),
-        "compressed": compile(r".*[.](bzip2|gz|tgz|zip|xz|bgz|bcf)$", IGNORECASE),
-        "uncompressed": compile(r".*([.]sam|[.]fasta|[.]fastq|[.]fa|[.]fq|[.]vcf|[.]csv|[.]tsv|[.]txt|[.]text|README|[.]o|[.]e|[.]oe|[.]dat)$", IGNORECASE),
-        "checkpoint": compile(r".*jobstate[.]context$", IGNORECASE),
-        "temporary": compile(r".*(tmp|TMP|temp|TEMP).*", IGNORECASE)
+    file_type_checks = {
+        "cram": lambda s: s.endswith(".cram"),
+        "bam": lambda s: s.endswith(".bam"),
+        "index": lambda s: s.endswith((".crai", ".bai", ".sai", ".fai", ".csi")),
+        "compressed": lambda s: s.endswith((".bzip2", ".gz", ".tgz", ".zip", ".xz", ".bgz", ".bcf")),
+        "uncompressed": lambda s: s.endswith((".sam", ".fasta", ".fastq", ".fa", ".fq", ".vcf", ".csv", ".tsv", ".txt", ".text", "README", ".o", ".e", ".oe", ".dat")),
+        "checkpoint": lambda s: s.endswith(("jobstate.context")),
+        "temporary": lambda s: ("tmp" in s) or ("temp" in s)
     }
 
     file_types = {
@@ -63,8 +61,8 @@ class TreeBuilder:
                     user = self.uid_lookup(uid)
                     group = self.gid_lookup(gid)
 
-                    categories = [name for name, regex in self.path_property_regexes.items()
-                                  if regex.match(path) is not None] or ["other"]
+                    categories = [name for name, func in self.file_type_checks.items()
+                                  if func(path)] or ["other"]
                     categories.append("*")
                     categories.append(self.file_types.get(file_type, "type_" + file_type))
 
@@ -86,11 +84,13 @@ class TreeBuilder:
                         ctime_cost = size * (now - creation_time)
                         mapping.add_multiple("ctime", group, user, category, ctime_cost)
 
-                    if file_type == "d":
-                        self._tree.add_node(path, mapping)
-                    elif file_type in "fl":
-                        dirname = os.path.dirname(path)
-                        self._tree.add_node(dirname, mapping)
+                    # if file_type == "d":
+                    #     self._tree.add_node(path, mapping)
+                    # elif file_type in "fl":
+                    #     dirname = os.path.dirname(path)
+                    #     self._tree.add_node(dirname, mapping)
+                    if file_type in "dlf":
+                        self._tree.add_node(path, file_type in "d", mapping)
 
         print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - now, "seconds")
         self._tree.finalize()

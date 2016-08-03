@@ -7,7 +7,7 @@ from treeserve.mapping import Mapping
 class Node:
     _node_count = 0
 
-    def __init__(self, name: str, parent=None):
+    def __init__(self, name: str, is_directory: bool, parent=None):
         self._name = name
         self._parent = parent
         Node._node_count += 1
@@ -18,10 +18,15 @@ class Node:
             self._depth = 0
         self._children = {}
         self._mapping = Mapping()
+        self._is_directory = is_directory
 
     @property
     def depth(self) -> int:
         return self._depth
+
+    @property
+    def is_directory(self):
+        return self._is_directory
 
     @property
     def name(self) -> str:
@@ -50,19 +55,34 @@ class Node:
     def add_child(self, node: "Node"):
         self._children[node.name] = node
 
+    def remove_child(self, node: "Node"):
+        del self._children[node.name]
+
     def get_child(self, name: str) -> "Node":
         return self._children.get(name, None)
 
     def finalize(self):
-        mapping_copy = copy(self._mapping)
+        star_child = None
+        if self._mapping:
+            # If this node was listed in the mpistat file:
+            star_child = Node("*.*", is_directory=False, parent=self)
+            star_child.update(self._mapping)
+        not_directory_children = []
+        child_mappings = []
         if self._children:
             for child in self._children.values():
-                child.finalize()
-                mapping_copy.subtract(child._mapping)
-        if mapping_copy:
-            # If not all data in self._mapping was due to child directories:
-            child = Node("*.*", parent=self)
-            child.update(mapping_copy)  # Add the remaining data to child
+                if child is star_child: continue
+                child_mappings.append(child.finalize())
+                if not child.is_directory:
+                    not_directory_children.append(child)
+        if not_directory_children:
+            # If the directory has non-directory children:
+            for child in not_directory_children:
+                star_child.update(child._mapping)  # Add the remaining data to child.
+                self.remove_child(child)  # Delete the node, since it shouldn't end up in the JSON.
+        for mapping in child_mappings:
+            self.update(mapping)
+        return self._mapping
 
     def to_json(self, depth: int):
         child_dirs = []
