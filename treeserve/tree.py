@@ -1,4 +1,4 @@
-import sys
+from typing import Dict
 
 from treeserve.mapping import Mapping
 from treeserve.node import Node
@@ -24,7 +24,7 @@ class Tree:
                 current = temp
         current.combine(mapping)
 
-    def get_node_at(self, path: str):
+    def get_node_at(self, path: str) -> Node:
         split_path = path.strip("/").split("/")
         current = self._root
         for fragment in split_path[1:]:
@@ -38,7 +38,7 @@ class Tree:
         if self._root:
             self._root.finalize()
 
-    def to_json(self, *, path: str=None, depth: int=sys.maxsize):
+    def to_json(self, *, path: str, depth: int) -> Dict:
         node = self.get_node_at(path) if path is not None else self._root
 
         if depth == 0:
