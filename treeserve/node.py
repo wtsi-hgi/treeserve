@@ -1,4 +1,5 @@
-from copy import deepcopy
+from copy import copy, deepcopy
+from collections import deque
 
 from treeserve.mapping import Mapping
 
@@ -27,17 +28,17 @@ class Node:
         return self._name
 
     @property
-    def parent(self):
+    def parent(self) -> "Node":
         return self._parent
 
     @property
     def path(self) -> str:
-        fragments = []
+        fragments = deque()
         current = self
         while current is not None:
-            fragments.append(current.name)
+            fragments.appendleft(current.name)
             current = current.parent
-        return "/" + "/".join(reversed(fragments))
+        return "/" + "/".join(fragments)
 
     @classmethod
     def get_node_count(cls) -> int:
@@ -46,24 +47,22 @@ class Node:
     def combine(self, mapping: Mapping):
         self._mapping.combine_with(mapping)
 
-    def add_child(self, node):
+    def add_child(self, node: "Node"):
         self._children[node.name] = node
 
-    def get_child(self, name: str):
+    def get_child(self, name: str) -> "Node":
         return self._children.get(name, None)
 
     def finalize(self):
-        # cloned_data = self._mapping.copy()
-        cloned_data = deepcopy(self._mapping)
+        mapping_copy = copy(self._mapping)
         if self._children:
             for child in self._children.values():
                 child.finalize()
-                cloned_data -= child._mapping
-        if cloned_data:
+                mapping_copy.subtract(child._mapping)
+        if mapping_copy:
             # If not all data in self._mapping was due to child directories:
             child = Node("*.*", parent=self)
-            child.combine(cloned_data)  # Add the remaining data to child
-            self.add_child(child)
+            child.combine(mapping_copy)  # Add the remaining data to child
 
     def to_json(self, depth: int):
         child_dirs = []
