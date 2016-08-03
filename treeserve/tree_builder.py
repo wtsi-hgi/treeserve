@@ -53,20 +53,17 @@ class TreeBuilder:
 
                     size = int(tokens[1])
                     uid = int(tokens[2])
-                    user = self.uid_lookup(uid)
                     gid = int(tokens[3])
-                    group = self.gid_lookup(gid)
                     access_time = int(tokens[4])
                     modification_time = int(tokens[5])
                     creation_time = int(tokens[6])
                     file_type = tokens[7]
 
-                    categories = []
-                    for name, regex in self.path_property_regexes.items():
-                        if regex.match(path) is not None:
-                            categories.append(name)
-                    if not categories:
-                        categories.append("other")
+                    user = self.uid_lookup(uid)
+                    group = self.gid_lookup(gid)
+
+                    categories = [name for name, regex in self.path_property_regexes.items()
+                                  if regex.match(path) is not None] or ["other"]
                     categories.append("*")
                     categories.append(self.file_types.get(file_type, "type_" + file_type))
 
