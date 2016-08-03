@@ -34,7 +34,7 @@ class TreeBuilder:
         self._gid_map = {}  # type: Dict[int, str]
 
     def from_lstat(self, files: List[str]) -> Tree:
-        now = time()  # Current time in seconds since epoch
+        now = int(time())  # Current time in seconds since epoch
 
         linecount = 0
         for filename in files:
