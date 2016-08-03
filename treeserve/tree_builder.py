@@ -22,6 +22,12 @@ class TreeBuilder:
         "temporary": compile(r".*(tmp|TMP|temp|TEMP).*", IGNORECASE)
     }
 
+    file_types = {
+        "d": "directory",
+        "f": "file",
+        "l": "link"
+    }
+
     def __init__(self):
         self._tree = Tree()
         self._uid_map = {}  # type: Dict[int, str]
@@ -29,9 +35,6 @@ class TreeBuilder:
 
     def from_lstat(self, files: List[str]) -> Tree:
         now = time()  # Current time in seconds since epoch
-        seconds_in_year = 60 * 60 * 24 * 365
-        cost_per_tib_year = 150  # Cost to store 1 TiB for 1 year in pounds
-        one_tib = 1024 ** 4
 
         linecount = 0
         for filename in files:
@@ -44,71 +47,50 @@ class TreeBuilder:
                               "Processed", linecount, "lines,",
                               "created", Node.get_node_count(), "nodes")
 
-                    mapping = Mapping()
-
                     tokens = line.split("\t")
+
                     path = b64decode(tokens[0]).decode()
 
                     size = int(tokens[1])
-                    size_tib = size / one_tib
-
                     uid = int(tokens[2])
                     user = self.uid_lookup(uid)
-
                     gid = int(tokens[3])
                     group = self.gid_lookup(gid)
-
-                    atime = int(tokens[4])
-                    atime_years = (now - atime) / seconds_in_year
-
-                    mtime = int(tokens[5])
-                    mtime_years = (now - mtime) / seconds_in_year
-
-                    ctime = int(tokens[6])
-                    ctime_years = (now - ctime) / seconds_in_year
-
+                    access_time = int(tokens[4])
+                    modification_time = int(tokens[5])
+                    creation_time = int(tokens[6])
                     file_type = tokens[7]
 
                     categories = []
-
                     for name, regex in self.path_property_regexes.items():
                         if regex.match(path) is not None:
                             categories.append(name)
-
                     if not categories:
                         categories.append("other")
-
                     categories.append("*")
+                    categories.append(self.file_types.get(file_type, "type_" + file_type))
 
-                    if file_type == "d":
-                        categories.append("directory")
-                    elif file_type == "f":
-                        categories.append("file")
-                    elif file_type == "l":
-                        categories.append("link")
-                    else:
-                        categories.append("type_" + file_type)
+                    mapping = Mapping()
 
                     for category in categories:
-                        # Need to round numbers to sensible precision
-
                         # Inode counts
                         mapping.add_multiple("count", group, user, category, 1)
                         # Size
                         mapping.add_multiple("size", group, user, category, size)
+
                         # Access time
-                        atime_cost = cost_per_tib_year * size_tib * atime_years
+                        atime_cost = size * (now - access_time)
                         mapping.add_multiple("atime", group, user, category, atime_cost)
                         # Modification time
-                        mtime_cost = cost_per_tib_year * size_tib * mtime_years
+                        mtime_cost = size * (now - modification_time)
                         mapping.add_multiple("mtime", group, user, category, mtime_cost)
                         # Creation time
-                        ctime_cost = cost_per_tib_year * size_tib * ctime_years
+                        ctime_cost = size * (now - creation_time)
                         mapping.add_multiple("ctime", group, user, category, ctime_cost)
 
                     if file_type == "d":
                         self._tree.add_node(path, mapping)
-                    elif file_type == "f" or file_type == "l":
+                    elif file_type in "fl":
                         split = path.split("/")
                         path = "/".join(split[:-1])
                         self._tree.add_node(path, mapping)

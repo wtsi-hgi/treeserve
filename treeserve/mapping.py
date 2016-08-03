@@ -3,6 +3,12 @@ from copy import deepcopy
 from typing import Any
 
 
+COST_PER_TIB_YEAR = 150
+SECONDS_PER_YEAR = 60 * 60 * 24 * 365
+ONE_TIB = 1024 ** 4
+COMBINED_COST = COST_PER_TIB_YEAR / (ONE_TIB * SECONDS_PER_YEAR)
+
+
 class Mapping(dict):
     def combine_with(self, other):
         for k, v in other.items():
@@ -11,18 +17,16 @@ class Mapping(dict):
             else:
                 self[k] = v
 
-    def __sub__(self, other):
+    def subtract(self, other):
         to_remove = []
-        temp = deepcopy(self)
-        for k, v in temp.items():
+        for k, v in self.items():
             if k in other:
-                v -= other[k]
+                v -= (other[k])
                 if v == 0:
                     to_remove.append(k)
         # Can't remove items from dictionary whilst iterating over it.
         for k in to_remove:
-            del temp[k]
-        return temp  # Don't mutate self! `x - y` should not have side-effects.
+            del self[k]
 
     def add(self, attribute: str, group: str, user: str, category: str, value: Any):
         self[(attribute, group, user, category)] = value
@@ -40,5 +44,7 @@ class Mapping(dict):
             user = key[2]
             category = key[3]
             # Need to convert numbers to strings - why? Who knows?
+            if data_type.endswith("time"):
+                value *= COMBINED_COST
             json[data_type][group][user][category] = str(value)
         return json
