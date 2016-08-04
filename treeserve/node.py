@@ -1,5 +1,6 @@
 from copy import copy, deepcopy
 from collections import deque
+from typing import Dict
 
 from treeserve.mapping import Mapping
 
@@ -7,7 +8,7 @@ from treeserve.mapping import Mapping
 class Node:
     _node_count = 0
 
-    def __init__(self, name: str, is_directory: bool, parent=None):
+    def __init__(self, name: str, is_directory: bool, parent: "Node"=None):
         self._name = name
         self._parent = parent
         Node._node_count += 1
@@ -16,7 +17,7 @@ class Node:
             self._parent.add_child(self)
         else:
             self._depth = 0
-        self._children = {}
+        self._children = {}  # type: Dict[str, Node]
         self._mapping = Mapping()
         self._is_directory = is_directory
 
@@ -25,7 +26,7 @@ class Node:
         return self._depth
 
     @property
-    def is_directory(self):
+    def is_directory(self) -> bool:
         return self._is_directory
 
     @property
@@ -61,7 +62,7 @@ class Node:
     def get_child(self, name: str) -> "Node":
         return self._children.get(name, None)
 
-    def finalize(self):
+    def finalize(self) -> Mapping:
         star_child = None
         if self._mapping and self._is_directory:
             # If this node was listed in the mpistat file (list space directory occupies as belonging to files inside directory):
@@ -84,7 +85,7 @@ class Node:
             self.update(mapping)
         return self._mapping
 
-    def to_json(self, depth: int):
+    def to_json(self, depth: int) -> dict:
         child_dirs = []
         json = {
             "name": self.name,

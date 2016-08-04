@@ -9,7 +9,7 @@ COMBINED_COST = COST_PER_TIB_YEAR / (ONE_TIB * SECONDS_PER_YEAR)
 
 
 class Mapping(dict):
-    def update(self, other):
+    def update(self, other: "Mapping"):
         if self:
             for key, count in other.items():
                 self[key] += count
@@ -19,7 +19,7 @@ class Mapping(dict):
     def __missing__(self, key):
         return 0
 
-    def subtract(self, other):
+    def subtract(self, other: "Mapping"):
         to_remove = []
         for k, v in self.items():
             if k in other:
@@ -38,7 +38,7 @@ class Mapping(dict):
             for u in ("*", user):
                 self.add(attribute, g, u, category, value)
 
-    def to_json(self):
+    def to_json(self) -> defaultdict:
         json = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]
