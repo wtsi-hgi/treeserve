@@ -33,9 +33,7 @@ class TreeBuilder:
         self._uid_map = {}  # type: Dict[int, str]
         self._gid_map = {}  # type: Dict[int, str]
 
-    def from_lstat(self, files: List[str]) -> Tree:
-        now = int(time())  # Current time in seconds since epoch
-
+    def from_lstat(self, files: List[str], now=int(time())) -> Tree:
         linecount = 0
         for filename in files:
             with gzip.open(filename, mode="rt") as file:
