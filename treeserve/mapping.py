@@ -1,5 +1,4 @@
-from collections import Counter, defaultdict
-from copy import deepcopy
+from collections import defaultdict
 from typing import Any
 
 
@@ -49,5 +48,5 @@ class Mapping(dict):
             # Need to convert numbers to strings - why? Who knows?
             if data_type.endswith("time"):
                 value *= COMBINED_COST
-            json[data_type][group][user][category] = str(value)
+            json[data_type][group][user][category] = str(round(value, 2))
         return json
