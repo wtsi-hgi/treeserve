@@ -55,9 +55,9 @@ def get_path_depth(args):
         errors.append("no 'path'")
     return path, depth, errors
 
-def create_tree():
+def create_tree(test_mode=False):
     global tree
-    sample_list = glob.glob("samples/*.dat.gz")
+    sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     print("Using samples:", sample_list)
     tree_builder = TreeBuilder()
     tree = tree_builder.from_lstat(sample_list)

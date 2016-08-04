@@ -7,7 +7,7 @@ class WebTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        web.create_tree()
+        web.create_tree(test_mode=True)
 
     def setUp(self):
         web.app.config['TESTING'] = True

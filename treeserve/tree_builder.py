@@ -1,4 +1,5 @@
 from base64 import b64decode
+import csv
 from grp import getgrgid
 import gzip
 from pwd import getpwuid
@@ -38,7 +39,10 @@ class TreeBuilder:
         linecount = 0
         for filename in files:
             with gzip.open(filename, mode="rt") as file:
-                for line in file:
+                reader = csv.reader(file, delimiter="\t")
+                for row in reader:
+                    if not row: continue
+
                     linecount += 1
 
                     if linecount % 10000 == 0:
@@ -46,17 +50,15 @@ class TreeBuilder:
                               "Processed", linecount, "lines,",
                               "created", Node.get_node_count(), "nodes")
 
-                    tokens = line.split("\t")
+                    path = b64decode(row[0]).decode()
 
-                    path = b64decode(tokens[0]).decode()
-
-                    size = int(tokens[1])
-                    uid = int(tokens[2])
-                    gid = int(tokens[3])
-                    access_time = int(tokens[4])
-                    modification_time = int(tokens[5])
-                    creation_time = int(tokens[6])
-                    file_type = tokens[7]
+                    size = int(row[1])
+                    uid = int(row[2])
+                    gid = int(row[3])
+                    access_time = int(row[4])
+                    modification_time = int(row[5])
+                    creation_time = int(row[6])
+                    file_type = row[7]
 
                     user = self.uid_lookup(uid)
                     group = self.gid_lookup(gid)
