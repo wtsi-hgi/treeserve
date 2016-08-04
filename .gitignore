@@ -1,4 +1,4 @@
-!sampledata.dat.gz
+!*.dat.gz
 
 src/*.o
 *~
