@@ -63,8 +63,8 @@ class Node:
 
     def finalize(self):
         star_child = None
-        if self._mapping:
-            # If this node was listed in the mpistat file:
+        if self._mapping and self._is_directory:
+            # If this node was listed in the mpistat file (list space directory occupies as belonging to files inside directory):
             star_child = Node("*.*", is_directory=False, parent=self)
             star_child.update(self._mapping)
         not_directory_children = []
