@@ -18,7 +18,7 @@ class TreeBuilder:
         "index": lambda s: s.endswith((".crai", ".bai", ".sai", ".fai", ".csi")),
         "compressed": lambda s: s.endswith((".bzip2", ".gz", ".tgz", ".zip", ".xz", ".bgz", ".bcf")),
         "uncompressed": lambda s: s.endswith((".sam", ".fasta", ".fastq", ".fa", ".fq", ".vcf", ".csv", ".tsv", ".txt", ".text", "README", ".o", ".e", ".oe", ".dat")),
-        "checkpoint": lambda s: s.endswith(("jobstate.context")),
+        "checkpoint": lambda s: s.endswith("jobstate.context"),
         "temporary": lambda s: ("tmp" in s) or ("temp" in s)
     }
 
