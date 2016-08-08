@@ -12,17 +12,10 @@ class Node:
         self._parent = parent
         Node._node_count += 1
         if self._parent is not None:
-            self._depth = self._parent.depth + 1
             self._parent.add_child(self)
-        else:
-            self._depth = 0
         self._children = {}  # type: Dict[str, Node]
         self._mapping = Mapping()
         self._is_directory = is_directory
-
-    @property
-    def depth(self) -> int:
-        return self._depth
 
     @property
     def is_directory(self) -> bool:
