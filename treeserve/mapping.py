@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any
+from typing import Any, Dict
 
 
 COST_PER_TIB_YEAR = 150
@@ -38,8 +38,8 @@ class Mapping(dict):
             for u in ("*", user):
                 self.add(attribute, g, u, category, value)
 
-    def to_json(self) -> defaultdict:
-        json = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
+    def format(self) -> Dict:
+        rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]
             group = key[1]
@@ -48,5 +48,5 @@ class Mapping(dict):
             if data_type.endswith("time"):
                 value *= COMBINED_COST
             # Need to convert numbers to strings - why? Who knows?
-            json[data_type][group][user][category] = str(round(value, 2))
-        return json
+            rtn[data_type][group][user][category] = str(round(value, 2))
+        return rtn

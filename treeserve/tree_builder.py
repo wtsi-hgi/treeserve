@@ -121,8 +121,3 @@ class TreeBuilder:
                 group = gid
             self._gid_map[gid] = group
         return str(group)
-
-if __name__ == "__main__":
-    tree_builder = TreeBuilder()
-    tree = tree_builder.from_lstat(["samples/sampledata.dat.gz"])
-    print(tree.to_json(depth=0, path="/"))

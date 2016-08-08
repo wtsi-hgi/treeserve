@@ -22,7 +22,7 @@ def api_call():
         error_dict = {"errors": errors}
         return jsonify(error_dict)
 
-    output_dict = tree.to_json(path=path, depth=depth)
+    output_dict = tree.format(path=path, depth=depth)
     return jsonify(output_dict)
 
 @app.route("/dummy_api")

@@ -77,15 +77,15 @@ class Node:
             self.update(mapping)
         return self._mapping
 
-    def to_json(self, depth: int) -> Dict:
+    def format(self, depth: int) -> Dict:
         child_dirs = []
-        json = {
+        rtn = {
             "name": self.name,
             "path": self.path,
-            "data": self._mapping.to_json()
+            "data": self._mapping.format()
         }
         if depth > 0 and self._children:
             for name, child in self._children.items():
-                child_dirs.append(child.to_json(depth-1))
-            json["child_dirs"] = child_dirs
-        return json
+                child_dirs.append(child.format(depth - 1))
+            rtn["child_dirs"] = child_dirs
+        return rtn

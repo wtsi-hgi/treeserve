@@ -22,7 +22,7 @@ class WebTestCase(unittest.TestCase):
         test_path = ""
         test_depth = 0
         self.assertEqual(self.load_response(path=test_path, depth=test_depth),
-                         web.tree.to_json(path=test_path, depth=test_depth))
+                         web.tree.format(path=test_path, depth=test_depth))
 
     @parameterized.expand([
         [{}, ["no 'depth'", "no 'path'"]],

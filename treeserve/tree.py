@@ -37,13 +37,13 @@ class Tree:
         if self._root:
             self._root.finalize()
 
-    def to_json(self, *, path: str, depth: int) -> Dict:
+    def format(self, path: str, depth: int) -> Dict:
         node = self.get_node_at(path) if path is not None else self._root
 
         if node is None:
             return {}
         else:
-            return node.to_json(depth+1)
+            return node.format(depth + 1)
 
 
 class LMDBTree(Tree):

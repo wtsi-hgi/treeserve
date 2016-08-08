@@ -10,7 +10,7 @@ class TestTreeBuilder(unittest.TestCase):
 
     def test_from_lstat(self):
         tree = self.tree_builder.from_lstat(["../../samples/test_minimal.dat.gz"], now=1470299913)
-        out = tree.to_json(depth=0, path="/")
+        out = tree.format(depth=0, path="/")
 
         with open("test_minimal.json") as file:
             correct = json.load(file)
