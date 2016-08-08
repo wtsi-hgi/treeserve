@@ -63,7 +63,7 @@ class TreeBuilder:
                     group = self.gid_lookup(gid)
 
                     categories = [name for name, func in self.file_type_checks.items()
-                                  if func(path)] or ["other"]
+                                  if func(path.lower())] or ["other"]
                     categories.append("*")
                     categories.append(self.file_types.get(file_type, "type_" + file_type))
 
