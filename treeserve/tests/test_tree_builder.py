@@ -14,9 +14,10 @@ class TestTreeBuilder(unittest.TestCase):
 
         with open("test_minimal.json") as file:
             correct = json.load(file)
-
-        self.assertEqual(correct, out)
+        self.maxDiff = None
+        print(out)
+        self.assertEqual(correct, json.loads(json.dumps(out)))
 
 
 if __name__ == '__main__':
-    unittest.main()
+           unittest.main()

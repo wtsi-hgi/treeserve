@@ -386,7 +386,7 @@
       }
     },
     "name": "*.*",
-    "path": "/root/*.*"
+    "path": "/lustre/*.*"
   }],
-  "path": "/root"
+  "path": "/lustre"
 }

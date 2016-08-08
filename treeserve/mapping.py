@@ -1,5 +1,7 @@
 from collections import defaultdict
 from typing import Any
+import json
+from ast import literal_eval
 
 
 COST_PER_TIB_YEAR = 150
@@ -50,3 +52,15 @@ class Mapping(dict):
                 value *= COMBINED_COST
             json[data_type][group][user][category] = str(round(value, 2))
         return json
+
+    def pack_json(self) -> str:
+        partial = {str(key): value for key, value in self.items()}
+        return json.dumps(partial)
+
+    @classmethod
+    def from_json(cls, packed_json: bytes) -> "Mapping":
+        unpacked_json = json.loads(packed_json)
+        unpacked_json = {literal_eval(key): value for key, value in unpacked_json.items()}
+        new_mapping = cls()
+        new_mapping.update(unpacked_json)
+        return new_mapping
