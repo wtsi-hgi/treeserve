@@ -88,6 +88,7 @@ class TreeBuilder:
                     # if file_type == "d":
                     #     self._tree.add_node(path, mapping)
                     # elif file_type in "fl":
+                    #     # Add/update parent directory
                     #     dirname = os.path.dirname(path)
                     #     self._tree.add_node(dirname, mapping)
                     if file_type in "dlf":

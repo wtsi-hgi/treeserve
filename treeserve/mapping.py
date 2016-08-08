@@ -45,8 +45,8 @@ class Mapping(dict):
             group = key[1]
             user = key[2]
             category = key[3]
-            # Need to convert numbers to strings - why? Who knows?
             if data_type.endswith("time"):
                 value *= COMBINED_COST
+            # Need to convert numbers to strings - why? Who knows?
             json[data_type][group][user][category] = str(round(value, 2))
         return json

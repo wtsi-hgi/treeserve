@@ -1,3 +1,4 @@
+import lmdb
 from typing import Dict
 
 from treeserve.mapping import Mapping
@@ -43,3 +44,9 @@ class Tree:
             return {}
         else:
             return node.to_json(depth+1)
+
+
+class LMDBTree(Tree):
+    def __init__(self, lmdb_dir):
+        self._env = lmdb.open(lmdb_dir)
+        super().__init__()
