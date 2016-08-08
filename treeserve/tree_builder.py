@@ -138,5 +138,4 @@ if __name__ == "__main__":
     # with tree_builder._env.begin() as txn:
     #     print(json.dumps(tree.to_json(depth=3, path="/", txn=txn)))
     with tree_builder._env.begin() as txn:
-        cursor = txn.cursor()
-        print(cursor.get(b"137597"))
+        print(json.dumps(Node.from_id(1, txn).to_json(1, txn)))

@@ -29,6 +29,7 @@ class Tree:
                         # Not root, has a parent
                         parent = self.alive_nodes[-1]
                     self.alive_nodes.append(Node(path, is_directory=True, parent=parent))
+                    self.write_node(self.alive_nodes[-1], txn)
             elif self.alive_nodes[i].name != path:
                 # If we've walked back up the tree (current directory has changed upwards):
                 self.alive_nodes = self.alive_nodes[:i]  # Trim excess nodes
@@ -40,6 +41,7 @@ class Tree:
                     # Not yet at the end of the path
                     # Add parent
                     self.alive_nodes.append(Node(path, is_directory=True, parent=self.alive_nodes[-1]))
+                    self.write_node(self.alive_nodes[-1], txn)
             if len(self.alive_nodes) > len(split_path) == i + 1:
                 # Why does this happen? (only happens twice) - possibly when you move from a child directory to the parent directory
                 self.alive_nodes.pop()
@@ -58,8 +60,8 @@ class Tree:
             # Update directory *.* with self
             self.alive_nodes[-1].update_star(mapping)
             # Put the directory and its star node in the db
-            txn.put(str(self.alive_nodes[-1].node_id).encode(), self.alive_nodes[-1].pack())
-            txn.put(str(self.alive_nodes[-1]._star_node.node_id).encode(), self.alive_nodes[-1]._star_node.pack())
+            self.write_node(self.alive_nodes[-1], txn)
+            self.write_node(self.alive_nodes[-1]._star_node, txn)
             # Assume /lustre never turns up in mpistats...
             self.alive_nodes[-2].update(mapping)
         else:
@@ -70,6 +72,9 @@ class Tree:
     def add_lustre(self, txn):
         # Lustre isn't in mpistats. Hacky workaround
         txn.put(b'0', self.alive_nodes[0].pack())
+
+    def write_node(self, node: Node, txn) -> bool:
+        return txn.put(str(node.node_id).encode(), node.pack())
 
     def get_node_at(self, path: str) -> Node:
         split_path = path.strip("/").split("/")
