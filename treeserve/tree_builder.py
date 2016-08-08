@@ -49,7 +49,7 @@ class TreeBuilder:
                               "Processed", linecount, "lines,",
                               "created", Node.get_node_count(), "nodes")
 
-                    path = b64decode(row[0]).decode()
+                    path = b64decode(row[0]).decode()  # type: str
 
                     size = int(row[1])
                     uid = int(row[2])
@@ -57,7 +57,7 @@ class TreeBuilder:
                     access_time = int(row[4])
                     modification_time = int(row[5])
                     creation_time = int(row[6])
-                    file_type = row[7]
+                    file_type = row[7]  # type: str
 
                     user = self.uid_lookup(uid)
                     group = self.gid_lookup(gid)
