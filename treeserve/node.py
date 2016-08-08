@@ -77,7 +77,7 @@ class Node:
             self.update(mapping)
         return self._mapping
 
-    def to_json(self, depth: int) -> dict:
+    def to_json(self, depth: int) -> Dict:
         child_dirs = []
         json = {
             "name": self.name,
