@@ -196,7 +196,7 @@ class SerializableNode(Node):
     @abstractmethod
     def deserialize(self, serialized: bytes) -> "SerializableNode":
         """
-        Return an instance of `SerializableNode` from a sequence of bytes.
+        Deserialize a previously serialized `SerializableNode`.
 
         :param serialized:
         :return:

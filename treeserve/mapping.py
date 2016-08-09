@@ -99,7 +99,7 @@ class SerializableMapping(Mapping):
     @abstractmethod
     def deserialize(self, serialized: bytes) -> "SerializableMapping":
         """
-        Return a `SerializableMapping` from a previously serialized `SerializableMapping`.
+        Deserialize a previously serialized `SerializableMapping`.
 
         :param serialized:
         :return:
