@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections import deque
 from typing import Dict, Optional
 
@@ -179,3 +180,34 @@ class Node:
                 child_dirs.append(child.format(depth - 1))
             rtn["child_dirs"] = child_dirs
         return rtn
+
+
+class SerializableNode(Node):
+    @abstractmethod
+    def serialize(self) -> bytes:
+        """
+        Serialize self for storage (e.g. in a database).
+
+        :return:
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def deserialize(self, serialized: bytes) -> "SerializableNode":
+        """
+        Return an instance of `SerializableNode` from a sequence of bytes.
+
+        :param serialized:
+        :return:
+        """
+        pass
+
+
+class JSONSerializableNode(SerializableNode):
+    def serialize(self) -> bytes:
+        pass
+
+    @classmethod
+    def deserialize(self, serialized: bytes) -> "JSONSerializableNode":
+        pass

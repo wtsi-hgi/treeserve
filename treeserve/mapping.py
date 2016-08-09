@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Dict
 
@@ -82,3 +83,34 @@ class Mapping(dict):
             # Need to convert numbers to strings - why? Who knows?
             rtn[data_type][group][user][category] = str(round(value, 2))
         return rtn
+
+
+class SerializableMapping(Mapping):
+    @abstractmethod
+    def serialize(self) -> bytes:
+        """
+        Serialize self for storage (e.g. in a database).
+
+        :return:
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def deserialize(self, serialized: bytes) -> "SerializableMapping":
+        """
+        Return a `SerializableMapping` from a previously serialized `SerializableMapping`.
+
+        :param serialized:
+        :return:
+        """
+        pass
+
+
+class JSONSerializableMapping(SerializableMapping):
+    def serialize(self) -> bytes:
+        pass
+
+    @classmethod
+    def deserialize(self, serialized: bytes) -> "JSONSerializableMapping":
+        pass
