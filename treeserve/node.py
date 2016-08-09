@@ -140,7 +140,8 @@ class Node:
         """
         star_child = None
         if self._mapping and self._is_directory:
-            # If this node was listed in the mpistat file (list space directory occupies as belonging to files inside directory):
+            # If this node was listed in the mpistat file (list space directory occupies as
+            # belonging to files inside directory):
             star_child = Node("*.*", is_directory=False, parent=self)
             star_child.update(self._mapping)
         not_directory_children = []
@@ -154,7 +155,7 @@ class Node:
         if not_directory_children:
             # If the directory has non-directory children:
             for child in not_directory_children:
-                star_child.update(child._mapping)  # Add the remaining data to child.
+                star_child.update(child._mapping)  # Add the remaining data from child to *.*.
                 self.remove_child(child)  # Delete the node, since it shouldn't end up in the JSON.
         for mapping in child_mappings:
             self.update(mapping)

@@ -114,14 +114,8 @@ class TreeBuilder:
                         ctime_cost = size * (now - creation_time)
                         mapping.set("ctime", group, user, category, ctime_cost)
 
-                    # if file_type == "d":
-                    #     self._tree.add_node(path, mapping)
-                    # elif file_type in "fl":
-                    #     # Add/update parent directory
-                    #     dirname = os.path.dirname(path)
-                    #     self._tree.add_node(dirname, mapping)
-                    if file_type in "dlf":
-                        self._tree.add_node(path, file_type in "d", mapping)
+                    if file_type in self.file_types:
+                        self._tree.add_node(path, file_type == "d", mapping)
 
         print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - start, "seconds")
         self._tree.finalize()

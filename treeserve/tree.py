@@ -15,6 +15,8 @@ class Tree:
             self._root = Node(split_path[0], is_directory=True)
         current_node = self._root
         for fragment in split_path[1:]:
+            # Start from the node after root - this has the side-effect of ignoring the first part
+            # of the path totally (e.g. /foo/scratch115 will work just fine).
             child_node = current_node.get_child(fragment)
             if child_node is None:
                 current_node = Node(fragment, is_directory, parent=current_node)
