@@ -47,6 +47,10 @@ class Tree:
 
 
 class LMDBTree(Tree):
+    """
+    A container for `Node`s that stores nodes in LMDB when not being used.
+    """
+
     def __init__(self, lmdb_dir):
         self._env = lmdb.open(lmdb_dir)
         super().__init__()

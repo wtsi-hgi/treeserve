@@ -9,17 +9,35 @@ COMBINED_COST = COST_PER_TIB_YEAR / (ONE_TIB * SECONDS_PER_YEAR)
 
 
 class Mapping(dict):
+    """
+    A custom subclass of `dict` that can be added to and subtracted from other `Mapping`s.
+    """
+
+    def __missing__(self, key):
+        return 0
+
     def update(self, other: "Mapping"):
+        """
+        Combine the given `Mapping` with self and store the result in self.
+
+        :param other:
+        :return:
+        """
         if self:
             for key, count in other.items():
                 self[key] += count
         else:
             super().update(other)
 
-    def __missing__(self, key):
-        return 0
-
     def subtract(self, other: "Mapping"):
+        """
+        Subtract the given `Mapping` from self and store the result in self.
+
+        If there would be values equal to 0 in the new `Mapping`, do not store them.
+
+        :param other:
+        :return:
+        """
         to_remove = []
         for k, v in self.items():
             if k in other:
@@ -39,6 +57,11 @@ class Mapping(dict):
                 self.add(attribute, g, u, category, value)
 
     def format(self) -> Dict:
+        """
+        Format self for output via the API.
+
+        :return:
+        """
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]

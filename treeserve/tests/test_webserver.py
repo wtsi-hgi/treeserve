@@ -4,7 +4,6 @@ from nose_parameterized import parameterized
 import treeserve_web as web
 
 class WebTestCase(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         web.create_tree(test_mode=True)
