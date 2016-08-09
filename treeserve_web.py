@@ -4,6 +4,7 @@ import glob
 import sys, argparse
 
 from treeserve.tree_builder import TreeBuilder
+from treeserve.tree import InMemoryTree
 
 
 def parse_args(args=sys.argv[1:]):
@@ -59,7 +60,7 @@ def create_tree(test_mode=False):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     print("Using samples:", sample_list)
-    tree_builder = TreeBuilder()
+    tree_builder = TreeBuilder(InMemoryTree())
     tree = tree_builder.from_lstat(sample_list)
     print("Created tree.")
 

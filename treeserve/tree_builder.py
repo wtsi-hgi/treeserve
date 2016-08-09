@@ -33,8 +33,8 @@ class TreeBuilder:
         "l": "link"
     }
 
-    def __init__(self):
-        self._tree = Tree()
+    def __init__(self, tree: Tree):
+        self._tree = tree
         self._uid_map = {}  # type: Dict[int, str]
         self._gid_map = {}  # type: Dict[int, str]
 
