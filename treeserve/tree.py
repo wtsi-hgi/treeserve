@@ -87,6 +87,8 @@ class InMemoryTree(Tree):
         if self._root is None:
             self._root = Node(split_path[0], is_directory=True)
         current_node = self._root
+        # The first path component should always be the name of the root node.
+        assert split_path[0] == self._root.name, (split_path[0], self._root.name)
         for fragment in split_path[1:]:
             # Start from the node after root - this has the side-effect of ignoring the first part
             # of the path totally (e.g. /foo/scratch115 will work just fine).
@@ -100,6 +102,10 @@ class InMemoryTree(Tree):
     def get_node(self, path: str) -> Node:
         split_path = path.strip("/").split("/")
         current_node = self._root
+        if not split_path[0]:
+            return current_node
+        # The first path component should always be the name of the root node.
+        assert split_path[0] == self._root.name, (split_path[0], self._root.name)
         for fragment in split_path[1:]:
             current_node = current_node.get_child(fragment)
             if current_node is None:
@@ -112,7 +118,7 @@ class InMemoryTree(Tree):
             self._root.finalize()
 
     def format(self, path: str, depth: int) -> Dict:
-        node = self.get_node(path) if path is not None else self._root
+        node = self.get_node(path)
 
         if node is None:
             return {}
