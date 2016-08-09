@@ -48,13 +48,22 @@ class Mapping(dict):
         for k in to_remove:
             del self[k]
 
-    def add(self, attribute: str, group: str, user: str, category: str, value: Any):
-        self[(attribute, group, user, category)] = value
+    def set(self, attribute: str, group: str, user: str, category: str, value: Any):
+        """
+        Set the value for the criteria given.
 
-    def add_multiple(self, attribute: str, group: str, user: str, category: str, value: Any):
-        for g in ("*", group):
-            for u in ("*", user):
-                self.add(attribute, g, u, category, value)
+        :param attribute:
+        :param group:
+        :param user:
+        :param category:
+        :param value:
+        :return:
+        """
+        # Although semantically correct, using += is significantly slower.
+        self[attribute, "*", "*", category] = value
+        self[attribute, "*", user, category] = value
+        self[attribute, group, "*", category] = value
+        self[attribute, group, user, category] = value
 
     def format(self) -> Dict:
         """

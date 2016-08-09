@@ -100,19 +100,19 @@ class TreeBuilder:
 
                     for category in categories:
                         # Inode counts
-                        mapping.add_multiple("count", group, user, category, 1)
+                        mapping.set("count", group, user, category, 1)
                         # Size
-                        mapping.add_multiple("size", group, user, category, size)
+                        mapping.set("size", group, user, category, size)
 
                         # Access time
                         atime_cost = size * (now - access_time)
-                        mapping.add_multiple("atime", group, user, category, atime_cost)
+                        mapping.set("atime", group, user, category, atime_cost)
                         # Modification time
                         mtime_cost = size * (now - modification_time)
-                        mapping.add_multiple("mtime", group, user, category, mtime_cost)
+                        mapping.set("mtime", group, user, category, mtime_cost)
                         # Creation time
                         ctime_cost = size * (now - creation_time)
-                        mapping.add_multiple("ctime", group, user, category, ctime_cost)
+                        mapping.set("ctime", group, user, category, ctime_cost)
 
                     # if file_type == "d":
                     #     self._tree.add_node(path, mapping)
