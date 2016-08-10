@@ -83,7 +83,7 @@ class Mapping(dict):
             if data_type.endswith("time"):
                 value *= COMBINED_COST
             # Need to convert numbers to strings - why? Who knows?
-            rtn[data_type][group][user][category] = str(round(value, 2))
+            rtn[data_type][group][user][category] = str(round(value, 3))
         return rtn
 
 
