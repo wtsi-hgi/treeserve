@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import lmdb
-from typing import Dict
+from typing import Dict, Optional
 
 from treeserve.mapping import Mapping
-from treeserve.node import Node
+from treeserve.node import Node, JSONSerializableNode
 
 
 class Tree(metaclass=ABCMeta):
@@ -80,7 +80,7 @@ class InMemoryTree(Tree):
     """
 
     def __init__(self):
-        self._root = None
+        self._root = None  # type: Optional[Node]
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping):
         split_path = path.strip("/").split("/")
@@ -135,10 +135,17 @@ class LMDBTree(Tree):
         self._env = lmdb.open(lmdb_dir)
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping):
-        pass
+        split_path = path.split("/")
+        name = split_path[-1]
+        node = JSONSerializableNode(name, is_directory)
+        node.update(mapping)
+        with self._env.begin(write=True) as txn:
+            txn.put(path.encode(), node.serialize())
 
     def get_node(self, path: str) -> Node:
-        pass
+        with self._env.begin() as txn:
+            node = txn.get(path.encode())
+        return node
 
     def finalize(self):
         pass

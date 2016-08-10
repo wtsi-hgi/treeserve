@@ -110,7 +110,7 @@ class SerializableMapping(Mapping):
 
 
 class JSONSerializableMapping(SerializableMapping):
-    def serialize(self) -> bytes:
+    def serialize(self) -> str:
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]
@@ -118,15 +118,14 @@ class JSONSerializableMapping(SerializableMapping):
             user = key[2]
             category = key[3]
             rtn[data_type][group][user][category] = value
-        return json.dumps(rtn).encode()
+        return json.dumps(rtn)
 
     @classmethod
-    def deserialize(self, serialized: bytes) -> "JSONSerializableMapping":
-        decoded = json.loads(serialized.decode())
+    def deserialize(self, serialized: Dict) -> "JSONSerializableMapping":
         rtn = JSONSerializableMapping()
-        for data_type in decoded:
-            for group in decoded[data_type]:
-                for user in decoded[data_type][group]:
-                    for category, value in decoded[data_type][group][user].items():
+        for data_type in serialized:
+            for group in serialized[data_type]:
+                for user in serialized[data_type][group]:
+                    for category, value in serialized[data_type][group][user].items():
                         rtn[data_type, group, user, category] = value
         return rtn

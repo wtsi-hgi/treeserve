@@ -1,8 +1,9 @@
 from abc import abstractmethod
 from collections import deque
+import json
 from typing import Dict, Optional
 
-from treeserve.mapping import Mapping
+from treeserve.mapping import Mapping, JSONSerializableMapping
 
 
 class Node:
@@ -18,7 +19,7 @@ class Node:
         Node._node_count += 1
         if self._parent is not None:
             self._parent.add_child(self)
-        self._children = {}  # type: Dict[str, Node]
+        self.children = {}  # type: Dict[str, Node]
         self._mapping = Mapping()
         self._is_directory = is_directory
 
@@ -97,7 +98,7 @@ class Node:
         :param node:
         :return:
         """
-        self._children[node.name] = node
+        self.children[node.name] = node
 
     def remove_child(self, node: "Node"):
         """
@@ -106,16 +107,18 @@ class Node:
         :param node:
         :return:
         """
-        del self._children[node.name]
+        del self.children[node.name]
 
     def get_child(self, name: str) -> Optional["Node"]:
         """
         Return a child `Node` with the given name, or `None` if no such child exists.
 
+        Implementation detail of `InMemoryTree`.
+
         :param name:
         :return:
         """
-        return self._children.get(name, None)
+        return self.children.get(name, None)
 
     def finalize(self) -> Mapping:
         """
@@ -145,17 +148,17 @@ class Node:
             # belonging to files inside directory):
             star_child = Node("*.*", is_directory=False, parent=self)
             star_child.update(self._mapping)
-        not_directory_children = []
+        file_children = []
         child_mappings = []
-        if self._children:
-            for child in self._children.values():
+        if self.children:
+            for child in self.children.values():
                 if child is star_child: continue
                 child_mappings.append(child.finalize())
                 if not child.is_directory:
-                    not_directory_children.append(child)
-        if not_directory_children:
-            # If the directory has non-directory children:
-            for child in not_directory_children:
+                    file_children.append(child)
+        if file_children:
+            # If the directory has file (or link) children:
+            for child in file_children:
                 star_child.update(child._mapping)  # Add the remaining data from child to *.*.
                 self.remove_child(child)  # Delete the node, since it shouldn't end up in the JSON.
         for mapping in child_mappings:
@@ -175,8 +178,8 @@ class Node:
             "path": self.path,
             "data": self._mapping.format()
         }
-        if depth > 0 and self._children:
-            for name, child in self._children.items():
+        if depth > 0 and self.children:
+            for name, child in self.children.items():
                 child_dirs.append(child.format(depth - 1))
             rtn["child_dirs"] = child_dirs
         return rtn
@@ -205,9 +208,25 @@ class SerializableNode(Node):
 
 
 class JSONSerializableNode(SerializableNode):
+    def __init__(self, name: str, is_directory: bool, parent: "Node"=None):
+        super().__init__(name, is_directory, parent)
+        self._mapping = JSONSerializableMapping()
+
     def serialize(self) -> bytes:
-        pass
+        rtn = {
+            "path": self.path,
+            "children": list(self.children.keys()),
+            "is_directory": self._is_directory,
+            "mapping": self._mapping.serialize()
+        }
+        return json.dumps(rtn).encode()
 
     @classmethod
     def deserialize(self, serialized: bytes) -> "JSONSerializableNode":
-        pass
+        serialized = json.loads(serialized.decode())
+        split_path = serialized["path"].split("/")
+        name = split_path[-1]
+        is_directory = serialized["is_directory"]
+        rtn = JSONSerializableNode(name, is_directory)
+        rtn.update(JSONSerializableMapping.deserialize(serialized["mapping"]))
+        return rtn
