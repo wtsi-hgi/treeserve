@@ -44,6 +44,7 @@ class Mapping(dict):
         for k, v in self.items():
             if k in other:
                 v -= (other[k])
+                self[k] = v
                 if v == 0:
                     to_remove.append(k)
         # Can't remove items from dictionary whilst iterating over it.
