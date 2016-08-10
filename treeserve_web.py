@@ -18,11 +18,8 @@ app = Flask(__name__)
 
 @app.route("/api")
 def api_call():
-    path, depth, errors = get_path_depth(request.args)
-    if errors:
-        error_dict = {"errors": errors}
-        return jsonify(error_dict)
-
+    path = request.args.get("path", "/")
+    depth = int(request.args.get("depth", "0"))
     output_dict = tree.format(path=path, depth=depth)
     return jsonify(output_dict)
 
@@ -35,30 +32,11 @@ def dummy_api():
     json_file.close()
     return jsonify(json.loads(rtn))
 
-def get_path_depth(args):
-    """Given the args from a request, return the path and depth parameters.
-       If they aren't present or invalid, return errors in json format"""
-    path=depth=None #By default there is no path or depth
-                    #Overwritten if no errors
-    errors = []
-    if "depth" in args:
-        depth = args["depth"]
-        try:
-            depth = int(depth, 10) # Only accept depth in base 10
-        except ValueError:
-            depth = 0
-            errors.append("'depth' not integer")
-    else:
-        errors.append("no 'depth'")
-    if "path" in args:
-        path = args["path"]
-    else:
-        errors.append("no 'path'")
-    return path, depth, errors
 
 def create_tree(test_mode=False):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
+    sample_list = ["samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
     tree_builder = TreeBuilder(InMemoryTree())
     tree = tree_builder.from_lstat(sample_list)
