@@ -62,7 +62,8 @@ class Mapping(dict):
         :param value:
         :return:
         """
-        # Although semantically correct, using += is significantly slower.
+        # Although semantically correct, using += is significantly slower; looping over ("*", user)
+        # and ("*", group) is also slower.
         self[attribute, "*", "*", category] = value
         self[attribute, "*", user, category] = value
         self[attribute, group, "*", category] = value
