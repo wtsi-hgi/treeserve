@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from collections import defaultdict
+import json
 from typing import Any, Dict
 
 
@@ -109,8 +110,22 @@ class SerializableMapping(Mapping):
 
 class JSONSerializableMapping(SerializableMapping):
     def serialize(self) -> bytes:
-        pass
+        rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
+        for key, value in self.items():
+            data_type = key[0]
+            group = key[1]
+            user = key[2]
+            category = key[3]
+            rtn[data_type][group][user][category] = value
+        return json.dumps(rtn).encode()
 
     @classmethod
     def deserialize(self, serialized: bytes) -> "JSONSerializableMapping":
-        pass
+        decoded = json.loads(serialized.decode())
+        rtn = JSONSerializableMapping()
+        for data_type in decoded:
+            for group in decoded[data_type]:
+                for user in decoded[data_type][group]:
+                    for category, value in decoded[data_type][group][user].items():
+                        rtn[data_type, group, user, category] = value
+        return rtn
