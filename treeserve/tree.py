@@ -81,20 +81,24 @@ class InMemoryTree(Tree):
 
     def __init__(self):
         self._root = None  # type: Optional[Node]
+        # This maps node paths to node objects, much like a database would.
+        self._nodes = {}  # type: Dict[str, Node]
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping):
         split_path = path.strip("/").split("/")
         if self._root is None:
-            self._root = Node(split_path[0], is_directory=True)
+            self._root = Node(split_path[0], is_directory=True, path="/" + split_path[0])
         current_node = self._root
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root.name, (split_path[0], self._root.name)
+        path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
         for fragment in split_path[1:]:
-            # Start from the node after root - this has the side-effect of ignoring the first part
-            # of the path totally (e.g. /foo/scratch115 will work just fine).
+            path_stack.append(fragment)
             child_node = current_node.get_child(fragment)
             if child_node is None:
-                current_node = Node(fragment, is_directory, parent=current_node)
+                tmp = Node(fragment, is_directory, path="/".join(path_stack))
+                current_node.add_child(tmp)
+                current_node = tmp
             else:
                 current_node = child_node
         current_node.update(mapping)

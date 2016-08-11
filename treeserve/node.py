@@ -13,15 +13,13 @@ class Node:
 
     _node_count = 0
 
-    def __init__(self, name: str, is_directory: bool, parent: "Node"=None):
+    def __init__(self, name: str, is_directory: bool, path: str):
         self._name = name
-        self._parent = parent
+        self._is_directory = is_directory
+        self._path = path
         Node._node_count += 1
-        if self._parent is not None:
-            self._parent.add_child(self)
         self.children = {}  # type: Dict[str, Node]
         self._mapping = Mapping()
-        self._is_directory = is_directory
 
     @property
     def is_directory(self) -> bool:
@@ -42,30 +40,8 @@ class Node:
         return self._name
 
     @property
-    def parent(self) -> "Node":
-        """
-        Return the parent `Node` of self.
-
-        :return:
-        """
-        return self._parent
-
-    @property
-    def path(self) -> str:
-        """
-        Return the absolute path of self.
-
-        This is constructed each time it is requested by walking the tree upwards; the full path of
-        each node is not stored, in order to save space.
-
-        :return:
-        """
-        fragments = deque()
-        current = self
-        while current is not None:
-            fragments.appendleft(current.name)
-            current = current.parent
-        return "/" + "/".join(fragments)
+    def path(self):
+        return self._path
 
     @classmethod
     def get_node_count(cls) -> int:
@@ -146,7 +122,8 @@ class Node:
         if self._mapping and self._is_directory:
             # If this node was listed in the mpistat file (list space directory occupies as
             # belonging to files inside directory):
-            star_child = Node("*.*", is_directory=False, parent=self)
+            star_child = Node("*.*", is_directory=False, path=self.path + "/*.*")
+            self.add_child(star_child)
             star_child.update(self._mapping)
         file_children = []
         child_mappings = []
@@ -179,7 +156,7 @@ class Node:
             "data": self._mapping.format()
         }
         if depth > 0 and self.children:
-            for name, child in self.children.items():
+            for child in self.children.values():
                 child_dirs.append(child.format(depth - 1))
             rtn["child_dirs"] = child_dirs
         return rtn
@@ -197,7 +174,7 @@ class SerializableNode(Node):
 
     @classmethod
     @abstractmethod
-    def deserialize(self, serialized: bytes) -> "SerializableNode":
+    def deserialize(cls, serialized: bytes) -> "SerializableNode":
         """
         Deserialize a previously serialized `SerializableNode`.
 
@@ -208,8 +185,8 @@ class SerializableNode(Node):
 
 
 class JSONSerializableNode(SerializableNode):
-    def __init__(self, name: str, is_directory: bool, parent: "Node"=None):
-        super().__init__(name, is_directory, parent)
+    def __init__(self, name: str, is_directory: bool, path: str):
+        super().__init__(name, is_directory, path)
         self._mapping = JSONSerializableMapping()
 
     def serialize(self) -> bytes:
@@ -222,11 +199,11 @@ class JSONSerializableNode(SerializableNode):
         return json.dumps(rtn).encode()
 
     @classmethod
-    def deserialize(self, serialized: bytes) -> "JSONSerializableNode":
+    def deserialize(cls, serialized: bytes) -> "JSONSerializableNode":
         serialized = json.loads(serialized.decode())
         split_path = serialized["path"].split("/")
         name = split_path[-1]
         is_directory = serialized["is_directory"]
-        rtn = JSONSerializableNode(name, is_directory)
+        rtn = cls(name, is_directory, serialized["path"])
         rtn.update(JSONSerializableMapping.deserialize(serialized["mapping"]))
         return rtn

@@ -100,7 +100,7 @@ class SerializableMapping(Mapping):
 
     @classmethod
     @abstractmethod
-    def deserialize(self, serialized: bytes) -> "SerializableMapping":
+    def deserialize(cls, serialized: bytes) -> "SerializableMapping":
         """
         Deserialize a previously serialized `SerializableMapping`.
 
@@ -111,7 +111,7 @@ class SerializableMapping(Mapping):
 
 
 class JSONSerializableMapping(SerializableMapping):
-    def serialize(self) -> str:
+    def serialize(self) -> Dict:
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
             data_type = key[0]
@@ -119,11 +119,11 @@ class JSONSerializableMapping(SerializableMapping):
             user = key[2]
             category = key[3]
             rtn[data_type][group][user][category] = value
-        return json.dumps(rtn)
+        return rtn
 
     @classmethod
-    def deserialize(self, serialized: Dict) -> "JSONSerializableMapping":
-        rtn = JSONSerializableMapping()
+    def deserialize(cls, serialized: Dict) -> "JSONSerializableMapping":
+        rtn = cls()
         for data_type in serialized:
             for group in serialized[data_type]:
                 for user in serialized[data_type][group]:
