@@ -21,6 +21,9 @@ class Node:
         self.children = {}  # type: Dict[str, Node]
         self._mapping = Mapping()
 
+    def __repr__(self):
+        return "<Node object at {}>".format(repr(self._path))
+
     @property
     def is_directory(self) -> bool:
         """
