@@ -66,10 +66,11 @@ class LMDBNodeStore(NodeStore):
         self._node_type = node_type
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
+        sentinel = object()
         with self._env.begin() as txn:
-            serialized = txn.get(path.encode())
-            if serialized is None:
-                return None
+            serialized = txn.get(path.encode(), default=sentinel)
+            if serialized is sentinel:
+                raise KeyError(path)
             else:
                 return self._node_type.deserialize(serialized)
 
