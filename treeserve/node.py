@@ -13,14 +13,34 @@ class Node:
     _node_count = 0
 
     def __init__(self, is_directory: bool, path: str):
+        Node._node_count += 1
         self._is_directory = is_directory
         self._path = path
-        Node._node_count += 1
-        self.child_names = set()  # type: Set[str]
+        self._child_names = set()  # type: Set[str]
         self._mapping = Mapping()
 
     def __repr__(self):
         return "<Node object at {}>".format(repr(self._path))
+
+    def __eq__(self, other: "Node"):
+        for attr in ("child_names", "is_directory", "mapping", "path"):
+            try:
+                self_attr, other_attr = [getattr(obj, attr) for obj in (self, other)]
+            except AttributeError:
+                return False
+            else:
+                if self_attr != other_attr:
+                    return False
+        return True
+
+    @property
+    def child_names(self) -> Set[str]:
+        """
+        Return the names of the children of self.
+
+        :return:
+        """
+        return self._child_names
 
     @property
     def is_directory(self) -> bool:
@@ -41,7 +61,11 @@ class Node:
         return self._path.split("/")[-1]
 
     @property
-    def path(self):
+    def mapping(self) -> Mapping:
+        return self._mapping
+
+    @property
+    def path(self) -> str:
         """
         Return the absolute path of self.
 
@@ -60,7 +84,7 @@ class Node:
         """
         return cls._node_count
 
-    def get_child_path(self, child_name):
+    def get_child_path(self, child_name) -> str:
         return self._path + "/" + child_name
 
     def update(self, mapping: Mapping):
@@ -82,7 +106,7 @@ class Node:
         :param node:
         :return:
         """
-        self.child_names.add(node.name)
+        self._child_names.add(node.name)
 
     def remove_child(self, node: "Node"):
         """
@@ -91,7 +115,7 @@ class Node:
         :param node:
         :return:
         """
-        self.child_names.remove(node.name)
+        self._child_names.remove(node.name)
 
 
 class SerializableNode(Node):
@@ -124,7 +148,7 @@ class JSONSerializableNode(SerializableNode):
     def serialize(self) -> bytes:
         rtn = {
             "path": self.path,
-            "children": list(self.child_names),
+            "children": list(self._child_names),
             "is_directory": self._is_directory,
             "mapping": self._mapping.serialize()
         }

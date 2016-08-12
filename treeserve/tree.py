@@ -153,22 +153,22 @@ class InMemoryTree(Tree):
             child_mappings.append(self._finalize_node(child))
             if not child.is_directory:
                 file_children.append(child)
-        if (node._mapping and node.is_directory) or file_children:
+        if (node.mapping and node.is_directory) or file_children:
             # If this node was listed in the mpistat file (list space directory occupies as
             # belonging to files inside directory):
             star = Node(is_directory=False, path=node.path + "/*.*")
             self._add_child(node, star)
-            star.update(node._mapping)
+            star.update(node.mapping)
             self._register_node(star)
         for child in file_children:
             # Add data from child files to *.* and delete the files' nodes, since they shouldn't
             # appear in the JSON outputted by the API.
-            star.update(child._mapping)
+            star.update(child.mapping)
             self._remove_child(node, child)
         for mapping in child_mappings:
-            # This must be postponed until after ``star.update(node._mapping)`` has been called.
+            # This must be postponed until after ``star.update(node.mapping)`` has been called.
             node.update(mapping)
-        return node._mapping
+        return node.mapping
 
     def format(self, path: str="/", depth: int=0) -> Dict:
         node = self.get_node(path)
@@ -188,7 +188,7 @@ class InMemoryTree(Tree):
         rtn = {
             "name": node.name,
             "path": node.path,
-            "data": node._mapping.format()
+            "data": node.mapping.format()
         }
         if depth > 0 and node.child_names:
             for child_name in node.child_names:

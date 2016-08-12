@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 
 COST_PER_TIB_YEAR = 150
@@ -39,7 +39,7 @@ class Mapping(dict):
         :param other:
         :return:
         """
-        to_remove = []  # type: List[Tuple]
+        to_remove = []
         for k, v in self.items():
             if k in other:
                 v -= (other[k])
