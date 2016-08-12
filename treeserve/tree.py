@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 from treeserve.mapping import Mapping
 from treeserve.node import Node, JSONSerializableNode
+from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 
 
 class Tree(metaclass=ABCMeta):
@@ -88,15 +89,17 @@ class InMemoryTree(Tree):
         #     "/root/somedirectory/*.*": ...
         # }
         # tl;dr: leading slash included, trailing slash not included.
-        self._nodes = {}  # type: Dict[str, Node]
+        # self._node_store = {}  # type: Dict[str, Node]
+        self._node_store = LMDBNodeStore("/tmp/lmdb", JSONSerializableNode)
         self._root_path = None
+        self._Node = JSONSerializableNode
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping=None):
         split_path = path.strip("/").split("/")
         if self._root_path is None:
             # Special-case root node creation, since it doesn't have a parent.
             self._root_path = "/" + split_path[0]
-            self._register_node(Node(is_directory=True, path=self._root_path))
+            self._register_node(self._Node(is_directory=True, path=self._root_path))
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
         path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
@@ -106,17 +109,17 @@ class InMemoryTree(Tree):
             path_stack.append(fragment)
             child_node = self.get_node("/".join(path_stack))
             if child_node is None:
-                tmp = Node(True, path="/".join(path_stack))
+                tmp = self._Node(True, path="/".join(path_stack))
                 self._register_node(tmp)
-                current_node.add_child(tmp)
+                self._add_child(current_node, tmp)
                 current_node = tmp
             else:
                 current_node = child_node
         # Nasty hack to work around the fact that the root node is special.
         if path != self._root_path:
             # Make the node we were actually asked to make, add it to the tree and give it data.
-            child = Node(is_directory, path)
-            current_node.add_child(child)
+            child = self._Node(is_directory, path)
+            self._add_child(current_node, child)
             if mapping is not None:
                 child.update(mapping)
             self._register_node(child)
@@ -128,13 +131,13 @@ class InMemoryTree(Tree):
     def get_node(self, path: str) -> Optional[Node]:
         if not path.strip("/"):
             return self.get_node(self._root_path)
-        return self._nodes.get(path.rstrip("/"))  # Remove a trailing slash, but not a leading one
+        return self._node_store.get(path.rstrip("/"))  # Remove a trailing slash, but not a leading one
 
     def _register_node(self, node: Node):
-        self._nodes[node.path] = node
+        self._node_store[node.path] = node
 
     def finalize(self):
-        if self._nodes and self._root_path:
+        if self._node_store and self._root_path:
             self._finalize_node(self.get_node(self._root_path))
 
     def _add_child(self, node: Node, child: Node):
@@ -142,7 +145,7 @@ class InMemoryTree(Tree):
 
     def _remove_child(self, node: Node, child: Node):
         node.remove_child(child)
-        del self._nodes[child.path]
+        del self._node_store[child.path]
 
     def _finalize_node(self, node: Node) -> Mapping:
         file_children = []  # type: List[Node]
@@ -156,7 +159,7 @@ class InMemoryTree(Tree):
         if (node.mapping and node.is_directory) or file_children:
             # If this node was listed in the mpistat file (list space directory occupies as
             # belonging to files inside directory):
-            star = Node(is_directory=False, path=node.path + "/*.*")
+            star = self._Node(is_directory=False, path=node.path + "/*.*")
             self._add_child(node, star)
             star.update(node.mapping)
             self._register_node(star)
