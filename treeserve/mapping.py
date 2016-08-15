@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Dict
+import struct
 
 
 COST_PER_TIB_YEAR = 150

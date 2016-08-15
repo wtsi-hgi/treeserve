@@ -90,6 +90,8 @@ class InMemoryTree(Tree):
         # }
         # tl;dr: leading slash included, trailing slash not included.
         # self._node_store = {}  # type: Dict[str, Node]
+        
+        #self._node_store = InMemoryNodeStore()
         self._node_store = LMDBNodeStore("/tmp/lmdb", JSONSerializableNode)
         self._root_path = None
         self._Node = JSONSerializableNode
@@ -142,6 +144,7 @@ class InMemoryTree(Tree):
 
     def _add_child(self, node: Node, child: Node):
         node.add_child(child)
+        self._node_store[node.path] = node
 
     def _remove_child(self, node: Node, child: Node):
         node.remove_child(child)
@@ -171,6 +174,7 @@ class InMemoryTree(Tree):
         for mapping in child_mappings:
             # This must be postponed until after ``star.update(node.mapping)`` has been called.
             node.update(mapping)
+        self._node_store[node.path] = node
         return node.mapping
 
     def format(self, path: str="/", depth: int=0) -> Dict:

@@ -161,6 +161,6 @@ class JSONSerializableNode(SerializableNode):
         rtn = cls(is_directory, serialized["path"])
         rtn.update(JSONSerializableMapping.deserialize(serialized["mapping"]))
         for child_name in serialized["children"]:
-            rtn.add_child(child_name)
+            rtn._child_names.add(child_name)
         Node._node_count -= 1  # Don't count accesses as 'creating a new node' - subject to change.
         return rtn
