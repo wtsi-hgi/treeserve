@@ -3,7 +3,7 @@ import json
 import shutil
 
 from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
-from treeserve.node import JSONSerializableNode
+from treeserve.node import JSONSerializableNode, PickleSerializableNode
 from treeserve.tree_builder import TreeBuilder
 from treeserve.tree import Tree
 
@@ -11,9 +11,10 @@ from treeserve.tree import Tree
 class TestTreeBuilder(unittest.TestCase):
     def setUp(self):
         self.lmdb_directory = "/tmp/test_tree_builder_lmdb"
-        node = JSONSerializableNode
+        # node_type = JSONSerializableNode
+        node_type = PickleSerializableNode
         # node_store = InMemoryNodeStore()
-        node_store = LMDBNodeStore(self.lmdb_directory, node)
+        node_store = LMDBNodeStore(node_type, self.lmdb_directory)
         tree = Tree(node_store)
         self.tree_builder = TreeBuilder(tree)
 

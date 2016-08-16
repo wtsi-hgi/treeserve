@@ -13,7 +13,7 @@ class Tree:
     def __init__(self, node_store: NodeStore):
         self._node_store = node_store
         self._root_path = None
-        self._Node = JSONSerializableNode
+        self._Node = node_store.node_type
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping=None):
         """

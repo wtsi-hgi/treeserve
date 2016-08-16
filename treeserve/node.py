@@ -1,5 +1,6 @@
 from abc import abstractmethod
 import json
+import pickle
 from typing import Set
 
 from treeserve.mapping import Mapping, DictSerializableMapping
@@ -164,3 +165,16 @@ class JSONSerializableNode(SerializableNode):
             rtn._child_names.add(child_name)
         Node._node_count -= 1  # Don't count accesses as 'creating a new node' - subject to change.
         return rtn
+
+
+class PickleSerializableNode(SerializableNode):
+    def __init__(self, is_directory: bool, path: str):
+        super().__init__(is_directory, path)
+        self._mapping = DictSerializableMapping()
+
+    def serialize(self) -> bytes:
+        return pickle.dumps(self)
+
+    @classmethod
+    def deserialize(cls, serialized: bytes) -> "PickleSerializableNode":
+        return pickle.loads(serialized)

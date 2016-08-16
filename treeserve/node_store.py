@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from collections import MutableMapping, Iterator
+from collections import MutableMapping
 import lmdb
-from typing import Optional
+from typing import Optional, Iterator
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
 
@@ -21,27 +21,39 @@ class NodeStore(MutableMapping, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def __getitem__(self, path):
+    def __init__(self, node_type: type(Node)):
+        self._node_type = node_type
+
+    @property
+    def node_type(self) -> type(Node):
+        return self._node_type
+
+    @abstractmethod
+    def __getitem__(self, path: str) -> Node:
         pass
 
     @abstractmethod
-    def __setitem__(self, path, node):
+    def __setitem__(self, path: str, node: Node):
         pass
 
     @abstractmethod
-    def __delitem__(self, path):
+    def __delitem__(self, path: str):
         pass
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         pass
 
     @abstractmethod
-    def __len__(self):
+    def __len__(self) -> int:
         pass
 
     @abstractmethod
-    def __contains__(self, path):
+    def __contains__(self, path: str) -> bool:
+        pass
+
+    @abstractmethod
+    def close(self):
         pass
 
 
@@ -50,11 +62,16 @@ class InMemoryNodeStore(NodeStore):
     A store for `Node`s that keeps nodes in memory.
     """
 
-    def __init__(self):
+    def __init__(self, node_type: type(Node)):
+        super().__init__(node_type)
         self._store = {}
 
+    @property
+    def node_type(self) -> type(Node):
+        return self._node_type
+
     def __getitem__(self, path: str) -> Node:
-        return JSONSerializableNode.deserialize(self._store[path.encode()])
+        return self._node_type.deserialize(self._store[path.encode()])
 
     def __setitem__(self, path: str, node: Node):
         self._store[path.encode()] = node.serialize()
@@ -68,7 +85,7 @@ class InMemoryNodeStore(NodeStore):
     def __len__(self) -> int:
         return self._store.__len__()
 
-    def __contains__(self, path):
+    def __contains__(self, path: str) -> bool:
         return path.encode() in self._store
 
     def close(self):
@@ -82,9 +99,9 @@ class LMDBNodeStore(NodeStore):
 
     _sentinel = object()
 
-    def __init__(self, lmdb_dir: str, node_type: type(SerializableNode)):
+    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str):
+        super().__init__(node_type)
         self._env = lmdb.open(lmdb_dir, map_size=1024**3)
-        self._node_type = node_type
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
         with self._env.begin() as txn:

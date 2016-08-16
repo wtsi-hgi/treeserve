@@ -7,7 +7,7 @@ from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 
 class TestInMemoryNodeStore(unittest.TestCase):
     def setUp(self):
-        self.node_store = InMemoryNodeStore()
+        self.node_store = InMemoryNodeStore(JSONSerializableNode)
         self.node = JSONSerializableNode(True, "/root")
         self.child = JSONSerializableNode(False, "/root/child")
         self.node.add_child(self.child)
@@ -33,12 +33,13 @@ class TestInMemoryNodeStore(unittest.TestCase):
 
 class TestLMDBNodeStore(unittest.TestCase):
     def setUp(self):
-        self.node_store = LMDBNodeStore("/tmp/lmdb", JSONSerializableNode)
+        self.lmdb_directory = "/tmp/lmdb"
+        self.node_store = LMDBNodeStore(JSONSerializableNode, self.lmdb_directory)
         self.node = JSONSerializableNode(True, "/root")
         self.node_store["/root"] = self.node
 
     def tearDown(self):
-        shutil.rmtree("/tmp/lmdb")
+        shutil.rmtree(self.lmdb_directory)
 
     def test_getitem(self):
         node = self.node_store["/root"]
