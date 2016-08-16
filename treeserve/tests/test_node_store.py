@@ -1,4 +1,5 @@
 import unittest
+import shutil
 
 from treeserve.node import JSONSerializableNode
 from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
@@ -36,16 +37,23 @@ class TestLMDBNodeStore(unittest.TestCase):
         self.node = JSONSerializableNode(True, "/root")
         self.node_store["/root"] = self.node
 
+    def tearDown(self):
+        shutil.rmtree("/tmp/lmdb")
+
     def test_getitem(self):
         node = self.node_store["/root"]
         self.assertEqual(self.node, node)
+        with self.assertRaises(KeyError):
+            none = self.node_store["/does/not/exist"]
 
     def test_delete(self):
         del self.node_store["/root"]
         self.assertIsNone(self.node_store.get("/root"))
+        with self.assertRaises(KeyError):
+            none = self.node_store["/root"]
 
     def test_get(self):
-        node = self.node_store["/root"]
+        node = self.node_store.get("/root")
         self.assertEqual(self.node, node)
         self.assertIsNot(self.node, node)
         none = self.node_store.get("/does/not/exist")

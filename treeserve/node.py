@@ -2,7 +2,7 @@ from abc import abstractmethod
 import json
 from typing import Set
 
-from treeserve.mapping import Mapping, JSONSerializableMapping
+from treeserve.mapping import Mapping, DictSerializableMapping
 
 
 class Node:
@@ -143,7 +143,7 @@ class SerializableNode(Node):
 class JSONSerializableNode(SerializableNode):
     def __init__(self, is_directory: bool, path: str):
         super().__init__(is_directory, path)
-        self._mapping = JSONSerializableMapping()
+        self._mapping = DictSerializableMapping()
 
     def serialize(self) -> bytes:
         rtn = {
@@ -159,7 +159,7 @@ class JSONSerializableNode(SerializableNode):
         serialized = json.loads(serialized.decode())
         is_directory = serialized["is_directory"]
         rtn = cls(is_directory, serialized["path"])
-        rtn.update(JSONSerializableMapping.deserialize(serialized["mapping"]))
+        rtn.update(DictSerializableMapping.deserialize(serialized["mapping"]))
         for child_name in serialized["children"]:
             rtn._child_names.add(child_name)
         Node._node_count -= 1  # Don't count accesses as 'creating a new node' - subject to change.

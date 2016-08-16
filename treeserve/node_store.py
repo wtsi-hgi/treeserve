@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import MutableMapping, Iterator
 import lmdb
-import copy
 from typing import Optional
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
@@ -10,6 +9,15 @@ from treeserve.node import Node, SerializableNode, JSONSerializableNode
 class NodeStore(MutableMapping, metaclass=ABCMeta):
     """
     A store for `Node`s.
+
+    This maps node paths to node objects, much like a database would.
+    An example:
+    {
+        "/root": ...,
+        "/root/somefile.txt": ...,
+        "/root/somedirectory/*.*": ...
+    }
+    tl;dr: leading slash included, trailing slash not included.
     """
 
     @abstractmethod
@@ -47,11 +55,9 @@ class InMemoryNodeStore(NodeStore):
 
     def __getitem__(self, path: str) -> Node:
         return JSONSerializableNode.deserialize(self._store[path.encode()])
-        #return self._store[path.encode()]
 
     def __setitem__(self, path: str, node: Node):
         self._store[path.encode()] = node.serialize()
-        #self._store[path.encode()] = copy.copy(node)
 
     def __delitem__(self, path: str):
         self._store.__delitem__(path.encode())
@@ -61,16 +67,19 @@ class InMemoryNodeStore(NodeStore):
 
     def __len__(self) -> int:
         return self._store.__len__()
-    
+
     def __contains__(self, path):
         return path.encode() in self._store
+
+    def close(self):
+        pass
 
 
 class LMDBNodeStore(NodeStore):
     """
     A store for `Node`s that keeps nodes in LMDB.
     """
-        
+
     _sentinel = object()
 
     def __init__(self, lmdb_dir: str, node_type: type(SerializableNode)):
@@ -84,8 +93,6 @@ class LMDBNodeStore(NodeStore):
                 raise KeyError(path)
             else:
                 return self._node_type.deserialize(serialized)
-
-                return self._node_type.deserialize()
 
     def __setitem__(self, path: str, node: SerializableNode):
         with self._env.begin(write=True) as txn:
@@ -107,3 +114,7 @@ class LMDBNodeStore(NodeStore):
         with self._env.begin() as txn:
             serialized = txn.get(path.encode(), default=LMDBNodeStore._sentinel)
             return serialized is LMDBNodeStore._sentinel
+
+    def close(self):
+        pass
+        # self._txn = self._env.begin()  # Reopen read-only for output

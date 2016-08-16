@@ -110,7 +110,7 @@ class SerializableMapping(Mapping):
         pass
 
 
-class JSONSerializableMapping(SerializableMapping):
+class DictSerializableMapping(SerializableMapping):
     def serialize(self) -> Dict:
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for key, value in self.items():
@@ -122,7 +122,7 @@ class JSONSerializableMapping(SerializableMapping):
         return rtn
 
     @classmethod
-    def deserialize(cls, serialized: Dict) -> "JSONSerializableMapping":
+    def deserialize(cls, serialized: Dict) -> "DictSerializableMapping":
         rtn = cls()
         for data_type in serialized:
             for group in serialized[data_type]:

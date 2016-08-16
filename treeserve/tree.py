@@ -1,19 +1,21 @@
-from abc import ABCMeta, abstractmethod
-import lmdb
 from typing import Dict, List, Optional
 
 from treeserve.mapping import Mapping
 from treeserve.node import Node, JSONSerializableNode
-from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
+from treeserve.node_store import NodeStore
 
 
-class Tree(metaclass=ABCMeta):
+class Tree:
     """
     A container for `Node`s.
     """
 
-    @abstractmethod
-    def add_node(self, path: str, is_directory: bool, mapping: Mapping):
+    def __init__(self, node_store: NodeStore):
+        self._node_store = node_store
+        self._root_path = None
+        self._Node = JSONSerializableNode
+
+    def add_node(self, path: str, is_directory: bool, mapping: Mapping=None):
         """
         Turn the components of a node into a `Node` and add it to self.
 
@@ -26,9 +28,44 @@ class Tree(metaclass=ABCMeta):
         :param mapping:
         :return:
         """
-        pass
+        split_path = path.strip("/").split("/")
+        if self._root_path is None:
+            # Special-case root node creation, since it doesn't have a parent.
+            self._root_path = "/" + split_path[0]
+            self._commit_node(self._Node(is_directory=True, path=self._root_path))
+        # The first path component should always be the name of the root node.
+        assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
+        path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
+        current_node = self.get_node(self._root_path)
+        for fragment in split_path[1:-1]:
+            # Create parent directories
+            path_stack.append(fragment)
+            child_node = self.get_node("/".join(path_stack))
+            if child_node is None:
+                # Child node doesn't exist, so create it.
+                tmp = self._Node(True, path="/".join(path_stack))
+                self._add_child(current_node, tmp)
+                self._commit_node(current_node)
+                self._commit_node(tmp)
+                current_node = tmp
+            else:
+                current_node = child_node
+        # Nasty hack to work around the fact that the root node is special - by the time we get
+        # here for the root node, we've already created it.
+        if path != self._root_path:
+            # Make the node we were actually asked to make, add it to the tree and give it data.
+            child = self._Node(is_directory, path)
+            self._add_child(current_node, child)
+            if mapping is not None:
+                child.update(mapping)
+            self._commit_node(current_node)
+            self._commit_node(child)
+        else:
+            # We were asked to make the root node, which already exists due to special case; we just need to give it data.
+            if mapping is not None:
+                current_node.update(mapping)
+                self._commit_node(current_node)
 
-    @abstractmethod
     def get_node(self, path: str) -> Optional[Node]:
         """
         Return a `Node` from self based on a path, or `None` if the node does not exist.
@@ -36,9 +73,10 @@ class Tree(metaclass=ABCMeta):
         :param path:
         :return:
         """
-        pass
+        if not path.strip("/"):
+            return self.get_node(self._root_path)
+        return self._node_store.get(path.rstrip("/"))  # Remove a trailing slash, but not a leading one
 
-    @abstractmethod
     def finalize(self):
         """
         Prepare self for output via the API.
@@ -61,94 +99,9 @@ class Tree(metaclass=ABCMeta):
 
         :return:
         """
-        pass
-
-    @abstractmethod
-    def format(self, path: str, depth: int) -> Dict:
-        """
-        Format self (or a subtree of self) for output via the API.
-
-        :param path:
-        :param depth:
-        :return:
-        """
-        pass
-
-
-class InMemoryTree(Tree):
-    """
-    A container for `Node`s that keeps all `Node`s in memory.
-    """
-
-    def __init__(self):
-        # This maps node paths to node objects, much like a database would.
-        # An example:
-        # {
-        #     "/root": ...,
-        #     "/root/somefile.txt": ...,
-        #     "/root/somedirectory/*.*": ...
-        # }
-        # tl;dr: leading slash included, trailing slash not included.
-        # self._node_store = {}  # type: Dict[str, Node]
-        
-        #self._node_store = InMemoryNodeStore()
-        self._node_store = LMDBNodeStore("/tmp/lmdb", JSONSerializableNode)
-        self._root_path = None
-        self._Node = JSONSerializableNode
-
-    def add_node(self, path: str, is_directory: bool, mapping: Mapping=None):
-        split_path = path.strip("/").split("/")
-        if self._root_path is None:
-            # Special-case root node creation, since it doesn't have a parent.
-            self._root_path = "/" + split_path[0]
-            self._register_node(self._Node(is_directory=True, path=self._root_path))
-        # The first path component should always be the name of the root node.
-        assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
-        path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
-        current_node = self.get_node(self._root_path)
-        for fragment in split_path[1:-1]:
-            # Create parent directories
-            path_stack.append(fragment)
-            child_node = self.get_node("/".join(path_stack))
-            if child_node is None:
-                tmp = self._Node(True, path="/".join(path_stack))
-                self._register_node(tmp)
-                self._add_child(current_node, tmp)
-                current_node = tmp
-            else:
-                current_node = child_node
-        # Nasty hack to work around the fact that the root node is special.
-        if path != self._root_path:
-            # Make the node we were actually asked to make, add it to the tree and give it data.
-            child = self._Node(is_directory, path)
-            self._add_child(current_node, child)
-            if mapping is not None:
-                child.update(mapping)
-            self._register_node(child)
-        else:
-            # We were asked to make the root node, which already exists due to special case; we just need to give it data.
-            if mapping is not None:
-                current_node.update(mapping)
-
-    def get_node(self, path: str) -> Optional[Node]:
-        if not path.strip("/"):
-            return self.get_node(self._root_path)
-        return self._node_store.get(path.rstrip("/"))  # Remove a trailing slash, but not a leading one
-
-    def _register_node(self, node: Node):
-        self._node_store[node.path] = node
-
-    def finalize(self):
         if self._node_store and self._root_path:
             self._finalize_node(self.get_node(self._root_path))
-
-    def _add_child(self, node: Node, child: Node):
-        node.add_child(child)
-        self._node_store[node.path] = node
-
-    def _remove_child(self, node: Node, child: Node):
-        node.remove_child(child)
-        del self._node_store[child.path]
+        self._node_store.close()
 
     def _finalize_node(self, node: Node) -> Mapping:
         file_children = []  # type: List[Node]
@@ -165,19 +118,39 @@ class InMemoryTree(Tree):
             star = self._Node(is_directory=False, path=node.path + "/*.*")
             self._add_child(node, star)
             star.update(node.mapping)
-            self._register_node(star)
+            self._commit_node(star)
+            self._commit_node(node)
         for child in file_children:
             # Add data from child files to *.* and delete the files' nodes, since they shouldn't
             # appear in the JSON outputted by the API.
             star.update(child.mapping)
             self._remove_child(node, child)
+            self._commit_node(star)
+            self._commit_node(node)
         for mapping in child_mappings:
             # This must be postponed until after ``star.update(node.mapping)`` has been called.
             node.update(mapping)
-        self._node_store[node.path] = node
+        self._commit_node(node)
         return node.mapping
 
+    def _commit_node(self, node: Node):
+        self._node_store[node.path] = node
+
+    def _add_child(self, node: Node, child: Node):
+        node.add_child(child)
+
+    def _remove_child(self, node: Node, child: Node):
+        node.remove_child(child)
+        del self._node_store[child.path]
+
     def format(self, path: str="/", depth: int=0) -> Dict:
+        """
+        Format self (or a subtree of self) for output via the API.
+
+        :param path:
+        :param depth:
+        :return:
+        """
         node = self.get_node(path)
         if node is None:
             return {}
@@ -204,29 +177,3 @@ class InMemoryTree(Tree):
                 child_dirs.append(self._format_node(child, depth - 1))
             rtn["child_dirs"] = child_dirs
         return rtn
-
-
-class LMDBTree(Tree):
-    """
-    A container for `Node`s that stores nodes in LMDB when not being used.
-    """
-
-    def __init__(self, lmdb_dir):
-        self._env = lmdb.open(lmdb_dir)
-
-    def add_node(self, path: str, is_directory: bool, mapping: Mapping):
-        node = JSONSerializableNode(is_directory, path)
-        node.update(mapping)
-        with self._env.begin(write=True) as txn:
-            txn.put(path.encode(), node.serialize())
-
-    def get_node(self, path: str) -> Node:
-        with self._env.begin() as txn:
-            node = txn.get(path.encode())
-        return node
-
-    def finalize(self):
-        pass
-
-    def format(self, path: str, depth: int) -> Dict:
-        pass

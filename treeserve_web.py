@@ -3,8 +3,9 @@ from flask import Flask, request, jsonify
 import glob
 import sys, argparse
 
+from treeserve.node_store import InMemoryNodeStore
 from treeserve.tree_builder import TreeBuilder
-from treeserve.tree import InMemoryTree
+from treeserve.tree import Tree
 
 
 def parse_args(args=sys.argv[1:]):
@@ -38,7 +39,7 @@ def create_tree(test_mode=False):
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     sample_list = ["samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
-    tree_builder = TreeBuilder(InMemoryTree())
+    tree_builder = TreeBuilder(Tree(InMemoryNodeStore()))
     tree = tree_builder.from_lstat(sample_list)
     print("Created tree.")
 

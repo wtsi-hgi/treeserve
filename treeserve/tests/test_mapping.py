@@ -1,6 +1,6 @@
 import unittest
 
-from treeserve.mapping import Mapping, JSONSerializableMapping
+from treeserve.mapping import Mapping, DictSerializableMapping
 
 
 class TestMapping(unittest.TestCase):
@@ -69,14 +69,14 @@ class TestMapping(unittest.TestCase):
         self.assertEqual(correct, self.mapping.format())
 
 
-class TestJSONSerializableMapping(unittest.TestCase):
+class TestDictSerializableMapping(unittest.TestCase):
     def setUp(self):
-        self.mapping = JSONSerializableMapping()
+        self.mapping = DictSerializableMapping()
         self.mapping.set("size", "group", "user", "file", 42)
         self.mapping.set("size", "group", "user_2", "file", 7)
 
     def test_serialize_deserialize(self):
-        self.assertEqual(self.mapping, JSONSerializableMapping.deserialize(self.mapping.serialize()))
+        self.assertEqual(self.mapping, DictSerializableMapping.deserialize(self.mapping.serialize()))
 
 
 if __name__ == '__main__':
