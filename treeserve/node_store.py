@@ -52,6 +52,9 @@ class NodeStore(MutableMapping, metaclass=ABCMeta):
     def __contains__(self, path: str) -> bool:
         pass
 
+    def __bool__(self) -> bool:
+        return bool(len(self))
+
     @abstractmethod
     def close(self):
         pass
@@ -102,36 +105,34 @@ class LMDBNodeStore(NodeStore):
     def __init__(self, node_type: type(SerializableNode), lmdb_dir: str):
         super().__init__(node_type)
         self._env = lmdb.open(lmdb_dir, map_size=1024**3)
+        self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
-        with self._env.begin() as txn:
-            serialized = txn.get(path.encode(), default=LMDBNodeStore._sentinel)
-            if serialized is LMDBNodeStore._sentinel:
-                raise KeyError(path)
-            else:
-                return self._node_type.deserialize(serialized)
+        serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
+        if serialized is LMDBNodeStore._sentinel:
+            raise KeyError(path)
+        else:
+            return self._node_type.deserialize(path, serialized)
 
     def __setitem__(self, path: str, node: SerializableNode):
-        with self._env.begin(write=True) as txn:
-            txn.put(path.encode(), node.serialize())
+        self._txn.put(path.encode(), node.serialize())
 
     def __delitem__(self, path: str):
-        with self._env.begin(write=True) as txn:
-            txn.delete(path.encode())
+        self._txn.delete(path.encode())
 
     def __iter__(self):
         raise NotImplementedError
 
     def __len__(self) -> int:
-        entries = self._env.stat()["entries"]
+        # self._txn is not yet committed, so self._env.stat() will return different (old) data.
+        entries = self._txn.stat()["entries"]
         print("LMDB entries:", entries)
         return entries
 
-    def __contains__(self, path):
-        with self._env.begin() as txn:
-            serialized = txn.get(path.encode(), default=LMDBNodeStore._sentinel)
-            return serialized is LMDBNodeStore._sentinel
+    def __contains__(self, path: str) -> bool:
+        serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
+        return serialized is LMDBNodeStore._sentinel
 
     def close(self):
-        pass
-        # self._txn = self._env.begin()  # Reopen read-only for output
+        self._txn.commit()
+        self._txn = lmdb.Transaction(self._env)  # Reopen transaction read-only for output.
