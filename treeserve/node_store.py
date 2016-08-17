@@ -126,7 +126,6 @@ class LMDBNodeStore(NodeStore):
     def __len__(self) -> int:
         # self._txn is not yet committed, so self._env.stat() will return different (old) data.
         entries = self._txn.stat()["entries"]
-        print("LMDB entries:", entries)
         return entries
 
     def __contains__(self, path: str) -> bool:
