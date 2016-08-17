@@ -30,6 +30,10 @@ class TestInMemoryNodeStore(unittest.TestCase):
         none = self.node_store.get("/does/not/exist")
         self.assertIsNone(none)
 
+    def test_contains(self):
+        self.assertIn("/root", self.node_store)
+        self.assertNotIn("/does/not/exist", self.node_store)
+
 
 class TestLMDBNodeStore(unittest.TestCase):
     def setUp(self):
@@ -60,6 +64,9 @@ class TestLMDBNodeStore(unittest.TestCase):
         none = self.node_store.get("/does/not/exist")
         self.assertIsNone(none)
 
+    def test_contains(self):
+        self.assertIn("/root", self.node_store)
+        self.assertNotIn("/does/not/exist", self.node_store)
 
 if __name__ == '__main__':
     unittest.main()
