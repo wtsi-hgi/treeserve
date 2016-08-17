@@ -40,20 +40,18 @@ class Tree(Sized):
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
         path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
-        current_node = self.get_node(self._root_path)
-        for fragment in split_path[1:-1]:
+        for fragment in split_path[1:]:
             # Create parent directories
             path_stack.append(fragment)
-            child_node = self.get_node("/".join(path_stack))
-            if child_node is None:
+            current_path = "/".join(path_stack)
+            if current_path not in self._node_store:
                 # Child node doesn't exist, so create it.
+                old_node = self.get_node("/".join(path_stack[:-1]))
                 tmp = self._Node(True, path="/".join(path_stack))
-                self._add_child(current_node, tmp)
-                self._commit_node(current_node)
+                self._add_child(old_node, tmp)
+                self._commit_node(old_node)
                 self._commit_node(tmp)
-                current_node = tmp
-            else:
-                current_node = child_node
+        current_node = self.get_node(path)
         # Nasty hack to work around the fact that the root node is special - by the time we get
         # here for the root node, we've already created it.
         if path != self._root_path:
@@ -116,21 +114,21 @@ class Tree(Sized):
             child_mappings.append(self._finalize_node(child))
             if not child.is_directory:
                 file_children.append(child)
+        has_star = False
         if (node.mapping and node.is_directory) or file_children:
             # If this node was listed in the mpistat file (list space directory occupies as
             # belonging to files inside directory):
             star = self._Node(is_directory=False, path=node.path + "/*.*")
+            has_star = True
             self._add_child(node, star)
             star.update(node.mapping)
-            self._commit_node(star)
-            self._commit_node(node)
         for child in file_children:
             # Add data from child files to *.* and delete the files' nodes, since they shouldn't
             # appear in the JSON outputted by the API.
             star.update(child.mapping)
             self._remove_child(node, child)
+        if has_star:
             self._commit_node(star)
-            self._commit_node(node)
         for mapping in child_mappings:
             # This must be postponed until after ``star.update(node.mapping)`` has been called.
             node.update(mapping)
