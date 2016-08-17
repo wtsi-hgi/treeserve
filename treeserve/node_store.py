@@ -106,16 +106,24 @@ class LMDBNodeStore(NodeStore):
         super().__init__(node_type)
         self._env = lmdb.open(lmdb_dir, map_size=1024**3)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
+        self._last_get = {}
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
+        if path in self._last_get:
+            return self._last_get[path]
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
         if serialized is LMDBNodeStore._sentinel:
             raise KeyError(path)
         else:
-            return self._node_type.deserialize(path, serialized)
+            rtn = self._node_type.deserialize(path, serialized)
+            self._last_get = {path: rtn}
+            return rtn
 
     def __setitem__(self, path: str, node: SerializableNode):
-        self._txn.put(path.encode(), node.serialize())
+        serialized = node.serialize()
+        if path in self._last_get:
+            self._last_get[path] = node
+        self._txn.put(path.encode(), serialized)
 
     def __delitem__(self, path: str):
         self._txn.delete(path.encode())
