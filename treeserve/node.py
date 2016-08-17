@@ -12,10 +12,7 @@ class Node:
     A container for information about a file.
     """
 
-    _node_count = 0
-
     def __init__(self, is_directory: bool, path: str):
-        Node._node_count += 1
         self._is_directory = is_directory
         self._path = path
         self._child_names = set()  # type: Set[str]
@@ -74,17 +71,6 @@ class Node:
         :return:
         """
         return self._path
-
-    @classmethod
-    def get_node_count(cls) -> int:
-        """
-        Return the number of `Node`s that have been created.
-
-        Note that this count is not decremented when a `Node` is deleted.
-
-        :return:
-        """
-        return cls._node_count
 
     def get_child_path(self, child_name) -> str:
         return self._path + "/" + child_name
@@ -166,7 +152,6 @@ class JSONSerializableNode(SerializableNode):
         rtn.update(DictSerializableMapping.deserialize(serialized["mapping"]))
         for child_name in serialized["children"]:
             rtn._child_names.add(child_name)
-        Node._node_count -= 1  # Don't count accesses as 'creating a new node' - subject to change.
         return rtn
 
 

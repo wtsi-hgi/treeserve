@@ -75,8 +75,8 @@ class TreeBuilder:
 
                     if linecount % 10000 == 0:
                         print(strftime("[%H:%M:%S]"),
-                              "Processed {} lines, created {} nodes ({} nodes exist)".format(
-                                  linecount, Node.get_node_count(), len(self._tree)
+                              "Processed {} lines, created {} nodes".format(
+                                  linecount, len(self._tree)
                               )
                         )
 
@@ -122,7 +122,7 @@ class TreeBuilder:
         print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - start, "seconds")
         self._tree.finalize()
         print(strftime("[%H:%M:%S]"), "Built tree in", time() - start, "seconds")
-        print(strftime("[%H:%M:%S]"), Node.get_node_count(), "nodes created")
+        print(strftime("[%H:%M:%S]"), len(self._tree), "nodes created")
         return self._tree
 
     def uid_lookup(self, uid: int) -> str:
