@@ -130,7 +130,7 @@ class LMDBNodeStore(NodeStore):
 
     def __contains__(self, path: str) -> bool:
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
-        return serialized is LMDBNodeStore._sentinel
+        return serialized is not LMDBNodeStore._sentinel
 
     def close(self):
         self._txn.commit()
