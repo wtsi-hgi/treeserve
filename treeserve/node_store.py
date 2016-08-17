@@ -74,7 +74,7 @@ class InMemoryNodeStore(NodeStore):
         return self._node_type
 
     def __getitem__(self, path: str) -> Node:
-        return self._node_type.deserialize(self._store[path.encode()])
+        return self._node_type.deserialize(path, self._store[path.encode()])
 
     def __setitem__(self, path: str, node: Node):
         self._store[path.encode()] = node.serialize()

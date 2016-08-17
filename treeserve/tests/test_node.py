@@ -13,9 +13,9 @@ class TestJSONSerializableNode(unittest.TestCase):
         self.child.mapping.set("size", "group", "user", "file_3", 66)
 
     def test_serialize_deserialize(self):
-        copied_node = JSONSerializableNode.deserialize(self.node.serialize())
+        copied_node = JSONSerializableNode.deserialize("/root", self.node.serialize())
         self.assertEqual(self.node, copied_node)
-        self.assertEqual(self.child, JSONSerializableNode.deserialize(self.child.serialize()))
+        self.assertEqual(self.child, JSONSerializableNode.deserialize("/root/test_file", self.child.serialize()))
         self.assertEqual(self.node.child_names, copied_node.child_names)
         self.assertEqual(self.node.is_directory, copied_node.is_directory)
         self.assertEqual(self.node.name, copied_node.name)
