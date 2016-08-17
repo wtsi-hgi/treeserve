@@ -3,7 +3,8 @@ from flask import Flask, request, jsonify
 import glob
 import sys, argparse
 
-from treeserve.node_store import InMemoryNodeStore
+from treeserve.node import PickleSerializableNode
+from treeserve.node_store import LMDBNodeStore
 from treeserve.tree_builder import TreeBuilder
 from treeserve.tree import Tree
 
@@ -39,7 +40,7 @@ def create_tree(test_mode=False):
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     sample_list = ["samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
-    tree_builder = TreeBuilder(Tree(InMemoryNodeStore()))
+    tree_builder = TreeBuilder(Tree(LMDBNodeStore(PickleSerializableNode, "/tmp/web_lmdb")))
     tree = tree_builder.from_lstat(sample_list)
     print("Created tree.")
 
