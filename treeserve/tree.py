@@ -1,3 +1,4 @@
+from collections.abc import Sized
 from typing import Dict, List, Optional
 
 from treeserve.mapping import Mapping
@@ -5,7 +6,7 @@ from treeserve.node import Node, JSONSerializableNode
 from treeserve.node_store import NodeStore
 
 
-class Tree:
+class Tree(Sized):
     """
     A container for `Node`s.
     """
@@ -14,6 +15,9 @@ class Tree:
         self._node_store = node_store
         self._root_path = None
         self._Node = node_store.node_type
+
+    def __len__(self):
+        return len(self._node_store)
 
     def add_node(self, path: str, is_directory: bool, mapping: Mapping=None):
         """

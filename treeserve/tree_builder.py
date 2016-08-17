@@ -75,8 +75,10 @@ class TreeBuilder:
 
                     if linecount % 10000 == 0:
                         print(strftime("[%H:%M:%S]"),
-                              "Processed", linecount, "lines,",
-                              "created", Node.get_node_count(), "nodes")
+                              "Processed {} lines, created {} nodes ({} nodes exist)".format(
+                                  linecount, Node.get_node_count(), len(self._tree)
+                              )
+                        )
 
                     path = b64decode(row[0]).decode()  # type: str
 
