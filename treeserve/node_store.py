@@ -1,12 +1,12 @@
 from abc import ABCMeta, abstractmethod
-from collections import MutableMapping
+from collections.abc import MutableMapping, Container
 import lmdb
 from typing import Optional, Iterator
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
 
 
-class NodeStore(MutableMapping, metaclass=ABCMeta):
+class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
     """
     A store for `Node`s.
 
