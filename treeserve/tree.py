@@ -39,6 +39,7 @@ class Tree(Sized):
             self._commit_node(self._Node(is_directory=True, path=self._root_path))
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
+        current_node = None
         path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
         for fragment in split_path[1:]:
             # Create parent directories
@@ -46,21 +47,24 @@ class Tree(Sized):
             current_path = "/".join(path_stack)
             if current_path not in self._node_store:
                 # Child node doesn't exist, so create it.
-                old_node = self.get_node("/".join(path_stack[:-1]))
-                tmp = self._Node(True, path="/".join(path_stack))
-                self._add_child(old_node, tmp)
+                if current_node:
+                    old_node = current_node
+                else:
+                    old_node = self.get_node("/".join(path_stack[:-1]))
+                current_node = self._Node(True, path="/".join(path_stack))
+                self._add_child(old_node, current_node)
                 self._commit_node(old_node)
-                self._commit_node(tmp)
-        current_node = self.get_node(path)
+        if current_node is None:
+            # Should only happen for root node, since it has no parent.
+            current_node = self.get_node(path)
+        assert current_node.path == path
         # Nasty hack to work around the fact that the root node is special - by the time we get
         # here for the root node, we've already created it.
         if path != self._root_path:
             # Make the node we were actually asked to make, add it to the tree and give it data.
             child = self._Node(is_directory, path)
-            self._add_child(current_node, child)
             if mapping is not None:
                 child.update(mapping)
-            self._commit_node(current_node)
             self._commit_node(child)
         else:
             # We were asked to make the root node, which already exists due to special case; we just need to give it data.
