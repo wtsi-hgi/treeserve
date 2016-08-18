@@ -1,4 +1,5 @@
 import unittest
+from nose_parameterized import parameterized
 import json
 import shutil
 
@@ -9,18 +10,25 @@ from treeserve.tree import Tree
 
 
 class TestTreeBuilder(unittest.TestCase):
-    def setUp(self):
-        self.lmdb_directory = "/tmp/test_tree_builder_lmdb"
-        node_type = PickleSerializableNode
-        node_store = LMDBNodeStore(node_type, self.lmdb_directory)
-        tree = Tree(node_store)
-        self.tree_builder = TreeBuilder(tree)
+    lmdb_directory = "/tmp/test_tree_builder_lmdb"
 
     def tearDown(self):
-        shutil.rmtree(self.lmdb_directory, ignore_errors=True)
+        shutil.rmtree(TestTreeBuilder.lmdb_directory, ignore_errors=True)
 
-    def test_correct_output(self):
-        tree = self.tree_builder.from_lstat(["../../samples/test_minimal.dat.gz"], now=1470299913)
+    @parameterized.expand([
+        (InMemoryNodeStore, [PickleSerializableNode]),
+        (InMemoryNodeStore, [JSONSerializableNode]),
+        (LMDBNodeStore, [PickleSerializableNode, lmdb_directory]),
+        (LMDBNodeStore, [JSONSerializableNode, lmdb_directory]),
+        (LMDBNodeStore, [PickleSerializableNode, lmdb_directory, 10]),
+        (LMDBNodeStore, [JSONSerializableNode, lmdb_directory, 10]),
+    ])
+    def test_correct_output(self, node_store_type, builder):
+        node_store = node_store_type(*builder)
+        print(node_store)
+        tree = Tree(node_store)
+        tree_builder = TreeBuilder(tree)
+        tree = tree_builder.from_lstat(["../../samples/test_minimal.dat.gz"], now=1470299913)
         out = tree.format(depth=0, path="/")
 
         with open("test_minimal.json") as file:
@@ -29,7 +37,10 @@ class TestTreeBuilder(unittest.TestCase):
         self.assertEqual(correct, json.loads(json.dumps(out)))
 
     def test_real_data(self):
-        self.tree_builder.from_lstat(["../../samples/sampledata.dat.gz"], now=1470299913).format()
+        node_store = LMDBNodeStore(PickleSerializableNode, TestTreeBuilder.lmdb_directory)
+        tree = Tree(node_store)
+        tree_builder = TreeBuilder(tree)
+        tree_builder.from_lstat(["../../samples/sampledata.dat.gz"], now=1470299913).format()
 
 
 if __name__ == '__main__':
