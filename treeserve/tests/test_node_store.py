@@ -1,7 +1,7 @@
 import unittest
 import shutil
 
-from treeserve.node import JSONSerializableNode, PickleSerializableNode
+from treeserve.node import JSONSerializableNode
 from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 
 
