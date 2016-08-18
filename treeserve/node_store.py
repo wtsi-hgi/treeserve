@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping, Container
+from collections import OrderedDict
 import lmdb
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Tuple, Any, List
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
 
@@ -106,40 +107,72 @@ class LMDBNodeStore(NodeStore):
         super().__init__(node_type)
         self._env = lmdb.open(lmdb_dir, map_size=1024**3)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
-        self._last_get = {}
+        self._last_get = (None, None)  # type: Tuple[str, Node]
+        self._set_cache = FIFOCache()
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
-        if path in self._last_get:
-            return self._last_get[path]
+        if path == self._last_get[0]:
+            return self._last_get[1]
+        if path in self._set_cache:
+            return self._set_cache[path]
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
         if serialized is LMDBNodeStore._sentinel:
             raise KeyError(path)
         else:
             rtn = self._node_type.deserialize(path, serialized)
-            self._last_get = {path: rtn}
+            self._last_get = (path, rtn)
             return rtn
 
     def __setitem__(self, path: str, node: SerializableNode):
-        serialized = node.serialize()
-        if path in self._last_get:
-            self._last_get[path] = node
-        self._txn.put(path.encode(), serialized)
+        if path == self._last_get[0]:
+            self._last_get = path, node
+        for path, node in self._set_cache.add(path, node):
+            self._txn.put(path.encode(), node.serialize())
 
     def __delitem__(self, path: str):
         self._txn.delete(path.encode())
+        if path in self._set_cache:
+            del self._set_cache[path]
 
     def __iter__(self):
         raise NotImplementedError
 
     def __len__(self) -> int:
         # self._txn is not yet committed, so self._env.stat() will return different (old) data.
-        entries = self._txn.stat()["entries"]
+        entries = self._txn.stat()["entries"] + len(self._set_cache)
         return entries
 
     def __contains__(self, path: str) -> bool:
+        if path in self._set_cache:
+            return True
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
         return serialized is not LMDBNodeStore._sentinel
 
     def close(self):
+        for path, node in self._set_cache.items():
+            self._txn.put(path.encode(), node.serialize())
+        self._set_cache.clear()
         self._txn.commit()
         self._txn = lmdb.Transaction(self._env)  # Reopen transaction read-only for output.
+
+
+class FIFOCache(OrderedDict):
+    """
+    A cache of configurable size where the least-recently accessed items are removed.
+    """
+
+    def __init__(self, max_size: int=4):
+        self.max_size = max_size
+        super().__init__()
+
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        super().__setitem__(key, value)
+
+    def add(self, key, value) -> List[Tuple[Any, Any]]:
+        self[key] = value
+        rtn = []
+        while len(self) > self.max_size:
+            rtn.append(self.popitem(last=False))
+        return rtn
