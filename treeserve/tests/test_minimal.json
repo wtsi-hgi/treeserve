@@ -191,7 +191,6 @@
       }
     }
   },
-  "name": "root",
   "child_dirs": [{
     "data": {
       "ctime": {
@@ -386,7 +385,8 @@
       }
     },
     "name": "*.*",
-    "path": "/root/*.*"
+    "path": "/lustre/*.*"
   }],
-  "path": "/root"
+  "name": "lustre",
+  "path": "/lustre"
 }
