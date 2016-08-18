@@ -60,7 +60,6 @@ class TestLMDBNodeStore(unittest.TestCase):
     def test_get(self):
         node = self.node_store.get("/root")
         self.assertEqual(self.node, node)
-        self.assertIsNot(self.node, node)
         none = self.node_store.get("/does/not/exist")
         self.assertIsNone(none)
 
