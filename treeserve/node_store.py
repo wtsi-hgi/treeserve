@@ -123,14 +123,18 @@ class LMDBNodeStore(NodeStore):
     """
 
     _sentinel = object()
+    # LMDB apparently has a maximum transaction size - it's unclear what it is, so we assume that
+    # committing every million operations will work.
+    max_txn_size = 1000000
 
     def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, cache_size: int=4):
         super().__init__(node_type)
         self.lmdb_dir = lmdb_dir
-        self._env = lmdb.open(self.lmdb_dir, map_size=1024**3)
+        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
         self._last_get = (None, None)  # type: Tuple[str, Node]
         self._set_cache = FIFOCache(cache_size)
+        self.current_txn_size = 0
 
     def __repr__(self):
         return "{}({}, {}, {})".format(self.__class__.__name__, self._node_type.__name__, repr(self.lmdb_dir), self._set_cache.max_size)
@@ -152,9 +156,11 @@ class LMDBNodeStore(NodeStore):
         if path == self._last_get[0]:
             self._last_get = path, node
         for path, node in self._set_cache.add(path, node):
+            self._txn_inc_commit()
             self._txn.put(path.encode(), node.serialize())
 
     def __delitem__(self, path: str):
+        self._txn_inc_commit()
         self._txn.delete(path.encode())
         if path in self._set_cache:
             del self._set_cache[path]
@@ -173,12 +179,22 @@ class LMDBNodeStore(NodeStore):
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
         return serialized is not LMDBNodeStore._sentinel
 
-    def close(self):
+    def _txn_inc_commit(self):
+        self.current_txn_size += 1
+        if self.current_txn_size >= LMDBNodeStore.max_txn_size:
+            print("Committing current transaction to disk")
+            self._commit(write=True)
+            self.current_txn_size = 0
+
+    def _commit(self, write: bool):
         for path, node in self._set_cache.items():
             self._txn.put(path.encode(), node.serialize())
-        self._set_cache.clear()
         self._txn.commit()
-        self._txn = lmdb.Transaction(self._env)  # Reopen transaction read-only for output.
+        self._txn = lmdb.Transaction(self._env, write=write, buffers=self.node_type.uses_buffers())
+
+    def close(self):
+        self._commit(write=False)
+        self._set_cache.clear()
 
     @property
     def _root_path(self):
