@@ -114,29 +114,38 @@ class Tree(Sized):
         file_children = []  # type: List[Node]
         child_mappings = []  # type: List[Mapping]
         for child_name in node.child_names:
+            # For each child:
+            #   finalize child
+            #   update self with child's mapping (postponed until end of finalize)
+            #   if child is a file:
+            #     update *.* with child's mapping (postponed until *.* is created)
             child_path = node.get_child_path(child_name)
             child = self.get_node(child_path)
-            child_mappings.append(self._finalize_node(child))
             if not child.is_directory:
                 file_children.append(child)
-        has_star = False
+            child_mappings.append(self._finalize_node(child))
         if (node.mapping and node.is_directory) or file_children:
-            # If this node was listed in the mpistat file (list space directory occupies as
-            # belonging to files inside directory):
+            # If this node is:
+            #   - listed in mpistat
+            #   - a directory
+            # or:
+            #   - has children that are files (and therefore is implicitly a directory)
+            # then create a *.* node that is a child of this node, and has a mapping that is the
+            # same as this node's mapping
             star = self._Node(is_directory=False, path=node.path + "/*.*")
-            has_star = True
             self._add_child(node, star)
             star.update(node.mapping)
-        for child in file_children:
-            # Add data from child files to *.* and delete the files' nodes, since they shouldn't
-            # appear in the JSON outputted by the API.
-            star.update(child.mapping)
-            self._remove_child(node, child)
-        if has_star:
+            for child in file_children:
+                # Add the mappings of this node's file children to this node's *.* (postponed from
+                # earlier), and remove this node's file children to stop them showing up in the
+                # JSON.
+                star.update(child.mapping)
+                self._remove_child(node, child)
             self._commit_node(star)
-        for mapping in child_mappings:
+        for child_mapping in child_mappings:
+            # Update this node with the mappings from all children
             # This must be postponed until after ``star.update(node.mapping)`` has been called.
-            node.update(mapping)
+            node.update(child_mapping)
         self._commit_node(node)
         return node.mapping
 
