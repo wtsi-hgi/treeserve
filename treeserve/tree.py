@@ -37,6 +37,7 @@ class Tree(Sized):
             # Special-case root node creation, since it doesn't have a parent.
             self._root_path = "/" + split_path[0]
             self._commit_node(self._Node(is_directory=True, path=self._root_path))
+            self._node_store._root_path = self._root_path
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
         current_node = None

@@ -25,6 +25,9 @@ class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
     def __init__(self, node_type: type(Node)):
         self._node_type = node_type
 
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._node_type.__name__)
+
     @property
     def node_type(self) -> type(Node):
         return self._node_type
@@ -58,6 +61,16 @@ class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
 
     @abstractmethod
     def close(self):
+        pass
+
+    @property
+    @abstractmethod
+    def _root_path(self):
+        pass
+
+    @_root_path.setter
+    @abstractmethod
+    def _root_path(self, value):
         pass
 
 
@@ -95,6 +108,14 @@ class InMemoryNodeStore(NodeStore):
     def close(self):
         pass
 
+    @property
+    def _root_path(self):
+        raise NotImplementedError
+
+    @_root_path.setter
+    def _root_path(self, value):
+        pass
+
 
 class LMDBNodeStore(NodeStore):
     """
@@ -103,12 +124,16 @@ class LMDBNodeStore(NodeStore):
 
     _sentinel = object()
 
-    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str):
+    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, cache_size: int=4):
         super().__init__(node_type)
-        self._env = lmdb.open(lmdb_dir, map_size=1024**3)
+        self.lmdb_dir = lmdb_dir
+        self._env = lmdb.open(self.lmdb_dir, map_size=1024**3)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
         self._last_get = (None, None)  # type: Tuple[str, Node]
-        self._set_cache = FIFOCache()
+        self._set_cache = FIFOCache(cache_size)
+
+    def __repr__(self):
+        return "{}({}, {}, {})".format(self.__class__.__name__, self._node_type.__name__, repr(self.lmdb_dir), self._set_cache.max_size)
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
         if path == self._last_get[0]:
@@ -155,13 +180,21 @@ class LMDBNodeStore(NodeStore):
         self._txn.commit()
         self._txn = lmdb.Transaction(self._env)  # Reopen transaction read-only for output.
 
+    @property
+    def _root_path(self):
+        return self._txn.get(b'_root_path').decode()
+
+    @_root_path.setter
+    def _root_path(self, value):
+        self._txn.put(b'_root_path', value.encode())
+
 
 class FIFOCache(OrderedDict):
     """
     A cache of configurable size where the least-recently accessed items are removed.
     """
 
-    def __init__(self, max_size: int=4):
+    def __init__(self, max_size: int):
         self.max_size = max_size
         super().__init__()
 
