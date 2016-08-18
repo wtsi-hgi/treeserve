@@ -8,7 +8,6 @@ from time import strftime, time
 from typing import Dict, List
 
 from treeserve.mapping import Mapping
-from treeserve.node import Node
 from treeserve.tree import Tree
 
 
