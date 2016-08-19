@@ -127,6 +127,16 @@ class SerializableNode(Node):
         """
         pass
 
+    @classmethod
+    @abstractmethod
+    def uses_buffers(cls) -> bool:
+        """
+        Whether the node supports serializing and deserializing to and from buffer objects.
+
+        :return:
+        """
+        pass
+
 
 class JSONSerializableNode(SerializableNode):
     def __init__(self, is_directory: bool, path: str):
