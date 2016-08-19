@@ -171,7 +171,7 @@ class PickleSerializableNode(SerializableNode):
         self._mapping = DictSerializableMapping()
 
     @classmethod
-    def uses_buffers(cls): return False
+    def uses_buffers(cls): return True
 
     def serialize(self) -> bytes:
         return pickle.dumps(self)
