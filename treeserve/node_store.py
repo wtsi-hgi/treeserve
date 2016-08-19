@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping, Container
 from collections import OrderedDict
 import lmdb
+from time import strftime
 from typing import Optional, Iterator, Tuple, Any, List
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
@@ -182,7 +183,7 @@ class LMDBNodeStore(NodeStore):
     def _txn_inc_commit(self):
         self.current_txn_size += 1
         if self.current_txn_size >= LMDBNodeStore.max_txn_size:
-            print("Committing current transaction to disk")
+            print(strftime("[%H:%M:%S]"), "Committing current transaction")
             self._commit(write=True)
             self.current_txn_size = 0
 
