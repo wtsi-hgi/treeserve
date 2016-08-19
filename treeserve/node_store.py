@@ -131,7 +131,8 @@ class LMDBNodeStore(NodeStore):
     def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, cache_size: int=4):
         super().__init__(node_type)
         self.lmdb_dir = lmdb_dir
-        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3)
+        # writemap=True and map_async=True increase speed slightly
+        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3, writemap=True, map_async=True)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
         self._last_get = (None, None)  # type: Tuple[str, Node]
         self._set_cache = FIFOCache(cache_size)
