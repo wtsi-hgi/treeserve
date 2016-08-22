@@ -39,6 +39,8 @@ def create_tree(test_mode=False):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     sample_list = ["samples/sampledata.dat.gz"]
+    if test_mode:
+        sample_list = ["../../samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
     tree = Tree(LMDBNodeStore(PickleSerializableNode, "/tmp/web_lmdb"))
     if len(tree):
