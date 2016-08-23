@@ -4,6 +4,7 @@ from collections import OrderedDict
 import lmdb
 from time import strftime
 from typing import Optional, Iterator, Tuple, Any, List
+from sys import platform
 
 from treeserve.node import Node, SerializableNode, JSONSerializableNode
 
@@ -132,7 +133,8 @@ class LMDBNodeStore(NodeStore):
         super().__init__(node_type)
         self.lmdb_dir = lmdb_dir
         # writemap=True and map_async=True increase speed slightly
-        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3, writemap=True, map_async=True)
+        not_macos = platform != "darwin"  # OS X doesn't support sparse files, so these just break things
+        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3, writemap=not_macos, map_async=not_macos)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
         self._last_get = (None, None)  # type: Tuple[str, Node]
         self._set_cache = FIFOCache(cache_size)
