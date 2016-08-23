@@ -32,6 +32,11 @@ class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
 
     @property
     def node_type(self) -> type(Node):
+        """
+        Return the type of nodes that this NodeStore stores.
+
+        :return:
+        """
         return self._node_type
 
     @abstractmethod
@@ -67,12 +72,19 @@ class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def _root_path(self):
+    def _root_path(self) -> str:
+        """
+        All NodeStores must be capable of storing and retrieving the path of the root node. This is
+        so that the Tree that owns the NodeStore always has an entry-point into the tree (once a
+        reference to the root node is obtained, other nodes can be discovered by walking the tree).
+
+        :return:
+        """
         pass
 
     @_root_path.setter
     @abstractmethod
-    def _root_path(self, value):
+    def _root_path(self, path: str):
         pass
 
 
@@ -115,7 +127,7 @@ class InMemoryNodeStore(NodeStore):
         raise NotImplementedError
 
     @_root_path.setter
-    def _root_path(self, value):
+    def _root_path(self, path):
         pass
 
 
@@ -123,6 +135,7 @@ class InMemoryLMDBNodeStore(InMemoryNodeStore):
     """
     A store for `Node`s that keeps nodes in memory.
     """
+
     max_txn_size = 1000000
 
     def __init__(self, node_type: type(SerializableNode), lmdb_dir: str):
@@ -172,6 +185,7 @@ class LMDBNodeStore(NodeStore):
         self.current_txn_size = 0
 
     def __repr__(self):
+        # e.g. "LMDBNodeStore(JSONSerializableNode, '/path/to/lmdb/directory', 10)"
         return "{}({}, {}, {})".format(self.__class__.__name__, self._node_type.__name__, repr(self.lmdb_dir), self._set_cache.max_size)
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
@@ -233,12 +247,12 @@ class LMDBNodeStore(NodeStore):
         self._set_cache.clear()
 
     @property
-    def _root_path(self):
+    def _root_path(self) -> str:
         return bytes(self._txn.get(b'_root_path')).decode()
 
     @_root_path.setter
-    def _root_path(self, value):
-        self._txn.put(b'_root_path', value.encode())
+    def _root_path(self, path: str):
+        self._txn.put(b'_root_path', path.encode())
 
 
 class FIFOCache(OrderedDict):
@@ -251,11 +265,28 @@ class FIFOCache(OrderedDict):
         super().__init__()
 
     def __setitem__(self, key, value):
+        """
+        This method should not be used. FIFOCache.add() should be used instead.
+
+        This method does not remove items from the cache, as that would involve discarding them
+        (a call to __setitem__ through something like `cache[path] = node` cannot return anything).
+
+        :param key:
+        :param value:
+        :return:
+        """
         if key in self:
             del self[key]
         super().__setitem__(key, value)
 
     def add(self, key, value) -> List[Tuple[Any, Any]]:
+        """
+        Add an item to the cache, returning any items that have fallen out of the cache.
+
+        :param key:
+        :param value:
+        :return:
+        """
         self[key] = value
         rtn = []
         while len(self) > self.max_size:

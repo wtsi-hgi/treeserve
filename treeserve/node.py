@@ -61,6 +61,11 @@ class Node:
 
     @property
     def mapping(self) -> Mapping:
+        """
+        Return this node's mapping (cost, size etc.).
+
+        :return:
+        """
         return self._mapping
 
     @property
@@ -73,6 +78,12 @@ class Node:
         return self._path
 
     def get_child_path(self, child_name) -> str:
+        """
+        Return the path of a child of this node.
+
+        :param child_name:
+        :return:
+        """
         return self._path + "/" + child_name
 
     def update(self, mapping: Mapping):

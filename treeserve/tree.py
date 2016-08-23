@@ -96,7 +96,7 @@ class Tree(Sized):
         - finalizing children
         - adding the data from each `Node`'s files to its ``*.*`` `Node`.
         - deleting the files under each directory [2]_
-        - adding the data from the directories in each directory to the directory
+        - adding the data from the directories in each directory to that directory
 
         .. [1] The reason for this is that typically a directory will take up some space on disk,
            but its data fields are full of data about its child directories; the best place for
@@ -115,6 +115,14 @@ class Tree(Sized):
         print(strftime("[%H:%M:%S]"), "Closed NodeStore")
 
     def _finalize_node(self, node: Node) -> Mapping:
+        """
+        Recursively prepare nodes for output via the API.
+
+        See documentation for Tree.finalize() for details.
+
+        :param node:
+        :return:
+        """
         file_children = []  # type: List[Node]
         child_mappings = []  # type: List[Mapping]
         for child_name in node.child_names:
@@ -154,12 +162,34 @@ class Tree(Sized):
         return node.mapping
 
     def _commit_node(self, node: Node):
+        """
+        Ensure that the given node is in the NodeStore.
+
+        :param node:
+        :return:
+        """
         self._node_store[node.path] = node
 
     def _add_child(self, node: Node, child: Node):
+        """
+        Add a child to a node.
+
+        :param node:
+        :param child:
+        :return:
+        """
         node.add_child(child)
 
     def _remove_child(self, node: Node, child: Node):
+        """
+        Remove a child from a node.
+
+        Raises KeyError if the child is not a child of the given node.
+
+        :param node:
+        :param child:
+        :return:
+        """
         node.remove_child(child)
         del self._node_store[child.path]
 
