@@ -1,6 +1,6 @@
 """Web interface for treeserve written in Python 3"""
 from flask import Flask, request, jsonify
-import glob
+import glob, time
 import sys, argparse
 
 from treeserve.node import PickleSerializableNode
@@ -12,7 +12,10 @@ from treeserve.tree import Tree
 def parse_args(args=sys.argv[1:]):
     parser = argparse.ArgumentParser(description='''Enable debug mode? (development only)''')
     parser.add_argument('-d', '--debug', dest='debug', action='store_const',
-                   const=True, default=False)
+                        const=True, default=False)
+    parser.add_argument('-t', '--time', dest='now', type=int,
+                        default=time.time(),
+                        help="""Current Unix time to use when calculating storage costs""")
     args = parser.parse_args(args)
     return args
 
@@ -35,7 +38,7 @@ def dummy_api():
     return jsonify(json.loads(rtn))
 
 
-def create_tree(test_mode=False):
+def create_tree(test_mode=False, now=None):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
     sample_list = ["samples/sampledata.dat.gz"]
@@ -47,15 +50,15 @@ def create_tree(test_mode=False):
         tree._root_path = tree._node_store._root_path
     else:
         tree_builder = TreeBuilder(tree)
-        tree = tree_builder.from_lstat(sample_list)
+        tree = tree_builder.from_lstat(sample_list, now=now)
     print("Created tree.")
 
 if __name__ == '__main__':
     args = parse_args()
     app.debug = args.debug
     if app.debug:
-        create_tree = app.before_first_request(create_tree)
+        create_tree = app.before_first_request(lambda: create_tree(now=args.now))
     else:
-        create_tree()
+        create_tree(now=args.now)
 
     app.run("0.0.0.0", port=8080)
