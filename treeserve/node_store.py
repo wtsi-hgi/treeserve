@@ -169,9 +169,9 @@ class LMDBNodeStore(NodeStore):
     """
 
     _sentinel = object()
-    # LMDB apparently has a maximum transaction size - it's unclear what it is, so we assume that
-    # committing every million operations will work.
-    max_txn_size = 1000000
+    # LMDB apparently has a maximum transaction size - it's unclear what it is, but we assume that
+    # committing every half million operations will work.
+    max_txn_size = 500000
 
     def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, cache_size: int=4):
         super().__init__(node_type)
