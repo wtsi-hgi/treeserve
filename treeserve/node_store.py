@@ -202,7 +202,7 @@ class LMDBNodeStore(NodeStore):
 
     @property
     def _root_path(self):
-        return self._txn.get(b'_root_path').decode()
+        return bytes(self._txn.get(b'_root_path')).decode()
 
     @_root_path.setter
     def _root_path(self, value):
