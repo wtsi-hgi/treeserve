@@ -12,6 +12,9 @@ from treeserve.tree import Tree
 class TestTreeBuilder(unittest.TestCase):
     lmdb_directory = "/tmp/test_tree_builder_lmdb"
 
+    def setUp(self):
+        shutil.rmtree(TestTreeBuilder.lmdb_directory, ignore_errors=True)
+
     def tearDown(self):
         shutil.rmtree(TestTreeBuilder.lmdb_directory, ignore_errors=True)
 
