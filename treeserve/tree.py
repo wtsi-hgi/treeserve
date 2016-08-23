@@ -1,4 +1,5 @@
 from collections.abc import Sized
+from time import strftime
 from typing import Dict, List, Optional
 
 from treeserve.mapping import Mapping
@@ -107,8 +108,11 @@ class Tree(Sized):
         :return:
         """
         if self._node_store and self._root_path:
+            print(strftime("[%H:%M:%S]"), "Finalizing...")
             self._finalize_node(self.get_node(self._root_path))
+            print(strftime("[%H:%M:%S]"), "Done finalizing")
         self._node_store.close()
+        print(strftime("[%H:%M:%S]"), "Closed NodeStore")
 
     def _finalize_node(self, node: Node) -> Mapping:
         file_children = []  # type: List[Node]
@@ -116,7 +120,7 @@ class Tree(Sized):
         for child_name in node.child_names:
             # For each child:
             #   finalize child
-            #   update self with child's mapping (postponed until end of finalize)
+            #   update self with child's mapping (postponed until *.* is updated from self)
             #   if child is a file:
             #     update *.* with child's mapping (postponed until *.* is created)
             child_path = node.get_child_path(child_name)
