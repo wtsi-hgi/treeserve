@@ -204,7 +204,7 @@ class LMDBNodeStore(NodeStore):
         raise NotImplementedError
 
     def __len__(self) -> int:
-        # self._txn is not yet committed, so self._env.stat() will return different (old) data.
+        # self._txn is not yet committed, so self._env.stat() will return stale data.
         entries = self._txn.stat()["entries"] + len(self._set_cache)
         return entries
 
@@ -222,6 +222,7 @@ class LMDBNodeStore(NodeStore):
             self.current_txn_size = 0
 
     def _commit(self, write: bool):
+        # Write cached changes
         for path, node in self._set_cache.items():
             self._txn.put(path.encode(), node.serialize())
         self._txn.commit()
