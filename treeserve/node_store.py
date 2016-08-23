@@ -90,13 +90,13 @@ class InMemoryNodeStore(NodeStore):
         return self._node_type
 
     def __getitem__(self, path: str) -> Node:
-        return self._node_type.deserialize(path, self._store[path.encode()])
+        return self._store[path]
 
     def __setitem__(self, path: str, node: Node):
-        self._store[path.encode()] = node.serialize()
+        self._store[path] = node
 
     def __delitem__(self, path: str):
-        self._store.__delitem__(path.encode())
+        self._store.__delitem__(path)
 
     def __iter__(self) -> Iterator:
         return self._store.__iter__()
@@ -105,7 +105,7 @@ class InMemoryNodeStore(NodeStore):
         return self._store.__len__()
 
     def __contains__(self, path: str) -> bool:
-        return path.encode() in self._store
+        return path in self._store
 
     def close(self):
         pass
