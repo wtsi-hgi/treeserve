@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, Type
+from typing import Any, Dict
 import struct
 
 
@@ -100,7 +100,7 @@ class SerializableMapping(Mapping):
 
     @classmethod
     @abstractmethod
-    def deserialize(cls: Type["SerializableMapping"], serialized: bytes) -> "SerializableMapping":
+    def deserialize(cls, serialized: bytes) -> "SerializableMapping":
         """
         Deserialize a previously serialized `SerializableMapping`.
 
@@ -122,7 +122,7 @@ class DictSerializableMapping(SerializableMapping):
         return rtn
 
     @classmethod
-    def deserialize(cls: Type["DictSerializableMapping"], serialized: Dict) -> "DictSerializableMapping":
+    def deserialize(cls, serialized: Dict) -> "DictSerializableMapping":
         rtn = cls()
         for data_type in serialized:
             for group in serialized[data_type]:
@@ -175,11 +175,11 @@ class StructSerializableMapping(SerializableMapping):
         return total
 
     @classmethod
-    def pack_var_str(self, string: str, buf: memoryview, offset: int=0) -> int:
+    def pack_var_str(cls, string: str, buf: memoryview, offset: int=0) -> int:
         # 2 bytes for the length of the string, then the string itself.
         assert len(string) < 2 ** 16, "String cannot be over {} characters long".format(2 ** 16)
         struct.pack_into(">H{}s".format(len(string)), buf, offset, len(string), string.encode())
-        offset += self.calc_var_str(string)
+        offset += cls.calc_var_str(string)
         return offset
 
     @classmethod
@@ -194,7 +194,7 @@ class StructSerializableMapping(SerializableMapping):
         return string.decode(), offset + length  # result, next offset
 
     @classmethod
-    def deserialize(cls: Type["StructSerializableMapping"], serialized: memoryview) -> ("StructSerializableMapping", int):
+    def deserialize(cls, serialized: memoryview) -> ("StructSerializableMapping", int):
         rtn = cls()
         offset = 0
         num_keys = struct.unpack_from(">I", serialized)[0]
