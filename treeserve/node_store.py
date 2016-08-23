@@ -119,6 +119,37 @@ class InMemoryNodeStore(NodeStore):
         pass
 
 
+class InMemoryLMDBNodeStore(InMemoryNodeStore):
+    """
+    A store for `Node`s that keeps nodes in memory.
+    """
+    max_txn_size = 1000000
+
+    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str):
+        super().__init__(node_type)
+        self.lmdb_dir = lmdb_dir
+
+    def close(self):
+        not_macos = platform != "darwin"  # OS X doesn't support sparse files, so these just break things24 ** 3, writemap=not_macos,
+        self._env = lmdb.open(self.lmdb_dir, map_size=50 * 1024 ** 3, writemap=not_macos,
+                              map_async=not_macos)
+        for i, (path, node) in enumerate(self._store.items()):
+            if i % self.max_txn_size == 0:
+                print("Starting/Committing")
+                try:
+                    self._txn.commit()
+                except AttributeError as e:
+                    print(e)
+                self._txn = lmdb.Transaction(self._env, write=True, buffers=self._node_type.uses_buffers())
+            if i%10000==0:
+                print(i)
+            self._txn.put(path.encode(), node.serialize())
+        self._txn.put(b'_root_path', b'/lustre')
+        print("Finished dumping to DB")
+        self._txn.commit()
+        del self._store
+
+
 class LMDBNodeStore(NodeStore):
     """
     A store for `Node`s that keeps nodes in LMDB.
