@@ -149,6 +149,7 @@ class Tree(Sized):
         :param node:
         :return:
         """
+        self.logger.debug("Finalizing node %s", node)
         file_children = []  # type: List[Node]
         child_mappings = []  # type: List[Mapping]
         for child_name in node.child_names:
@@ -160,7 +161,9 @@ class Tree(Sized):
             child_path = node.get_child_path(child_name)
             child = self.get_node(child_path)
             if not child.is_directory:
+                self.logger.debug("Child node %s is a file", child)
                 file_children.append(child)
+            self.logger.debug("Postponing updating node with node %s", child)
             child_mappings.append(self._finalize_node(child))
         if (node.mapping and node.is_directory) or file_children:
             # If this node is:
@@ -172,6 +175,7 @@ class Tree(Sized):
             #     be used to calculate the metrics for *.*)
             # then create a *.* node that is a child of this node, and has a mapping that is the
             # same as this node's mapping + file children's mappings
+            self.logger.debug("Creating *.* node for node %s", node)
             star = self._Node(is_directory=False, path=node.path + "/*.*")
             self._add_child(node, star)
             star.update(node.mapping)
@@ -179,6 +183,7 @@ class Tree(Sized):
                 # Add the mappings of this node's file children to this node's *.* (postponed from
                 # earlier), and remove this node's file children to stop them showing up in the
                 # JSON.
+                self.logger.debug("Updating *.* node of node %s with mapping from node %s", node, child)
                 star.update(child.mapping)
                 self._remove_child(node, child)
             self._commit_node(star)
