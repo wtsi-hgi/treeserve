@@ -19,6 +19,8 @@ def parse_args(args=sys.argv[1:]):
     parser.add_argument('-t', '--time', dest='now', type=int,
                         default=time.time(),
                         help="""Current Unix time to use when calculating storage costs""")
+    parser.add_argument('-i', '--input', dest="input_file", default="samples/sampledata.dat.gz",
+                        help="Path to input file")
     parser.add_argument('--log', dest="log_level", default="INFO",
                         help="One of 'debug', 'info', 'warning', 'error' or 'critical'.")
     args = parser.parse_args(args)
@@ -46,10 +48,10 @@ def dummy_api():
     return jsonify(json.loads(rtn))
 
 
-def create_tree(test_mode=False, now=None):
+def create_tree(test_mode=False, now=None, input_file=None):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
-    sample_list = ["samples/sampledata.dat.gz"]
+    sample_list = [input_file]
     if test_mode:
         sample_list = ["../../samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
@@ -76,8 +78,8 @@ if __name__ == '__main__':
     logger.addHandler(handler)
 
     if app.debug:
-        create_tree = app.before_first_request(lambda: create_tree(now=args.now))
+        create_tree = app.before_first_request(lambda: create_tree(now=args.now, input_file=args.input_file))
     else:
-        create_tree(now=args.now)
+        create_tree(now=args.now, input_file=args.input_file)
 
     app.run("0.0.0.0", port=8080)
