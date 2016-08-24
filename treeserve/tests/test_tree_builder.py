@@ -20,7 +20,7 @@ class TestTreeBuilder(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stdout)
         handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(fmt="[%(asctime)s | %(levelname)s\t| %(name)s] %(message)s",
+        formatter = logging.Formatter(fmt="%(levelname)-8s | %(asctime)s | %(name)s: %(message)s",
                                       datefmt="%H:%M:%S")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -53,6 +53,7 @@ class TestTreeBuilder(unittest.TestCase):
         self.assertEqual(correct, json.loads(json.dumps(out)))
 
     def test_real_data(self):
+        logging.getLogger("treeserve").setLevel(logging.INFO)
         node_store = LMDBNodeStore(PickleSerializableNode, TestTreeBuilder.lmdb_directory)
         tree = Tree(node_store)
         tree_builder = TreeBuilder(tree)
