@@ -154,9 +154,9 @@ class Tree(Sized):
         for child_name in node.child_names:
             # For each child:
             #   finalize child
-            #   update self with child's mapping (postponed until *.* is updated from self)
             #   if child is a file:
             #     update *.* with child's mapping (postponed until *.* is created)
+            #   update self with child's mapping (postponed until *.* is updated from self)
             child_path = node.get_child_path(child_name)
             child = self.get_node(child_path)
             if not child.is_directory:
@@ -168,8 +168,10 @@ class Tree(Sized):
             #   - a directory
             # or:
             #   - has children that are files (and therefore is implicitly a directory)
+            #     (NB: don't create *.* if the node only has directory children, as they should not
+            #     be used to calculate the metrics for *.*)
             # then create a *.* node that is a child of this node, and has a mapping that is the
-            # same as this node's mapping
+            # same as this node's mapping + file children's mappings
             star = self._Node(is_directory=False, path=node.path + "/*.*")
             self._add_child(node, star)
             star.update(node.mapping)
