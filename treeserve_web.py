@@ -72,7 +72,7 @@ if __name__ == '__main__':
     logger = logging.getLogger("treeserve")
     logger.setLevel(getattr(logging, args.log_level.upper()))
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(fmt="%(levelname)s\t| %(asctime)s | %(name)s: %(message)s",
+    formatter = logging.Formatter(fmt="%(levelname)-8s | %(asctime)s | %(name)s: %(message)s",
                                   datefmt="%H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
