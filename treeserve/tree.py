@@ -1,5 +1,5 @@
 from collections.abc import Sized
-from time import strftime
+import logging
 from typing import Dict, List, Optional
 
 from treeserve.mapping import Mapping
@@ -16,6 +16,7 @@ class Tree(Sized):
         self._node_store = node_store
         self._root_path = None
         self._Node = node_store.node_type
+        self.logger = logging.getLogger(__name__)
 
     def __len__(self):
         return len(self._node_store)
@@ -35,40 +36,61 @@ class Tree(Sized):
         """
         split_path = path.strip("/").split("/")
         if self._root_path is None:
-            # Special-case root node creation, since it doesn't have a parent.
+            self.logger.debug("Special-casing the root node")
+            # Special-case root node creation, since it doesn't have a parent. It also won't
+            # necessarily appear in mpistats, and needs to be accessible from the API as "/".
             self._root_path = "/" + split_path[0]
             self._commit_node(self._Node(is_directory=True, path=self._root_path))
             self._node_store._root_path = self._root_path
+            assert self.get_node(self._root_path) is not None
         # The first path component should always be the name of the root node.
         assert split_path[0] == self._root_path.lstrip("/"), (split_path[0], self._root_path)
         current_node = None
-        path_stack = ["", split_path[0]]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
-        for fragment in split_path[1:]:
-            # Create parent directories
+        path_stack = [""]  # The empty element at the start causes "/".join to insert a slash at the start of the string.
+        self.logger.debug("Starting walk...")
+        for fragment in split_path[:-1]:
+            # Create *parent* nodes of the node given to us
             path_stack.append(fragment)
             current_path = "/".join(path_stack)
+            self.logger.debug("Walked to %r", current_path)
             if current_path not in self._node_store:
-                # Child node doesn't exist, so create it.
+                # Current node doesn't exist, so create it.
+                self.logger.warning("Inferred existence of node at %r", current_path)
+                # Store the parent of the soon-to-be-current_node
                 if current_node:
-                    old_node = current_node
+                    # We already got the parent, no point getting it again
+                    parent_node = current_node
                 else:
-                    old_node = self.get_node("/".join(path_stack[:-1]))
+                    parent_node = self.get_node("/".join(path_stack[:-1]))
                 current_node = self._Node(True, path="/".join(path_stack))
-                self._add_child(old_node, current_node)
-                self._commit_node(old_node)
+                self._add_child(parent_node, current_node)
+                self._commit_node(parent_node)
+                self._commit_node(current_node)
+                assert current_path in self._node_store
+            else:
+                current_node = self.get_node("/".join(path_stack))
+                self.logger.debug("Got existing node %s", current_node)
+                assert current_node.path == current_path
         if current_node is None:
-            # Should only happen for root node, since it has no parent.
-            current_node = self.get_node(path)
-        assert current_node.path == path
+            # Should only happen for root node, since it has no parent - it has only one path
+            # fragment (split_path[:-1] is []).
+            current_node = self.get_node(self._root_path)
+            self.logger.debug("Got root node %s at path %r", current_node, self._root_path)
+        assert current_node is not None
         # Nasty hack to work around the fact that the root node is special - by the time we get
         # here for the root node, we've already created it.
         if path != self._root_path:
             # Make the node we were actually asked to make, add it to the tree and give it data.
+            self.logger.debug("Creating node at %s...", path)
             child = self._Node(is_directory, path)
             if mapping is not None:
+                self.logger.debug("Updating node %s with mapping...", child)
                 child.update(mapping)
+            self._add_child(current_node, child)
             self._commit_node(child)
+            self.logger.debug("Created final node %s", child)
         else:
+            self.logger.debug("Updating the root node %s with mapping...", current_node)
             # We were asked to make the root node, which already exists due to special case; we just need to give it data.
             if mapping is not None:
                 current_node.update(mapping)
@@ -108,11 +130,15 @@ class Tree(Sized):
         :return:
         """
         if self._node_store and self._root_path:
-            print(strftime("[%H:%M:%S]"), "Finalizing...")
+            self.logger.info("Finalizing...")
             self._finalize_node(self.get_node(self._root_path))
-            print(strftime("[%H:%M:%S]"), "Done finalizing")
+            self.logger.info("Done finalizing")
+        else:
+            self.logger.warning("Not finalizing!")
+            self.logger.debug("bool(self._node_store) is %s", bool(self._node_store))
+            self.logger.debug("bool(self._root_path) is %s", bool(self._root_path))
         self._node_store.close()
-        print(strftime("[%H:%M:%S]"), "Closed NodeStore")
+        self.logger.info("Closed node store")
 
     def _finalize_node(self, node: Node) -> Mapping:
         """

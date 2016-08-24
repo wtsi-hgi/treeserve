@@ -2,6 +2,7 @@ from base64 import b64decode
 import csv
 from grp import getgrgid
 import gzip
+import logging
 from numbers import Number
 from pwd import getpwuid
 from time import strftime, time
@@ -36,6 +37,7 @@ class TreeBuilder:
         self._tree = tree
         self._uid_map = {}  # type: Dict[int, str]
         self._gid_map = {}  # type: Dict[int, str]
+        self.logger = logging.getLogger(__name__)
 
     def from_lstat(self, files: List[str], now: Number=None) -> Tree:
         """
@@ -64,6 +66,7 @@ class TreeBuilder:
             now = int(time())
         start = time()
         linecount = 0
+
         for filename in files:
             with gzip.open(filename, mode="rt") as file:
                 reader = csv.reader(file, delimiter="\t")
@@ -73,11 +76,7 @@ class TreeBuilder:
                     linecount += 1
 
                     if linecount % 10000 == 0:
-                        print(strftime("[%H:%M:%S]"),
-                              "Processed {} lines, created {} nodes".format(
-                                  linecount, len(self._tree)
-                              )
-                        )
+                        self.logger.info("Processed %s lines, created %s nodes", linecount, len(self._tree))
 
                     path = b64decode(row[0]).decode()  # type: str
 
@@ -118,10 +117,10 @@ class TreeBuilder:
                     if file_type in self.file_types:
                         self._tree.add_node(path, file_type == "d", mapping)
 
-        print(strftime("[%H:%M:%S]"), "Finalizing tree after", time() - start, "seconds")
+        self.logger.info("Finalizing tree after %s seconds", time() - start)
         self._tree.finalize()
-        print(strftime("[%H:%M:%S]"), "Built tree in", time() - start, "seconds")
-        print(strftime("[%H:%M:%S]"), len(self._tree), "nodes in database")
+        self.logger.info("Built tree in %s seconds", time() - start)
+        self.logger.info("%s nodes in database", len(self._tree))
         return self._tree
 
     def uid_lookup(self, uid: int) -> str:

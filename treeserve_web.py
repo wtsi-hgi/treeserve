@@ -1,10 +1,13 @@
 """Web interface for treeserve written in Python 3"""
 from flask import Flask, request, jsonify
-import glob, time
-import sys, argparse
+import argparse
+import glob
+import logging
+import time
+import sys
 
 from treeserve.node import PickleSerializableNode
-from treeserve.node_store import LMDBNodeStore
+from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 from treeserve.tree_builder import TreeBuilder
 from treeserve.tree import Tree
 
@@ -16,10 +19,14 @@ def parse_args(args=sys.argv[1:]):
     parser.add_argument('-t', '--time', dest='now', type=int,
                         default=time.time(),
                         help="""Current Unix time to use when calculating storage costs""")
+    parser.add_argument('--log', dest="log_level", default="INFO",
+                        help="One of 'debug', 'info', 'warning', 'error' or 'critical'.")
     args = parser.parse_args(args)
     return args
 
+
 app = Flask(__name__)
+
 
 @app.route("/api")
 def api_call():
@@ -27,6 +34,7 @@ def api_call():
     depth = int(request.args.get("depth", "0"))
     output_dict = tree.format(path=path, depth=depth)
     return jsonify(output_dict)
+
 
 @app.route("/dummy_api")
 def dummy_api():
@@ -53,9 +61,20 @@ def create_tree(test_mode=False, now=None):
         tree = tree_builder.from_lstat(sample_list, now=now)
     print("Created tree.")
 
+
 if __name__ == '__main__':
     args = parse_args()
     app.debug = args.debug
+
+    # Set up logging
+    logger = logging.getLogger("treeserve")
+    logger.setLevel(getattr(logging, args.log_level.upper()))
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(fmt="%(levelname)s\t| %(asctime)s | %(name)s: %(message)s",
+                                  datefmt="%H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
     if app.debug:
         create_tree = app.before_first_request(lambda: create_tree(now=args.now))
     else:

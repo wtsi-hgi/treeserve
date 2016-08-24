@@ -1,7 +1,9 @@
 import unittest
 from nose_parameterized import parameterized
 import json
+import logging
 import shutil
+from sys import stdout
 
 from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 from treeserve.node import JSONSerializableNode, PickleSerializableNode, StructSerializableNode
@@ -11,6 +13,17 @@ from treeserve.tree import Tree
 
 class TestTreeBuilder(unittest.TestCase):
     lmdb_directory = "/tmp/test_tree_builder_lmdb"
+
+    @classmethod
+    def setUpClass(cls):
+        logger = logging.getLogger("treeserve")
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler(stdout)
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(fmt="[%(asctime)s | %(levelname)s\t| %(name)s] %(message)s",
+                                      datefmt="%H:%M:%S")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     def setUp(self):
         shutil.rmtree(TestTreeBuilder.lmdb_directory, ignore_errors=True)
