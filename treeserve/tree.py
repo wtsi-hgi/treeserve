@@ -55,7 +55,7 @@ class Tree(Sized):
             self.logger.debug("Walked to %r", current_path)
             if current_path not in self._node_store:
                 # Current node doesn't exist, so create it.
-                self.logger.warning("Inferred existence of node at %r", current_path)
+                self.logger.debug("Inferred existence of node at %r", current_path)
                 # Store the parent of the soon-to-be-current_node
                 if current_node:
                     # We already got the parent, no point getting it again
