@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping, Container
 from collections import OrderedDict
 import lmdb
+import logging
 from time import strftime
 from typing import Optional, Iterator, Tuple, Any, List
 from sys import platform
@@ -26,6 +27,7 @@ class NodeStore(MutableMapping, Container, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, node_type: type(Node)):
         self._node_type = node_type
+        self.logger = logging.getLogger(__name__)
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._node_type.__name__)
@@ -231,7 +233,7 @@ class LMDBNodeStore(NodeStore):
     def _txn_inc_commit(self):
         self.current_txn_size += 1
         if self.current_txn_size >= LMDBNodeStore.max_txn_size:
-            print(strftime("[%H:%M:%S]"), "Committing current transaction")
+            self.logger.info("Committing current transaction")
             self._commit(write=True)
             self.current_txn_size = 0
 
