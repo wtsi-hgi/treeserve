@@ -88,6 +88,7 @@ class Tree(Sized):
                 child.update(mapping)
             self._add_child(current_node, child)
             self._commit_node(child)
+            self._commit_node(current_node)
             self.logger.debug("Created final node %s", child)
         else:
             self.logger.debug("Updating the root node %s with mapping...", current_node)
