@@ -175,8 +175,8 @@ class LMDBNodeStore(NodeStore):
     # committing every half million operations will work.
     max_txn_size = 500000
 
-    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, set_cache_size: int=24,
-                 get_cache_size: int=24):
+    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, set_cache_size: int=48,
+                 get_cache_size: int=36):
         super().__init__(node_type)
         self.lmdb_dir = lmdb_dir
         # writemap=True and map_async=True increase speed slightly
@@ -206,6 +206,7 @@ class LMDBNodeStore(NodeStore):
 
     def __setitem__(self, path: str, node: SerializableNode):
         if path in self._get_cache:
+            # The cache shouldn't be allowed to get out of date
             self._get_cache.add(path, node)
         for path, node in self._set_cache.add(path, node):
             # Deal with anything that's fallen out of the cache.
@@ -215,6 +216,7 @@ class LMDBNodeStore(NodeStore):
     def __delitem__(self, path: str):
         self._txn_inc_commit()
         self._txn.delete(path.encode())
+        # Decrease the refcount so it can be garbage collected
         if path in self._set_cache:
             del self._set_cache[path]
         if path in self._get_cache:
@@ -230,6 +232,8 @@ class LMDBNodeStore(NodeStore):
 
     def __contains__(self, path: str) -> bool:
         if path in self._set_cache:
+            return True
+        if path in self._get_cache:
             return True
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
         return serialized is not LMDBNodeStore._sentinel
@@ -251,6 +255,7 @@ class LMDBNodeStore(NodeStore):
     def close(self):
         self._commit(write=False)
         self._set_cache.clear()
+        self._get_cache.clear()
 
     @property
     def _root_path(self) -> str:
