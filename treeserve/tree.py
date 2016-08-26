@@ -53,24 +53,23 @@ class Tree(Sized):
             path_stack.append(fragment)
             current_path = "/".join(path_stack)
             self.logger.debug("Walked to %r", current_path)
-            if current_path not in self._node_store:
+            if current_path in self._node_store:
+                # This should always happen at least once, since the initial path fragment should
+                # always be the same (e.g. "/root").
+                current_node = self.get_node("/".join(path_stack))
+                self.logger.debug("Got existing node %s", current_node)
+            else:
+                assert current_node is not None
                 # Current node doesn't exist, so create it.
                 self.logger.debug("Inferred existence of node at %r", current_path)
                 # Store the parent of the soon-to-be-current_node
-                if current_node:
-                    # We already got the parent, no point getting it again
-                    parent_node = current_node
-                else:
-                    parent_node = self.get_node("/".join(path_stack[:-1]))
+                parent_node = current_node
                 current_node = self._Node(True, path="/".join(path_stack))
                 self._add_child(parent_node, current_node)
                 self._commit_node(parent_node)
                 self._commit_node(current_node)
-                assert current_path in self._node_store
-            else:
-                current_node = self.get_node("/".join(path_stack))
-                self.logger.debug("Got existing node %s", current_node)
-                assert current_node.path == current_path
+            assert current_path in self._node_store
+            assert current_node.path == current_path
         if current_node is None:
             # Should only happen for root node, since it has no parent - it has only one path
             # fragment (split_path[:-1] is []).
