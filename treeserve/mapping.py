@@ -141,24 +141,22 @@ class StructSerializableMapping(SerializableMapping):
             for key_index in range(4):
                 len_key_part: unsigned short "H" (2 bytes)
                 key_part: char[len_key_part] "s" (`len_key_part` bytes)
-            value: unsigned long long "Q" (8 bytes)
+            value: unsigned long long "QQ" (16 bytes)
     """
     def serialize(self, buf: memoryview) -> int:
         no_keys = len(self)
-        #print("SERIALIZE", no_keys)
         offset = 0
         struct.pack_into(">I", buf, offset, no_keys)
         offset += 4
         for key, value in self.items():
             for i in key:
                 offset = self.pack_var_str(i, buf, offset)
-            #print("value", value)
             try:
-                struct.pack_into(">Q", buf, offset, value)
+                struct.pack_into(">QQ", buf, offset, value >> 64, value & (2 ** 64 - 1))
             except struct.error:
                 print(value)
                 raise
-            offset += 8
+            offset += 16
         return offset
 
     def calc_length(self) -> int:
@@ -170,8 +168,8 @@ class StructSerializableMapping(SerializableMapping):
         total = 4  # unsigned int (4 bytes) for the number of keys
         for key in self:
             #
-            # plus unsigned long long (8 bytes) for the value
-            total += sum(self.calc_var_str(x) for x in key) + 8
+            # plus two unsigned long longs (16 bytes) for the value
+            total += sum(self.calc_var_str(x) for x in key) + 16
         return total
 
     @classmethod
@@ -198,14 +196,14 @@ class StructSerializableMapping(SerializableMapping):
         rtn = cls()
         offset = 0
         num_keys = struct.unpack_from(">I", serialized)[0]
-        #print("DESERIALIZE", num_keys)
         offset += 4  # Length of "I" (num_keys) in bytes
         for key_index in range(num_keys):
             key = []
             for i in range(4):
                 string, offset = cls.unpack_var_str(serialized, offset)
                 key.append(string)
-            value = struct.unpack_from(">Q", serialized, offset)[0]
-            offset += 8
+            a, b = struct.unpack_from(">QQ", serialized, offset)
+            value = (a << 64) + b
+            offset += 16
             rtn[tuple(key)] = value
         return rtn, offset
