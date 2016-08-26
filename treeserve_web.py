@@ -38,16 +38,6 @@ def api_call():
     return jsonify(output_dict)
 
 
-@app.route("/dummy_api")
-def dummy_api():
-    import random, json
-    sample_list = glob.glob("json/*.json")
-    json_file = open(random.choice(sample_list))
-    rtn = json_file.read()
-    json_file.close()
-    return jsonify(json.loads(rtn))
-
-
 def create_tree(test_mode=False, now=None, input_file=None):
     global tree
     sample_list = [filename for filename in glob.glob("samples/*.dat.gz") if (("test_" not in filename)^test_mode)]
