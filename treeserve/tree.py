@@ -164,11 +164,11 @@ class Tree(Sized):
             if not child.is_directory:
                 self.logger.debug("Child node %s is a file", child)
                 file_children.append(child)
-            self.logger.debug("Postponing updating node with node %s", child)
+            self.logger.debug("Postponing node update using node %s", child)
             child_mappings.append(self._finalize_node(child))
         if (node.mapping and node.is_directory) or file_children:
             # If this node is:
-            #   - listed in mpistat
+            #   - listed in mpistat, and
             #   - a directory
             # or:
             #   - has children that are files (and therefore is implicitly a directory)
