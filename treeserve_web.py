@@ -1,5 +1,5 @@
 """Web interface for treeserve written in Python 3"""
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import argparse
 import glob
 import logging
@@ -27,7 +27,7 @@ def parse_args(args=sys.argv[1:]):
     return args
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/')
 
 
 @app.route("/api")
@@ -36,6 +36,11 @@ def api_call():
     depth = int(request.args.get("depth", "0"))
     output_dict = tree.format(path=path, depth=depth)
     return jsonify(output_dict)
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 
 def create_tree(test_mode=False, now=None, input_file=None):
@@ -68,7 +73,7 @@ if __name__ == '__main__':
     logger.addHandler(handler)
 
     if app.debug:
-        create_tree = app.before_first_request(lambda: create_tree(now=args.now, input_file=args.input_file))
+        app.before_first_request(lambda: create_tree(now=args.now, input_file=args.input_file))
     else:
         create_tree(now=args.now, input_file=args.input_file)
 
