@@ -175,15 +175,16 @@ class LMDBNodeStore(NodeStore):
     # committing every half million operations will work.
     max_txn_size = 500000
 
-    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, cache_size: int=4):
+    def __init__(self, node_type: type(SerializableNode), lmdb_dir: str, set_cache_size: int=24,
+                 get_cache_size: int=24):
         super().__init__(node_type)
         self.lmdb_dir = lmdb_dir
         # writemap=True and map_async=True increase speed slightly
         not_macos = platform != "darwin"  # OS X doesn't support sparse files, so these just break things
         self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3, writemap=not_macos, map_async=not_macos)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
-        self._last_get = (None, None)  # type: Tuple[str, Node]
-        self._set_cache = FIFOCache(cache_size)
+        self._set_cache = FIFOCache(set_cache_size)
+        self._get_cache = FIFOCache(get_cache_size)
         self.current_txn_size = 0
 
     def __repr__(self):
@@ -191,8 +192,8 @@ class LMDBNodeStore(NodeStore):
         return "{}({}, {}, {})".format(self.__class__.__name__, self._node_type.__name__, repr(self.lmdb_dir), self._set_cache.max_size)
 
     def __getitem__(self, path: str) -> Optional[SerializableNode]:
-        if path == self._last_get[0]:
-            return self._last_get[1]
+        if path in self._get_cache:
+            return self._get_cache[path]
         if path in self._set_cache:
             return self._set_cache[path]
         serialized = self._txn.get(path.encode(), default=LMDBNodeStore._sentinel)
@@ -200,13 +201,14 @@ class LMDBNodeStore(NodeStore):
             raise KeyError(path)
         else:
             rtn = self._node_type.deserialize(path, serialized)
-            self._last_get = (path, rtn)
+            self._get_cache.add(path, rtn)
             return rtn
 
     def __setitem__(self, path: str, node: SerializableNode):
-        if path == self._last_get[0]:
-            self._last_get = path, node
+        if path in self._get_cache:
+            self._get_cache.add(path, node)
         for path, node in self._set_cache.add(path, node):
+            # Deal with anything that's fallen out of the cache.
             self._txn_inc_commit()
             self._txn.put(path.encode(), node.serialize())
 
@@ -215,6 +217,8 @@ class LMDBNodeStore(NodeStore):
         self._txn.delete(path.encode())
         if path in self._set_cache:
             del self._set_cache[path]
+        if path in self._get_cache:
+            del self._get_cache[path]
 
     def __iter__(self):
         raise NotImplementedError
