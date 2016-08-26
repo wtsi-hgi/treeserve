@@ -1,6 +1,6 @@
 from collections.abc import Sized
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from treeserve.mapping import Mapping
 from treeserve.node import Node, JSONSerializableNode
@@ -226,21 +226,22 @@ class Tree(Sized):
         node.remove_child(child)
         del self._node_store[child.path]
 
-    def format(self, path: str="/", depth: int=0) -> Dict:
+    def format(self, path: str="/", depth: int=0, whitelist: Set[str]=set()) -> Dict:
         """
         Format self (or a subtree of self) for output via the API.
 
         :param path:
         :param depth:
+        :param whitelist:
         :return:
         """
         node = self.get_node(path)
         if node is None:
             return {}
         else:
-            return self._format_node(node, depth + 1)
+            return self._format_node(node, depth + 1, whitelist)
 
-    def _format_node(self, node: Node, depth: int) -> Dict:
+    def _format_node(self, node: Node, depth: int, whitelist: Set[str]) -> Dict:
         """
         Format self for output via the API.
 
@@ -251,12 +252,12 @@ class Tree(Sized):
         rtn = {
             "name": node.name,
             "path": node.path,
-            "data": node.mapping.format()
+            "data": node.mapping.format(whitelist)
         }
         if depth > 0 and node.child_names:
             for child_name in node.child_names:
                 child_path = node.get_child_path(child_name)
                 child = self.get_node(child_path)
-                child_dirs.append(self._format_node(child, depth - 1))
+                child_dirs.append(self._format_node(child, depth - 1, whitelist))
             rtn["child_dirs"] = child_dirs
         return rtn

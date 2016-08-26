@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, Set
 import struct
 
 
@@ -69,22 +69,19 @@ class Mapping(dict):
         self[attribute, group, "*", category] = value
         self[attribute, group, user, category] = value
 
-    def format(self) -> Dict:
+    def format(self, whitelist: Set[str]) -> Dict:
         """
         Format self for output via the API.
 
         :return:
         """
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
-        for key, value in self.items():
-            data_type = key[0]
-            group = key[1]
-            user = key[2]
-            category = key[3]
-            if data_type.endswith("time"):
-                value *= COMBINED_COST
-            # Need to convert numbers to strings - why? Who knows?
-            rtn[data_type][group][user][category] = str(round(value, 3))
+        for (data_type, group, user, category), value in self.items():
+            if whitelist == {''} or category in whitelist:
+                if data_type.endswith("time"):
+                    value *= COMBINED_COST
+                # Need to convert numbers to strings - why? Who knows?
+                rtn[data_type][group][user][category] = str(round(value, 3))
         return rtn
 
 

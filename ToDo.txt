@@ -3,8 +3,6 @@ To Do
 
 Ideas for code improvements / enhancements
 
-* add an 'attributes' parameter to the api to allow choosing one or more separate attributes to send out (including path as that has to be there) instead of the whole lot.
-
 * add file suffix handling to get breakdown by various files (bam, cram etc.)
 
 * look into adding a lustre log listener thread which can modify the tree as live filesystem changes come through. That will free us from having to regenerate a static tree each day.
