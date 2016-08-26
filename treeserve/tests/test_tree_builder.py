@@ -5,7 +5,7 @@ import logging
 import shutil
 from sys import stdout
 
-from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
+from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore, InMemoryLMDBNodeStore
 from treeserve.node import JSONSerializableNode, PickleSerializableNode, StructSerializableNode
 from treeserve.tree_builder import TreeBuilder
 from treeserve.tree import Tree
@@ -34,10 +34,10 @@ class TestTreeBuilder(unittest.TestCase):
     @parameterized.expand([
         (InMemoryNodeStore, [PickleSerializableNode]),
         (InMemoryNodeStore, [JSONSerializableNode]),
+        (InMemoryNodeStore, [StructSerializableNode]),
         (LMDBNodeStore, [PickleSerializableNode, lmdb_directory]),
         (LMDBNodeStore, [JSONSerializableNode, lmdb_directory]),
-        (LMDBNodeStore, [PickleSerializableNode, lmdb_directory, 10]),
-        (LMDBNodeStore, [JSONSerializableNode, lmdb_directory, 10]),
+        (LMDBNodeStore, [StructSerializableNode, lmdb_directory])
     ])
     def test_correct_output(self, node_store_type, builder):
         node_store = node_store_type(*builder)
@@ -52,9 +52,14 @@ class TestTreeBuilder(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(correct, json.loads(json.dumps(out)))
 
-    def test_real_data(self):
+    @parameterized.expand([
+        (InMemoryNodeStore, [PickleSerializableNode]),
+        (InMemoryLMDBNodeStore, [PickleSerializableNode, lmdb_directory]),
+        (LMDBNodeStore, [PickleSerializableNode, lmdb_directory])
+    ])
+    def test_real_data(self, node_store_type, builder):
         logging.getLogger("treeserve").setLevel(logging.INFO)
-        node_store = LMDBNodeStore(PickleSerializableNode, TestTreeBuilder.lmdb_directory)
+        node_store = node_store_type(*builder)
         tree = Tree(node_store)
         tree_builder = TreeBuilder(tree)
         tree_builder.from_lstat(["../../samples/sampledata.dat.gz"], now=1470299913).format()
