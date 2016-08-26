@@ -151,18 +151,15 @@ class InMemoryLMDBNodeStore(InMemoryNodeStore):
         for i, (path, node) in enumerate(self._store.items()):
             if i % self.max_txn_size == 0:
                 print("Starting/Committing")
-                try:
+                if i != 0:
                     self._txn.commit()
-                except AttributeError as e:
-                    print(e)
                 self._txn = lmdb.Transaction(self._env, write=True, buffers=self._node_type.uses_buffers())
             if i%10000==0:
                 print(i)
             self._txn.put(path.encode(), node.serialize())
-        self._txn.put(b'_root_path', b'/lustre')
+        self._txn.put(b'_root_path', path.split("/")[0].encode())
         print("Finished dumping to DB")
         self._txn.commit()
-        del self._store
 
 
 class LMDBNodeStore(NodeStore):
