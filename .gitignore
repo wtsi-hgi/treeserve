@@ -1,12 +1,4 @@
 !*.dat.gz
-
-src/*.o
 *~
 __pycache__/
 .DS_Store
-bin/testDatum
-bin/testIndexedMap
-bin/testProxygen
-bin/testTree
-bin/testTreeBuilder
-bin/testTreeNode
