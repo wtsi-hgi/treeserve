@@ -68,6 +68,7 @@ class TreeBuilder:
         linecount = 0
 
         for filename in files:
+            self.logger.info("Processing file %s...", repr(filename))
             with gzip.open(filename, mode="rt") as file:
                 reader = csv.reader(file, delimiter="\t")
                 for row in reader:
