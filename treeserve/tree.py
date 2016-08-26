@@ -135,7 +135,7 @@ class Tree(Sized):
             self._finalize_node(self.get_node(self._root_path))
             self.logger.info("Done finalizing")
         else:
-            self.logger.warning("Not finalizing!")
+            self.logger.error("Not finalizing!")
             self.logger.debug("bool(self._node_store) is %s", bool(self._node_store))
             self.logger.debug("bool(self._root_path) is %s", bool(self._root_path))
         self._node_store.close()
