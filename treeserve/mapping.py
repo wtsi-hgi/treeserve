@@ -37,6 +37,9 @@ class Mapping(dict):
 
         If there would be values equal to 0 in the new `Mapping`, do not store them.
 
+        NB: this method is currently unused, but will be potentially useful for incremental
+        updates.
+
         :param other:
         :return:
         """
@@ -77,7 +80,7 @@ class Mapping(dict):
         """
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
         for (data_type, group, user, category), value in self.items():
-            if whitelist == {''} or category in whitelist:
+            if not whitelist or category in whitelist:
                 if data_type.endswith("time"):
                     value *= COMBINED_COST
                 # Need to convert numbers to strings - why? Who knows?

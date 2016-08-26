@@ -35,6 +35,8 @@ def api_call():
     path = request.args.get("path", "/")
     depth = int(request.args.get("depth", "0"))
     whitelist = set(request.args.get("categories", "").split(","))
+    if whitelist == {''}:
+        whitelist = set()
     output_dict = tree.format(path=path, depth=depth, whitelist=whitelist)
     return jsonify(output_dict)
 

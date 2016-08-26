@@ -66,7 +66,7 @@ class TestMapping(unittest.TestCase):
                 }
             }
         }
-        self.assertEqual(correct, self.mapping.format())
+        self.assertEqual(correct, self.mapping.format(set()))
 
 
 class TestDictSerializableMapping(unittest.TestCase):
