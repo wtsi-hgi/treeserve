@@ -224,6 +224,7 @@ class LMDBNodeStore(NodeStore):
 
     def __len__(self) -> int:
         # self._txn is not yet committed, so self._env.stat() will return stale data.
+        # Values returned by this could be out by up to the size of the set cache
         entries = self._txn.stat()["entries"] + len(self._set_cache)
         return entries
 
@@ -240,7 +241,6 @@ class LMDBNodeStore(NodeStore):
         if self.current_txn_size >= LMDBNodeStore.max_txn_size:
             self.logger.info("Committing current transaction")
             self._commit(write=True)
-            self.current_txn_size = 0
 
     def _commit(self, write: bool):
         # Write cached changes
@@ -248,8 +248,10 @@ class LMDBNodeStore(NodeStore):
             self._txn.put(path.encode(), node.serialize())
         self._txn.commit()
         self._txn = lmdb.Transaction(self._env, write=write, buffers=self.node_type.uses_buffers())
+        self.current_txn_size = 0
 
     def close(self):
+        """Finish writing to the database and reopen in read-only mode."""
         self._commit(write=False)
         self._set_cache.clear()
         self._get_cache.clear()

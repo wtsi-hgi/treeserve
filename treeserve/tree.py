@@ -71,8 +71,7 @@ class Tree(Sized):
             assert current_path in self._node_store
             assert current_node.path == current_path
         if current_node is None:
-            # Should only happen for root node, since it has no parent - it has only one path
-            # fragment (split_path[:-1] is []).
+            # Should only happen for root node, - it has only one path fragment (split_path[:-1] is []).
             current_node = self.get_node(self._root_path)
             self.logger.debug("Got root node %s at path %r", current_node, self._root_path)
         assert current_node is not None

@@ -118,11 +118,7 @@ class SerializableMapping(Mapping):
 class DictSerializableMapping(SerializableMapping):
     def serialize(self) -> Dict:
         rtn = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))  # ew
-        for key, value in self.items():
-            data_type = key[0]
-            group = key[1]
-            user = key[2]
-            category = key[3]
+        for (data_type, group, user, category), value in self.items():
             rtn[data_type][group][user][category] = value
         return rtn
 
