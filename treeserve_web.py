@@ -10,19 +10,31 @@ from treeserve.node import PickleSerializableNode
 from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
 from treeserve.tree_builder import TreeBuilder
 from treeserve.tree import Tree
+from treeserve.mapping import Mapping
 
 
 def parse_args(args=sys.argv[1:]):
-    parser = argparse.ArgumentParser(description='''Enable debug mode? (development only)''')
-    parser.add_argument('-d', '--debug', dest='debug', action='store_const',
-                        const=True, default=False)
-    parser.add_argument('-t', '--time', dest='now', type=int,
-                        default=time.time(),
-                        help="""Current Unix time to use when calculating storage costs""")
+    parser = argparse.ArgumentParser(description="Python Treeserve")
     parser.add_argument('-i', '--input', dest="input_file", default="samples/sampledata.dat.gz",
                         help="Path to input file")
-    parser.add_argument('--log', dest="log_level", default="INFO",
-                        help="One of 'debug', 'info', 'warning', 'error' or 'critical'.")
+    parser.add_argument('-c', '--cache', dest="cache_dir", default="/tmp/lmdb_web",
+                        help="Path for lmdb cache directory (doesn't need to exist)")
+    parser.add_argument('-a', '--address', dest="ip", default="0.0.0.0",
+                        help="Ip address to bind to")
+    parser.add_argument('-p', '--port', dest='port', type=int,
+                        default=8000,
+                        help="Port to run on")
+    parser.add_argument('-d', '--debug', dest='debug', action='store_const',
+                        const=True, default=False,
+                        help="Enable web debug mode? (development only, replaces 500 errors with interactive prompt)")
+    parser.add_argument('-l', '--log', dest="log_level", default="INFO",
+                        help="One of 'debug', 'info', 'warning', 'error' or 'critical'. Default 'info'")
+    parser.add_argument('-t', '--time', dest='now', type=int,
+                        default=time.time(),
+                        help="Current Unix time to use when calculating storage costs. Defaults to current time")
+    parser.add_argument('--cost_tib_year', dest='cost_tib_year', type=int,
+                        default=150,
+                        help="Cost to store 1 TiB for a year")
     args = parser.parse_args(args)
     return args
 
@@ -53,7 +65,7 @@ def create_tree(test_mode=False, now=None, input_file=None):
     if test_mode:
         sample_list = ["../../samples/sampledata.dat.gz"]
     print("Using samples:", sample_list)
-    tree = Tree(LMDBNodeStore(PickleSerializableNode, "/tmp/web_lmdb"))
+    tree = Tree(LMDBNodeStore(PickleSerializableNode, args.cache_dir))
     if len(tree):
         tree._root_path = tree._node_store._root_path
     else:
@@ -75,9 +87,12 @@ if __name__ == '__main__':
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    Mapping.recalc_cost(args.cost_tib_year)
+
     if app.debug:
         app.before_first_request(lambda: create_tree(now=args.now, input_file=args.input_file))
     else:
         create_tree(now=args.now, input_file=args.input_file)
 
-    app.run("0.0.0.0", port=8080)
+    app.run(args.ip, port=args.port)
+

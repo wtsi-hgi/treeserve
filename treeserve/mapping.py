@@ -4,16 +4,15 @@ from typing import Any, Dict, Set
 import struct
 
 
-COST_PER_TIB_YEAR = 150
 SECONDS_PER_YEAR = 60 * 60 * 24 * 365
 ONE_TIB = 1024 ** 4
-COMBINED_COST = COST_PER_TIB_YEAR / (ONE_TIB * SECONDS_PER_YEAR)
-
 
 class Mapping(dict):
     """
     A custom subclass of `dict` that can be added to and subtracted from other `Mapping`s.
     """
+    cost_per_tib_year = 150
+    combined_cost = cost_per_tib_year / (ONE_TIB * SECONDS_PER_YEAR)
 
     def __missing__(self, key):
         return 0
@@ -72,6 +71,12 @@ class Mapping(dict):
         self[attribute, group, "*", category] = value
         self[attribute, group, user, category] = value
 
+    @classmethod
+    def recalc_cost(cls, new_cost_per_tib_year: int):
+        cls.cost_per_tib_year = new_cost_per_tib_year
+        cls.combined_cost = new_cost_per_tib_year / (ONE_TIB * SECONDS_PER_YEAR)
+
+
     def format(self, whitelist: Set[str]) -> Dict:
         """
         Format self for output via the API.
@@ -82,7 +87,7 @@ class Mapping(dict):
         for (data_type, group, user, category), value in self.items():
             if not whitelist or category in whitelist:
                 if data_type.endswith("time"):
-                    value *= COMBINED_COST
+                    value *= self.combined_cost
                 # Need to convert numbers to strings - why? Who knows?
                 rtn[data_type][group][user][category] = str(round(value, 3))
         return rtn
