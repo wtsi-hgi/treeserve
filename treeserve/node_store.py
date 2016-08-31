@@ -146,7 +146,7 @@ class InMemoryLMDBNodeStore(InMemoryNodeStore):
 
     def close(self):
         not_macos = platform != "darwin"  # OS X doesn't support sparse files, so these just break things24 ** 3, writemap=not_macos,
-        self._env = lmdb.open(self.lmdb_dir, map_size=50 * 1024 ** 3, writemap=not_macos,
+        self._env = lmdb.open(self.lmdb_dir, map_size=1024 ** 4, writemap=not_macos,
                               map_async=not_macos)
         for i, (path, node) in enumerate(self._store.items()):
             if i % self.max_txn_size == 0:
@@ -178,7 +178,7 @@ class LMDBNodeStore(NodeStore):
         self.lmdb_dir = lmdb_dir
         # writemap=True and map_async=True increase speed slightly
         not_macos = platform != "darwin"  # OS X doesn't support sparse files, so these just break things
-        self._env = lmdb.open(self.lmdb_dir, map_size=50*1024**3, writemap=not_macos, map_async=not_macos)
+        self._env = lmdb.open(self.lmdb_dir, map_size=1024 ** 4, writemap=not_macos, map_async=not_macos)
         self._txn = lmdb.Transaction(self._env, write=True, buffers=node_type.uses_buffers())
         self._set_cache = FIFOCache(set_cache_size)
         self._get_cache = FIFOCache(get_cache_size)
