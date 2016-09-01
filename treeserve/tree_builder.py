@@ -119,6 +119,7 @@ class TreeBuilder:
                         self._tree.add_node(path, file_type == "d", mapping)
 
         self.logger.info("Finalizing tree after %s seconds", time() - start)
+        exit()
         self._tree.finalize()
         self.logger.info("Built tree in %s seconds", time() - start)
         self.logger.info("%s nodes in database", len(self._tree))
