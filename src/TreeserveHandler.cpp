@@ -26,35 +26,49 @@ void TreeserveHandler::onBody(std::unique_ptr<folly::IOBuf> b) noexcept {
 // Invoked when we finish receiving the body.
 void TreeserveHandler::onEOM() noexcept {
     LOG(INFO) << "got request " << request_->getQueryString() << std::endl;
-    // get the URL path
-    if (request_->getPath() == "/api") {
-        LOG(INFO) << "URL path was /api" << std::endl;
-        // get the path and depth parameters
-        std::string path=request_->getQueryParam("path");
-        uint64_t depth=static_cast<uint64_t>(request_->getIntQueryParam("depth",0));
-        LOG(INFO) << "path parameter was " << path << std::endl;
-        LOG(INFO) << "depth parameter was " << depth << std::endl;
-
-        // get JSON
-        // tree is a global tree pointer declared in globals.hpp
-        // and defined in globals.cpp
-        json result = global_tree->toJSON(std::string(path), depth+1);
-
-        // send headers and body
-        proxygen::ResponseBuilder(downstream_)
-            .status(200, "OK")
-            .header("Access-Control-Allow-Origin", "*")
-            .header("Cache-Control","public,max-age=3600")
-            .body(result.dump(2))
-            .sendWithEOM();
-    } else {
-        LOG(INFO) << "unhandled URL path : " << request_->getPath() << std::endl;
-        // if there is a problem
-        proxygen::ResponseBuilder(downstream_)
-            .status(500, "Server Error")
-            .body("invalid request string")
-            .sendWithEOM();
+    json result;
+    // get the request URL path
+    if ( request_->getPath() == "/api/v2" ) {
+      LOG(INFO) << "v2 api request" << std::endl;
+      // get the path and depth parameters
+      std::string path=request_->getQueryParam("path");
+      uint64_t depth=static_cast<uint64_t>(request_->getIntQueryParam("depth",0));
+      LOG(INFO) << "path parameter was " << path << std::endl;
+      LOG(INFO) << "depth parameter was " << depth << std::endl;
+      result["date"] = global_tree->getDate();
+      result["tree"] = global_tree->toJSON(std::string(path), depth+1);
     }
+    else if ( request_->getPath() == "/api" ||
+         request_->getPath() == "/api/v1" ) {
+      LOG(INFO) << "v1 api request" << std::endl;
+      // get the path and depth parameters
+      std::string path=request_->getQueryParam("path");
+      uint64_t depth=static_cast<uint64_t>(request_->getIntQueryParam("depth",0));
+      LOG(INFO) << "path parameter was " << path << std::endl;
+      LOG(INFO) << "depth parameter was " << depth << std::endl;
+      
+      // get JSON
+      // tree is a global tree pointer declared in globals.hpp
+      // and defined in globals.cpp
+      result = global_tree->toJSON(std::string(path), depth+1);
+    }
+    else {
+      LOG(INFO) << "unhandled URL path : " << request_->getPath() << std::endl;
+      // if there is a problem
+      proxygen::ResponseBuilder(downstream_)
+        .status(500, "Server Error")
+        .body("invalid request string")
+        .sendWithEOM();
+      return;
+    }
+
+    // send headers and body
+    proxygen::ResponseBuilder(downstream_)
+      .status(200, "OK")
+      .header("Access-Control-Allow-Origin", "*")
+      .header("Cache-Control","public,max-age=3600")
+      .body(result.dump(2))
+      .sendWithEOM();
 }
 
 // Invoked when request processing has been completed and nothing more

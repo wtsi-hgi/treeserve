@@ -30,8 +30,8 @@
 
 class TreeBuilder {
  public:
-    TreeBuilder() : tree(0),uid_map(), gid_map() {
-        tree=new Tree();
+    TreeBuilder(const std::string date_string_v) : tree(0),uid_map(), gid_map() {
+        tree=new Tree(date_string_v);
     }
 
     ~TreeBuilder() {
@@ -39,7 +39,7 @@ class TreeBuilder {
     }
 
     Tree* from_lstat(const std::vector<std::string>& lstat_file,
-                const std::string& dump_file);
+                     const std::string& dump_file);
 
     Tree* from_serial(const std::string& serial_file);
 

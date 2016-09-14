@@ -12,9 +12,11 @@ class Tree {
     
     public :
 
-        Tree() : root(0) {}
+        Tree(const std::string date_string_v) : root(0), date_string(date_string_v) {}
 
-        ~Tree() {delete root;}
+        ~Tree() {
+          delete root;
+        }
         
         void addNode(std::string path, IndexedMap& im) {
             // path will be a string of form (/)a/b/c/d(/)
@@ -79,23 +81,25 @@ class Tree {
         }
         
         json toJSON(std::string path, uint64_t d=std::numeric_limits<uint64_t>::max()) {
-            json j;
             if (d==0) d=1;
+            
             TreeNode *tmp=getNodeAt(path);
             if (tmp == NULL) {
-              j =  json::object();
+              return json::object();
             } else {
-              j = tmp->toJSON(d,0);
+              return tmp->toJSON(d,0);
             }
-            return j;
         }
         json toJSON(uint64_t d) {
-            if (d==0) d=1;
-            return root->toJSON(d,0);
+            return toJSON("", d);
         }
         json toJSON() {
-            return root->toJSON(std::numeric_limits<uint64_t>::max(),0);
-        }    
+            return toJSON("");
+        }
+        
+        const std::string getDate() {
+            return date_string;
+        }
     private:
 
         // private copy constructor and assignment operator
@@ -105,6 +109,7 @@ class Tree {
         Tree& operator=(const Tree&);
 
         TreeNode *root;
+        const std::string date_string;
 };
 
 #endif

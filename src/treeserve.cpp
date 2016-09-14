@@ -36,7 +36,13 @@ DEFINE_int32(http_threads, 0, "Number of threads to listen on. Numbers <= 0 will
     " the number of cores on this machine.");
 
 int main(int argc, char **argv) {
-    TreeBuilder *tb = new TreeBuilder();
+    // get date_string from LUSTRETREE_DATE env var, otherwise use the value "unknown"
+    char* ds = std::getenv("LUSTRETREE_DATE");
+    std::string date_string = "unknown";
+    if (ds != NULL) {
+        date_string = ds;
+    }
+    TreeBuilder *tb = new TreeBuilder(date_string);
 
     // Initialize Google's logging library.
     google::InitGoogleLogging(argv[0]);

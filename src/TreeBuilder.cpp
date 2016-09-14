@@ -33,7 +33,7 @@ std::unordered_map<std::string, boost::regex> TreeBuilder::path_property_regexes
 
 // build a tree from an lstat gzipped file
 Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
-                const std::string&) {
+                              const std::string&) {
     // set the current timestamp in epoch seconds,
     // seconds in a year and cost per terabyte per year
     uint64_t now = time(0);
