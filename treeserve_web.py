@@ -1,16 +1,17 @@
 """Web interface for treeserve written in Python 3"""
-from flask import Flask, request, jsonify, render_template, send_from_directory
 import argparse
 import glob
 import logging
-import time
 import sys
+import time
 
-from treeserve.node import PickleSerializableNode
-from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
-from treeserve.tree_builder import TreeBuilder
-from treeserve.tree import Tree
+from flask import Flask, request, jsonify, render_template
+
 from treeserve.mapping import Mapping
+from treeserve.node import PickleSerializableNode
+from treeserve.node_store import LMDBNodeStore
+from treeserve.tree import Tree
+from treeserve.tree_builder import TreeBuilder
 
 
 def parse_args(args=sys.argv[1:]):

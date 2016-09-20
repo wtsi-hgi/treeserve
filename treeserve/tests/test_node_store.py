@@ -1,54 +1,70 @@
-import unittest
 import shutil
+import unittest
+from abc import ABCMeta
+from tempfile import mkdtemp
 
 from treeserve.node import JSONSerializableNode
-from treeserve.node_store import InMemoryNodeStore, LMDBNodeStore
+from treeserve.node_store import LMDBNodeStore, NodeStore, InMemoryNodeStore
 
 
-# noinspection PyUnresolvedReferences
-class BaseNodeStore:
+class _TestNodeStore(unittest.TestCase, metaclass=ABCMeta):
+    """
+    Tests for `NodeStore`.
+    """
+    def __init__(self, node_store: NodeStore, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.node_store = node_store
+        self.node = JSONSerializableNode(False, "/1/2")
+
+    def test_get_when_not_exists(self):
+        self.assertRaises(KeyError, self.node_store.__getitem__, "/other")
+
     def test_set(self):
-        new_child = JSONSerializableNode(False, "/root/child_2")
-        self.node_store["/root/child_2"] = new_child
-        self.assertIn("/root/child_2", self.node_store)
+        self.node_store[self.node.path] = self.node
+        self.assertEqual(self.node, self.node_store[self.node.path])
+
+    def test_contains_when_not_present(self):
+        self.assertNotIn("/other", self.node_store)
+
+    def test_contains_when_present(self):
+        self.node_store[self.node.path] = self.node
+        self.assertIn(self.node.path, self.node_store)
 
     def test_delete(self):
-        del self.node_store["/root"]
-        self.assertIsNone(self.node_store.get("/root"))
-
-    def test_get(self):
-        node = self.node_store["/root"]
-        self.assertEqual(self.node, node)
-        none = self.node_store.get("/does/not/exist")
-        self.assertIsNone(none)
-
-    def test_contains(self):
-        self.assertIn("/root", self.node_store)
-        self.assertNotIn("/does/not/exist", self.node_store)
+        self.node_store[self.node.path] = self.node
+        assert self.node.path in self.node_store
+        del self.node_store[self.node.path]
+        self.assertNotIn(self.node.path, self.node_store)
 
 
-class TestInMemoryNodeStore(unittest.TestCase, BaseNodeStore):
-    def setUp(self):
-        self.node_store = InMemoryNodeStore(JSONSerializableNode)
-        self.node = JSONSerializableNode(True, "/root")
-        self.child = JSONSerializableNode(False, "/root/child")
-        self.node.add_child(self.child)
-        self.node_store["/root"] = self.node
-        self.node_store["/root/child"] = self.child
+class TestInMemoryNodeStore(_TestNodeStore):
+    """
+    Tests for `InMemoryNodeStore`.
+    """
+    def __init__(self, *args, **kwargs):
+        node_store = InMemoryNodeStore(JSONSerializableNode)
+        super().__init__(node_store, *args, **kwargs)
 
 
-class TestLMDBNodeStore(unittest.TestCase, BaseNodeStore):
-    def setUp(self):
-        self.lmdb_directory = "/tmp/lmdb"
-        self.node_store = LMDBNodeStore(JSONSerializableNode, self.lmdb_directory)
-        self.node = JSONSerializableNode(True, "/root")
-        self.child = JSONSerializableNode(False, "/root/child")
-        self.node.add_child(self.child)
-        self.node_store["/root"] = self.node
-        self.node_store["/root/child"] = self.child
+class TestLMDBNodeStore(_TestNodeStore):
+    """
+    Tests for `LMDBNodeStore`.
+    """
+    _DATABASE_SIZE = 1024 * 1024 * 10
+
+    def __init__(self, *args, **kwargs):
+        self._lmdb_directory = mkdtemp()
+        node_store = LMDBNodeStore(
+            JSONSerializableNode, self._lmdb_directory, max_size=TestLMDBNodeStore._DATABASE_SIZE)
+        super().__init__(node_store, *args, **kwargs)
 
     def tearDown(self):
-        shutil.rmtree(self.lmdb_directory)
+        shutil.rmtree(self._lmdb_directory)
 
-if __name__ == '__main__':
+
+# Stop unittest from running the base class as a test
+del _TestNodeStore
+
+
+if __name__ == "__main__":
     unittest.main()

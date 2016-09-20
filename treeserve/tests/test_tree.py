@@ -1,13 +1,13 @@
 import unittest
 
-from treeserve.node import Node
+from treeserve.node import Node, JSONSerializableNode
 from treeserve.node_store import InMemoryNodeStore
 from treeserve.tree import Tree
 
 
 class TestTree(unittest.TestCase):
     def setUp(self):
-        self.tree = Tree(InMemoryNodeStore(Node))
+        self.tree = Tree(InMemoryNodeStore(JSONSerializableNode))
 
     def test_add_node(self):
         self.tree.add_node("/root", True)
