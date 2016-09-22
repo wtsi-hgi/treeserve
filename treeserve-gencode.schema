@@ -1,0 +1,5 @@
+struct TreeNode {
+        Name string
+        ParentKey [16]byte
+        ChildrenKeys [][16]byte
+}
