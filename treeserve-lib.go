@@ -40,6 +40,7 @@ type TreeServe struct {
 	FileCategoryPathChecks map[string]PathCheck
 	LMDBEnv *lmdb.Env
 	TreeDBI lmdb.DBI
+	ChildrenDBI lmdb.DBI
 	StatMappingsDBI lmdb.DBI
 	NodesCreated int64
 }
@@ -119,12 +120,17 @@ func (ts *TreeServe) OpenLMDB() (err error) {
 		}).Fatal("failed to open LMDB environment")
 	}
 
-	ts.TreeDBI, err = openLMDBDBI(ts.LMDBEnv, "tree")
+	ts.TreeDBI, err = openLMDBDBI(ts.LMDBEnv, "tree", lmdb.Create)
 	log.WithFields(log.Fields{
 		"ts": ts,
 	}).Debug("opened tree database")
 
-	ts.StatMappingsDBI, err = openLMDBDBI(ts.LMDBEnv, "statMappings")
+	ts.ChildrenDBI, err = openLMDBDBI(ts.LMDBEnv, "children", (lmdb.Create | lmdb.DupSort))
+	log.WithFields(log.Fields{
+		"ts": ts,
+	}).Debug("opened children database")
+
+	ts.StatMappingsDBI, err = openLMDBDBI(ts.LMDBEnv, "statMappings", lmdb.Create)
 	log.WithFields(log.Fields{"ts": ts}).Debug("opened statMappings database")
 	return
 }
@@ -193,40 +199,24 @@ func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey NodeKey, 
 	return
 }
 
-func (ts *TreeServe) addNodeToParent(parentKey NodeKey, nodeKey NodeKey) (err error) {
+func (ts *TreeServe) addChildToParent(parentKey NodeKey, nodeKey NodeKey) (err error) {
 	err = ts.LMDBEnv.Update(func(txn *lmdb.Txn) (err error) {
-		parentData, err := txn.Get(ts.TreeDBI, parentKey[:])
-		if err != nil {
-			log.WithFields(log.Fields{
-				"parentKey": parentKey,
-				"err": err,
-			}).Error("failed to get parent node from LMDB")
-		}
-		var parent TreeNode
-		//err = json.Unmarshal(parentData, &parent)
-		_, err = parent.Unmarshal(parentData)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"parentData": parentData,
-				"err": err,
-			}).Error("failed to unmarshal parent node data")
-		}
-		parent.ChildrenKeys = append(parent.ChildrenKeys, nodeKey)
-		//parentData, err = json.Marshal(parent)
-		parentData, err = parent.Marshal(nil)
-		log.WithFields(log.Fields{
-			"len(parentData)": len(parentData),
-		}).Debug("about to put updated parent node")
-		err = txn.Put(ts.TreeDBI, parentKey[:], parentData, 0)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"parentKey": parentKey,
-				"parentData": parentData,
-				"err": err,
-			}).Error("failed to put updated parent node into LMDB")
-		}
+		err = txn.Put(ts.ChildrenDBI, parentKey[:], nodeKey[:], lmdb.NoDupData)
 		return
 	})
+	if lmdb.IsErrno(err, lmdb.KeyExist) {
+		log.WithFields(log.Fields{
+			"parentKey": parentKey,
+			"nodeKey": nodeKey,
+		}).Debug("node is already a child of parent")
+		err = nil
+	} else if err != nil {
+		log.WithFields(log.Fields{
+			"parentKey": parentKey,
+			"nodeKey": nodeKey,
+			"err": err,
+		}).Error("failed to add child to parent node")
+	}
 	return
 }
 
@@ -316,7 +306,7 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string) (err error
 			"parentPath": parentPath,
 			"parentKey": parentKey,
 		}).Debug("adding node to parent")
-		err = ts.addNodeToParent(parentKey, nodeKey)
+		err = ts.addChildToParent(parentKey, nodeKey)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"parentKey": parentKey,
@@ -440,13 +430,13 @@ func (ts *TreeServe) InputWorker(id int, lines <-chan string) (err error) {
 	return err
 }
 
-func openLMDBDBI(lmdbEnv *lmdb.Env, dbName string) (dbi lmdb.DBI, err error) {
+func openLMDBDBI(lmdbEnv *lmdb.Env, dbName string, flags uint) (dbi lmdb.DBI, err error) {
 	log.WithFields(log.Fields{
 		"lmdbEnv": lmdbEnv,
 		"dbName": dbName,
 	}).Debug("Opening (creating if necessary) the LMDB dbi")
 	err = lmdbEnv.Update(func(txn *lmdb.Txn) (err error) {
-		dbi, err = txn.OpenDBI(dbName, lmdb.Create)
+		dbi, err = txn.OpenDBI(dbName, flags)
 		return
 	})
 	if err != nil {

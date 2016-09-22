@@ -44,7 +44,7 @@ func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
 	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200 * 1024 * 1024 * 1024, "LMDB map size (maximum)")
-	flag.IntVar(&inputWorkers, "inputWorkers", 4, "Number of workers to use for processing lines of input data")
+	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of workers to use for processing lines of input data")
 	flag.Int64Var(&costReferenceTime, "costReferenceTime", time.Now().Unix(), "The time to use for cost calculations in seconds since the epoch")
 	flag.Int64Var(&nodesCreatedInfoEveryN, "nodesCreatedInfoEveryN", 10000, "Number of node creations between info logs")
 	flag.Int64Var(&stopAfterNLines, "stopAfterNLines", -1, "Stop processing input after this number of lines (-1 to process all input)")
