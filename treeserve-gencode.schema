@@ -1,5 +1,15 @@
 struct TreeNode {
         Name string
         ParentKey [16]byte
-        ChildrenKeys [][16]byte
+        Stats NodeStats
+}
+
+struct NodeStats {
+	size uint64
+	uid uint64
+	gid uint64
+	accessTime int64
+	modificationTime int64
+	creationTime int64
+	fileType byte
 }

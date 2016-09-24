@@ -20,11 +20,9 @@ package main
 import (
 	"flag"
 	log "github.com/Sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 	"os"
-	"compress/gzip"
-	"bufio"
 	"time"
+	"runtime"
 	"runtime/pprof"
 	"github.com/wtsi-hgi/treeserve"
 )
@@ -37,6 +35,8 @@ var costReferenceTime int64
 var lmdbMapSize int64
 var nodesCreatedInfoEveryN int64
 var stopAfterNLines int64
+var finalizeWorkers int
+var maxProcs int
 var debug bool
 var cpuProfilePath string
 
@@ -44,10 +44,12 @@ func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
 	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200 * 1024 * 1024 * 1024, "LMDB map size (maximum)")
-	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of workers to use for processing lines of input data")
+	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
 	flag.Int64Var(&costReferenceTime, "costReferenceTime", time.Now().Unix(), "The time to use for cost calculations in seconds since the epoch")
 	flag.Int64Var(&nodesCreatedInfoEveryN, "nodesCreatedInfoEveryN", 10000, "Number of node creations between info logs")
 	flag.Int64Var(&stopAfterNLines, "stopAfterNLines", -1, "Stop processing input after this number of lines (-1 to process all input)")
+	flag.IntVar(&finalizeWorkers, "finalizeWorkers", 10, "Number of parallel workers to use for finalizing the tree")
+	flag.IntVar(&maxProcs, "maxProcs", runtime.GOMAXPROCS(0), "Maximum number of CPUs to use simultaneously (default: $GOMAXPROCS)")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
 	flag.StringVar(&cpuProfilePath, "cpuProfilePath", "", "Write cpu profile to file")
 }
@@ -57,6 +59,11 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
+	formerMaxProcs := runtime.GOMAXPROCS(maxProcs)
+	log.WithFields(log.Fields{
+		"formerMaxProcs": formerMaxProcs,
+		"maxProcs": maxProcs,
+	}).Info("set GOMAXPROCS")
 	if cpuProfilePath != "" {
 		f, err := os.Create(cpuProfilePath)
 		if err != nil {
@@ -71,7 +78,7 @@ func main() {
 	})
 	log.WithFields(flag_fields).Debug("entered main()")
 
-	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN)
+	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopAfterNLines)
 	err := ts.OpenLMDB()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -82,67 +89,60 @@ func main() {
 	}
 	defer ts.CloseLMDB()
 
-	log.WithFields(log.Fields{
-		"inputWorkers": inputWorkers,
-	}).Debug("starting InputWorker goroutines")
-	var inputWorkerGroup errgroup.Group
-	lines := make(chan string, inputWorkers * 10)
-	for workerId := 1; workerId <= inputWorkers; workerId++ {
-		log.WithFields(log.Fields{
-			"workerId": workerId,
-		}).Debug("Starting goroutine for InputWorker")
-		inputWorkerGroup.Go(func() (err error) {
-			err = ts.InputWorker(workerId, lines)
-			return err
-		})
-	}
-
-	log.WithFields(log.Fields{"inputPath": inputPath}).Debug("opening input")
-	inputFile, err := os.Open(inputPath)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"inputPath": inputPath,
-		}).Fatal("Error opening input")
-	}
-	defer inputFile.Close()
-
-	gzipReader, err := gzip.NewReader(inputFile)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"inputPath": inputPath,
-		}).Fatal("Error creating gzip reader")
-	}
-	defer gzipReader.Close()
-
-	lineScanner := bufio.NewScanner(gzipReader)
-
-	log.Debug("processing input and dispatching lines to workers")
-	var lineCount int64 = 0
-	for lineScanner.Scan() {
-		lines <- lineScanner.Text()
-		lineCount++
-		if stopAfterNLines >= 0 && lineCount > stopAfterNLines {
-			break
+	MainStateMachine:
+	for {
+		state, err := ts.GetState()
+		if err != nil {
+			log.WithFields(log.Fields{"err":err}).Fatal("failed to get state")
 		}
-	}
-	if err := lineScanner.Err(); err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"inputPath": inputPath,
-		}).Fatal("Error reading lines")
-	}
-	close(lines)
 
-	log.Debug("waiting for InputWorkers to complete")
-	if err := inputWorkerGroup.Wait(); err != nil {
-		log.WithFields(log.Fields{"err": err}).Fatal("one or more InputWorkers failed")
-	} else {
-		log.Info("successfully processed all input lines")
+		nextState := "failed"
+		switch state {
+		case "":
+			log.Debug("main state machine: initial state")
+			nextState = "inputProcessing"
+		case "inputProcessing":
+			log.Info("main state machine: inputProcessing")
+			err = ts.ProcessInput(inputPath, inputWorkers)
+			if err != nil {
+				log.WithFields(log.Fields{"err":err}).Fatal("failed to process input")
+			} else {
+				nextState = "inputProcessed"
+			}
+		case "inputProcessed":
+			log.Info("main state machine: inputProcessed")
+			nextState = "finalize"
+		case "finalize":
+			log.Info("main state machine: finalize")
+			err = ts.Finalize("/", finalizeWorkers)
+			if err != nil {
+				nextState = "treeReady"
+			}
+			nextState = "finalize"
+			break MainStateMachine // for development only
+		case "treeReady":
+			log.Info("main state machine: tree ready")
+			break MainStateMachine
+		case "failed":
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Fatal("main state machine: failed")
+		default:
+			log.WithFields(log.Fields{
+				"state": state,
+			}).Fatal("main state machine: unimplemented state transition")
+		}
+		err = ts.SetState(nextState)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"nextState": nextState,
+				"err":err,
+			}).Fatal("failed to set state")
+		}
 	}
 
 	log.Debug("leaving main()")
+
 	return
 }
 
