@@ -23,7 +23,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strconv"
-//	"math/big"
+	//	"math/big"
 	"crypto/md5"
 	"github.com/bmatsuo/lmdb-go/lmdb"
 	"path"
@@ -51,15 +51,17 @@ type TreeServe struct {
 	StatMappingsDBI lmdb.DBI
 	NodesCreated int64
 	StopAfterNLines int64
+	Debug bool
 }
 
-func NewTreeServe(lmdbPath string, lmdbMapSize int64, costReferenceTime int64, nodesCreatedInfoEveryN int64, stopAfterNLines int64) (ts *TreeServe) {
+func NewTreeServe(lmdbPath string, lmdbMapSize int64, costReferenceTime int64, nodesCreatedInfoEveryN int64, stopAfterNLines int64, debug bool) (ts *TreeServe) {
 	ts = new(TreeServe)
 	ts.LMDBPath = lmdbPath
 	ts.LMDBMapSize = lmdbMapSize
 	ts.CostReferenceTime = costReferenceTime
 	ts.NodesCreatedInfoEveryN = nodesCreatedInfoEveryN
 	ts.StopAfterNLines = stopAfterNLines
+	ts.Debug = debug
 	ts.SetFileCategoryPathChecks()
 	return ts
 }
@@ -105,7 +107,9 @@ func (ts *TreeServe) SetFileCategoryPathChecks() {
 }
 
 func (ts *TreeServe) OpenLMDB() (err error) {
-	log.WithFields(log.Fields{"ts": ts}).Debug("configuring and opening LMDB environment")
+	if ts.Debug {
+		log.WithFields(log.Fields{"ts": ts}).Debug("configuring and opening LMDB environment") 
+	}
 	ts.LMDBEnv, err = lmdb.NewEnv()
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("failed to create new LMDB environment")
@@ -129,17 +133,25 @@ func (ts *TreeServe) OpenLMDB() (err error) {
 		}).Fatal("failed to open LMDB environment")
 	}
 
-	ts.TreeNodesDBI, err = openLMDBDBI(ts.LMDBEnv, "treenodes", lmdb.Create)
-	log.WithFields(log.Fields{"ts": ts}).Debug("opened nodes database")
+	ts.TreeNodesDBI, err = ts.openLMDBDBI(ts.LMDBEnv, "treenodes", lmdb.Create)
+	if ts.Debug {
+		log.WithFields(log.Fields{"ts": ts}).Debug("opened nodes database") 
+	}
 
-	ts.ChildrenDBI, err = openLMDBDBI(ts.LMDBEnv, "children", (lmdb.Create | lmdb.DupSort | lmdb.DupFixed))
-	log.WithFields(log.Fields{"ts": ts}).Debug("opened children database")
+	ts.ChildrenDBI, err = ts.openLMDBDBI(ts.LMDBEnv, "children", (lmdb.Create | lmdb.DupSort | lmdb.DupFixed))
+	if ts.Debug {
+		log.WithFields(log.Fields{"ts": ts}).Debug("opened children database") 
+	}
 
-	ts.StatMappingsDBI, err = openLMDBDBI(ts.LMDBEnv, "statMappings", lmdb.Create)
-	log.WithFields(log.Fields{"ts": ts}).Debug("opened statMappings database")
+	ts.StatMappingsDBI, err = ts.openLMDBDBI(ts.LMDBEnv, "statMappings", lmdb.Create)
+	if ts.Debug {
+		log.WithFields(log.Fields{"ts": ts}).Debug("opened statMappings database") 
+	}
 
-	ts.TreeServeDBI, err = openLMDBDBI(ts.LMDBEnv, "treeServe", lmdb.Create)
-	log.WithFields(log.Fields{"ts": ts}).Debug("opened treeServe database")
+	ts.TreeServeDBI, err = ts.openLMDBDBI(ts.LMDBEnv, "treeServe", lmdb.Create)
+	if ts.Debug {
+		log.WithFields(log.Fields{"ts": ts}).Debug("opened treeServe database") 
+	}
 
 	return
 }
@@ -201,20 +213,24 @@ func (ts *TreeServe) GetTreeNode(nodeKey NodeKey) (treeNode TreeNode, err error)
 
 func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey NodeKey, err error) {
 	dirPathKey = ts.getPathKey(dirPath)
-	log.WithFields(log.Fields{
-		"dirPath": dirPath,
-		"dirPathKey": dirPathKey,
-		"ts.LMDBEnv": ts.LMDBEnv,
-		"ts.TreeNodesDBI": ts.TreeNodesDBI,
-	}).Debug("entered ensureDirectoryInTree()")
+	if ts.Debug { 
+		log.WithFields(log.Fields{
+			"dirPath": dirPath,
+			"dirPathKey": dirPathKey,
+			"ts.LMDBEnv": ts.LMDBEnv,
+			"ts.TreeNodesDBI": ts.TreeNodesDBI,
+		}).Debug("entered ensureDirectoryInTree()") 
+	}
 	err = ts.LMDBEnv.View(func(txn *lmdb.Txn) (err error) {
 		_, err = txn.Get(ts.TreeNodesDBI, dirPathKey[:])
 		return
 	})
 	if lmdb.IsNotFound(err) {
-		log.WithFields(log.Fields{
-			"dirPath": dirPath,
-		}).Debug("parent does not exist, creating")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"dirPath": dirPath,
+			}).Debug("parent does not exist, creating") 
+		}
 		err = ts.createTreeNode(dirPath, "d", NodeStats{})
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -237,10 +253,12 @@ func (ts *TreeServe) addChildToParent(parentKey NodeKey, nodeKey NodeKey) (err e
 		return
 	})
 	if lmdb.IsErrno(err, lmdb.KeyExist) {
-		log.WithFields(log.Fields{
-			"parentKey": parentKey,
-			"nodeKey": nodeKey,
-		}).Debug("node is already a child of parent")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"parentKey": parentKey,
+				"nodeKey": nodeKey,
+			}).Debug("node is already a child of parent") 
+		}
 		err = nil
 	} else if err != nil {
 		log.WithFields(log.Fields{
@@ -278,19 +296,23 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 		}).Error("failed to marshall TreeNode")
 		return
 	}
-	log.WithFields(log.Fields{
-		"nodePath": nodePath,
-		"nodeKey": nodeKey,
-		"nodeData": nodeData,
-	}).Debug("creating node")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"nodePath": nodePath,
+			"nodeKey": nodeKey,
+			"nodeData": nodeData,
+		}).Debug("creating node") 
+	}
 	err = ts.LMDBEnv.Update(func(txn *lmdb.Txn) (err error) {
 		// check if node already exists
 		// THIS MUST BE DONE INSIDE WRITE TRANSACTION OR WE COULD ACCIDENTALLY OVERWRITE NODE
 		existingData, err := txn.Get(ts.TreeNodesDBI, nodeKey[:])
 		if err == nil {
-			log.WithFields(log.Fields{
-				"nodeKey": nodeKey,
-			}).Debug("node already exists in LMDB tree")
+			if ts.Debug {
+				log.WithFields(log.Fields{
+					"nodeKey": nodeKey,
+				}).Debug("node already exists in LMDB tree") 
+			}
 			var existing TreeNode
 			//err = json.Unmarshal(existingData, &existing)
 			_, err = existing.Unmarshal(existingData)
@@ -324,20 +346,24 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 			}).Error("failed to create node in tree")
 			return
 		}
-		log.WithFields(log.Fields{
-			"nodePath": nodePath,
-			"nodeKey": nodeKey,
-			"nodeData": nodeData,
-		}).Debug("new node created")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"nodePath": nodePath,
+				"nodeKey": nodeKey,
+				"nodeData": nodeData,
+			}).Debug("new node created") 
+		}
 		return
 	})
 	if nodePath != "/" {
-		log.WithFields(log.Fields{
-			"nodePath": nodePath,
-			"nodeKey": nodeKey,
-			"parentPath": parentPath,
-			"parentKey": parentKey,
-		}).Debug("adding node to parent")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"nodePath": nodePath,
+				"nodeKey": nodeKey,
+				"parentPath": parentPath,
+				"parentKey": parentKey,
+			}).Debug("adding node to parent") 
+		}
 		err = ts.addChildToParent(parentKey, nodeKey)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -358,9 +384,11 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 }
 
 func (ts *TreeServe) processLine(line string) (err error) {
-	log.WithFields(log.Fields{
-		"line": line,
-	}).Debug("entered processLine()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"line": line,
+		}).Debug("entered processLine()") 
+	}
 	s := strings.SplitN(line, "\t", 11)
 	b64NodePath := s[0]
 	nodePathBytes, err := base64.StdEncoding.DecodeString(b64NodePath)
@@ -400,15 +428,17 @@ func (ts *TreeServe) processLine(line string) (err error) {
 	//linkCount := s[9]
 	//devId := s[10]
 	nodeStats := NodeStats{size, uid, gid, accessTime, modificationTime, creationTime, fileType[0]}
-	log.WithFields(log.Fields{
-		"nodePath": nodePath,
-		"nodeStats": nodeStats,
-	}).Debug("parsed line and populated nodeStats")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"nodePath": nodePath,
+			"nodeStats": nodeStats,
+		}).Debug("parsed line and populated nodeStats") 
+	}
 
-//	user := ts.lookupUid(uid)
-//	group := ts.lookupGid(gid)
+	//	user := ts.lookupUid(uid)
+	//	group := ts.lookupGid(gid)
 	categories := ts.makeCategories(nodePath, fileType)
-/*
+	/*
 	var bigSize big.Int
 	bigSize.SetUint64(size)
 	var accessTimeByteSeconds big.Int
@@ -418,15 +448,17 @@ func (ts *TreeServe) processLine(line string) (err error) {
 	var creationTimeByteSeconds big.Int
 	creationTimeByteSeconds.Mul(&bigSize, big.NewInt(ts.CostReferenceTime - creationTime))
 */
-	log.WithFields(log.Fields{
-//		"nodePath": nodePath,
-//		"user": user,
-//		"group": group,
-		"categories": categories,
-//		"accessTimeByteSeconds": accessTimeByteSeconds.Text(10),
-//		"modificationTimeByteSeconds": modificationTimeByteSeconds.Text(10),
-//		"creationTimeByteSeconds": creationTimeByteSeconds.Text(10),
-	}).Debug("Calculated values")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			//		"nodePath": nodePath,
+			//		"user": user,
+			//		"group": group,
+			"categories": categories,
+			//		"accessTimeByteSeconds": accessTimeByteSeconds.Text(10),
+			//		"modificationTimeByteSeconds": modificationTimeByteSeconds.Text(10),
+			//		"creationTimeByteSeconds": creationTimeByteSeconds.Text(10),
+		}).Debug("Calculated values") 
+	}
 
 	ts.createTreeNode(nodePath, fileType, nodeStats)
 
@@ -434,9 +466,11 @@ func (ts *TreeServe) processLine(line string) (err error) {
 }
 
 func (ts *TreeServe) InputWorker(workerId int, lines <-chan string) (err error) {
-	log.WithFields(log.Fields{
-		"workerId": workerId,
-	}).Debug("entered InputWorker()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"workerId": workerId,
+		}).Debug("entered InputWorker()") 
+	}
 	for line := range lines {
 		err = ts.processLine(line)
 		if err != nil {
@@ -448,17 +482,21 @@ func (ts *TreeServe) InputWorker(workerId int, lines <-chan string) (err error) 
 			break
 		}
 	}
-	log.WithFields(log.Fields{
-		"workerId": workerId,
-		"err": err,
-	}).Debug("leaving InputWorker()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"workerId": workerId,
+			"err": err,
+		}).Debug("leaving InputWorker()") 
+	}
 	return err
 }
 
 func (ts *TreeServe) FinalizeWorker(workerId int, subtreeNodes <-chan NodeKey) (err error) {
-	log.WithFields(log.Fields{
-		"workerId": workerId,
-	}).Debug("entered FinalizeWorker()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"workerId": workerId,
+		}).Debug("entered FinalizeWorker()") 
+	}
 	for nodeKey := range subtreeNodes {
 		var node TreeNode
 		node, err = ts.GetTreeNode(nodeKey)
@@ -469,16 +507,20 @@ func (ts *TreeServe) FinalizeWorker(workerId int, subtreeNodes <-chan NodeKey) (
 			}).Error("failed to get tree node")
 			return
 		}
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"workerId": workerId,
+				"nodeKey": nodeKey,
+				"node": node,
+			}).Debug("FinalizeWorker processing subtree") 
+		}
+	}
+	if ts.Debug {
 		log.WithFields(log.Fields{
 			"workerId": workerId,
-			"nodeKey": nodeKey,
-			"node": node,
-		}).Debug("FinalizeWorker processing subtree")
+			"err": err,
+		}).Debug("leaving FinalizeWorker()") 
 	}
-	log.WithFields(log.Fields{
-		"workerId": workerId,
-		"err": err,
-	}).Debug("leaving FinalizeWorker()")
 	return err
 }
 
@@ -518,24 +560,30 @@ func (ts *TreeServe) SetState(state string) (err error) {
 }
 
 func (ts *TreeServe) ProcessInput(inputPath string, workers int) (err error) {
-	log.WithFields(log.Fields{
-		"ts": ts,
-		"inputPath": inputPath,
-		"workers": workers,
-	}).Debug("entered ProcessInput()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"ts": ts,
+			"inputPath": inputPath,
+			"workers": workers,
+		}).Debug("entered ProcessInput()") 
+	}
 	var inputWorkerGroup errgroup.Group
 	lines := make(chan string, workers * 10)
 	for workerId := 1; workerId <= workers; workerId++ {
-		log.WithFields(log.Fields{
-			"workerId": workerId,
-		}).Debug("Starting goroutine for InputWorker")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"workerId": workerId,
+			}).Debug("Starting goroutine for InputWorker") 
+		}
 		inputWorkerGroup.Go(func() (err error) {
 			err = ts.InputWorker(workerId, lines)
 			return err
 		})
 	}
 
-	log.WithFields(log.Fields{"inputPath": inputPath}).Debug("opening input")
+	if ts.Debug {
+		log.WithFields(log.Fields{"inputPath": inputPath}).Debug("opening input") 
+	}
 	inputFile, err := os.Open(inputPath)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -584,9 +632,11 @@ func (ts *TreeServe) ProcessInput(inputPath string, workers int) (err error) {
 }
 
 func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err error) {
-	log.WithFields(log.Fields{
-		"nodeKey": nodeKey,
-	}).Debug("about to start read transaction")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"nodeKey": nodeKey,
+		}).Debug("about to start read transaction") 
+	}
 	err = ts.LMDBEnv.View(func(txn *lmdb.Txn) (err error) {
 		cur, err := txn.OpenCursor(ts.ChildrenDBI)
 		if err != nil {
@@ -595,16 +645,20 @@ func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err err
 		}
 		defer cur.Close()
 
-		log.WithFields(log.Fields{
-			"nodeKey": nodeKey,
-		}).Debug("moving cursor to start path")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"nodeKey": nodeKey,
+			}).Debug("moving cursor to start path") 
+		}
 		//_, firstChildKey, err := cur.Get(nodeKey[:], nil, lmdb.Set)
 		_, firstChildKey, err := cur.Get(nodeKey[:], nil, lmdb.Set)
 		if lmdb.IsNotFound(err) {
-			log.WithFields(log.Fields{
-				"err": err,
-				"nodeKey": nodeKey,
-			}).Debug("no children found")
+			if ts.Debug {
+				log.WithFields(log.Fields{
+					"err": err,
+					"nodeKey": nodeKey,
+				}).Debug("no children found") 
+			}
 			err = nil
 			return 
 		}
@@ -615,11 +669,13 @@ func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err err
 			}).Error("failed to get children")
 		}
 		stride := len(firstChildKey)
-		log.WithFields(log.Fields{
-			"nodeKey": nodeKey,
-			"stride": stride,
-			"firstChildKey": firstChildKey,
-		}).Debug("have stride, getting children")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"nodeKey": nodeKey,
+				"stride": stride,
+				"firstChildKey": firstChildKey,
+			}).Debug("have stride, getting children") 
+		}
 		var childKey NodeKey
 		//key, values, err := cur.Get(nodeKey[:], nil, (lmdb.Set | lmdb.GetMultiple))
 		key, values, err := cur.Get(nil, nil, lmdb.NextMultiple)
@@ -634,13 +690,15 @@ func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err err
 		childPageCount := 0
 		for {
 			if lmdb.IsNotFound(err) {
-				log.WithFields(log.Fields{
-					"key": key,
-					"values": values,
-					"err": err,
-					"childCount": childCount,
-					"childPageCount": childPageCount,
-				}).Debug("no more sets of children")
+				if ts.Debug {
+					log.WithFields(log.Fields{
+						"key": key,
+						"values": values,
+						"err": err,
+						"childCount": childCount,
+						"childPageCount": childPageCount,
+					}).Debug("no more sets of children") 
+				}
 				err = nil
 				break
 			}
@@ -652,30 +710,36 @@ func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err err
 				}).Fatal("failed to iterate over children")
 			}
 			if !bytes.Equal(key, nodeKey[:]) {
-				log.WithFields(log.Fields{
-					"nodeKey": nodeKey,
-					"key": key,
-					"childPageCount": childPageCount,
-					"childCount": childCount,
-				}).Debug("got unexpected key")
+				if ts.Debug {
+					log.WithFields(log.Fields{
+						"nodeKey": nodeKey,
+						"key": key,
+						"childPageCount": childPageCount,
+						"childCount": childCount,
+					}).Debug("got unexpected key") 
+				}
 				break
 			}
 			multi := lmdb.WrapMulti(values, stride)
-			log.WithFields(log.Fields{
-				"multi": multi,
-				"multi.Len()": multi.Len(),
-				"values": values,
-				"stride": stride,
-			}).Debug("have wrapped multi")
+			if ts.Debug {
+				log.WithFields(log.Fields{
+					"multi": multi,
+					"multi.Len()": multi.Len(),
+					"values": values,
+					"stride": stride,
+				}).Debug("have wrapped multi") 
+			}
 			for i := 0; i < multi.Len(); i++ {
 				childCount++
 				copy(childKey[:], multi.Val(i))
-				log.WithFields(log.Fields{
-					"childKey": childKey,
-					"i": i,
-					"key": key,
-					"childCount": childCount,
-				}).Debug("got child, appending")
+				if ts.Debug {
+					log.WithFields(log.Fields{
+						"childKey": childKey,
+						"i": i,
+						"key": key,
+						"childCount": childCount,
+					}).Debug("got child, appending") 
+				}
 				childKeys = append(childKeys, childKey)
 			}
 			key, values, err = cur.Get(nil, nil, lmdb.NextMultiple)
@@ -687,18 +751,22 @@ func (ts *TreeServe) getChildKeys(nodeKey NodeKey) (childKeys []NodeKey, err err
 }
 
 func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
-	log.WithFields(log.Fields{
-		"ts": ts,
-		"startPath": startPath,
-		"workers": workers,
-	}).Debug("entered Finalize()")
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"ts": ts,
+			"startPath": startPath,
+			"workers": workers,
+		}).Debug("entered Finalize()") 
+	}
 
 	var finalizeWorkerGroup errgroup.Group
 	subtreeNodes := make(chan NodeKey, workers * 10)
 	for workerId := 1; workerId <= workers; workerId++ {
-		log.WithFields(log.Fields{
-			"workerId": workerId,
-		}).Debug("Starting goroutine for FinalizeWorker")
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"workerId": workerId,
+			}).Debug("Starting goroutine for FinalizeWorker") 
+		}
 		finalizeWorkerGroup.Go(func() (err error) {
 			err = ts.FinalizeWorker(workerId, subtreeNodes)
 			return err
@@ -714,9 +782,13 @@ func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
 			}).Error("visitor failed to get tree node")
 			return
 		}
-		log.WithFields(log.Fields{
-			"treeNode.Name": treeNode.Name,
-		}).Info("visited node")
+		if ts.Debug {
+			
+			log.WithFields(log.Fields{
+				"treeNode.Name": treeNode.Name,
+			}).Debug("visited node")
+			
+		}
 		return
 	})
 	if err != nil {
@@ -751,16 +823,20 @@ func (ts *TreeServe) aggregateSubtree(node NodeKey, nodeVisitor NodeVisitor) (er
 			"node": node,
 		}).Error("failed to get child keys for node")
 	}
-	log.WithFields(log.Fields{
-		"node": node,
-		"childKeys": childKeys,
-	}).Debug("got children for node")
-	for _, childKey := range childKeys {
+	if ts.Debug {
 		log.WithFields(log.Fields{
 			"node": node,
-			"childKey": childKey,
 			"childKeys": childKeys,
-		}).Debug("aggregateSubtree recursing")
+		}).Debug("got children for node") 
+	}
+	for _, childKey := range childKeys {
+		if ts.Debug {
+			log.WithFields(log.Fields{
+				"node": node,
+				"childKey": childKey,
+				"childKeys": childKeys,
+			}).Debug("aggregateSubtree recursing") 
+		}
 		ts.aggregateSubtree(childKey, nodeVisitor)
 	}
 	err = nodeVisitor(node)
@@ -774,11 +850,13 @@ func (ts *TreeServe) aggregateSubtree(node NodeKey, nodeVisitor NodeVisitor) (er
 	return
 }
 
-func openLMDBDBI(lmdbEnv *lmdb.Env, dbName string, flags uint) (dbi lmdb.DBI, err error) {
-	log.WithFields(log.Fields{
-		"lmdbEnv": lmdbEnv,
-		"dbName": dbName,
-	}).Debug("Opening (creating if necessary) the LMDB dbi")
+func (ts *TreeServe) openLMDBDBI(lmdbEnv *lmdb.Env, dbName string, flags uint) (dbi lmdb.DBI, err error) {
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"lmdbEnv": lmdbEnv,
+			"dbName": dbName,
+		}).Debug("Opening (creating if necessary) the LMDB dbi") 
+	}
 	err = lmdbEnv.Update(func(txn *lmdb.Txn) (err error) {
 		dbi, err = txn.OpenDBI(dbName, flags)
 		return

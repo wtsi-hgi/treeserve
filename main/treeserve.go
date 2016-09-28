@@ -76,9 +76,11 @@ func main() {
 	flag.VisitAll(func(f *flag.Flag) {
 		flag_fields[f.Name] = f.Value
 	})
-	log.WithFields(flag_fields).Debug("entered main()")
+	if debug { 
+		log.WithFields(flag_fields).Debug("entered main()") 
+	}
 
-	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopAfterNLines)
+	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopAfterNLines, debug)
 	err := ts.OpenLMDB()
 	if err != nil {
 		log.WithFields(log.Fields{
