@@ -19,11 +19,12 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
 	"os"
-	"time"
 	"runtime"
 	"runtime/pprof"
+	"time"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/wtsi-hgi/treeserve"
 )
 
@@ -43,7 +44,7 @@ var cpuProfilePath string
 func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
-	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200 * 1024 * 1024 * 1024, "LMDB map size (maximum)")
+	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200*1024*1024*1024, "LMDB map size (maximum)")
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
 	flag.Int64Var(&costReferenceTime, "costReferenceTime", time.Now().Unix(), "The time to use for cost calculations in seconds since the epoch")
 	flag.Int64Var(&nodesCreatedInfoEveryN, "nodesCreatedInfoEveryN", 10000, "Number of node creations between info logs")
@@ -62,7 +63,7 @@ func main() {
 	formerMaxProcs := runtime.GOMAXPROCS(maxProcs)
 	log.WithFields(log.Fields{
 		"formerMaxProcs": formerMaxProcs,
-		"maxProcs": maxProcs,
+		"maxProcs":       maxProcs,
 	}).Info("set GOMAXPROCS")
 	if cpuProfilePath != "" {
 		f, err := os.Create(cpuProfilePath)
@@ -76,26 +77,26 @@ func main() {
 	flag.VisitAll(func(f *flag.Flag) {
 		flag_fields[f.Name] = f.Value
 	})
-	if debug { 
-		log.WithFields(flag_fields).Debug("entered main()") 
+	if debug {
+		log.WithFields(flag_fields).Debug("entered main()")
 	}
 
 	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopAfterNLines, debug)
 	err := ts.OpenLMDB()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"lmdbPath": lmdbPath,
+			"lmdbPath":    lmdbPath,
 			"lmdbMapSize": lmdbMapSize,
-			"ts": ts,
+			"ts":          ts,
 		}).Fatal("failed to open TreeServe LMDB")
 	}
 	defer ts.CloseLMDB()
 
-	MainStateMachine:
+MainStateMachine:
 	for {
 		state, err := ts.GetState()
 		if err != nil {
-			log.WithFields(log.Fields{"err":err}).Fatal("failed to get state")
+			log.WithFields(log.Fields{"err": err}).Fatal("failed to get state")
 		}
 
 		nextState := "failed"
@@ -107,7 +108,7 @@ func main() {
 			log.Info("main state machine: inputProcessing")
 			err = ts.ProcessInput(inputPath, inputWorkers)
 			if err != nil {
-				log.WithFields(log.Fields{"err":err}).Fatal("failed to process input")
+				log.WithFields(log.Fields{"err": err}).Fatal("failed to process input")
 			} else {
 				nextState = "inputProcessed"
 			}
@@ -138,7 +139,7 @@ func main() {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"nextState": nextState,
-				"err":err,
+				"err":       err,
 			}).Fatal("failed to set state")
 		}
 	}
@@ -147,4 +148,3 @@ func main() {
 
 	return
 }
-
