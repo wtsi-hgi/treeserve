@@ -38,9 +38,9 @@ func TestTreeNodeDB(t *testing.T) {
 	}
 	defer ts.CloseLMDB()
 
-	testNode1 := TreeNode{Name: "testNode1-1"}
+	testNode1 := &TreeNode{Name: "testNode1-1"}
 	testKey1 := Md5Key(md5.Sum([]byte("testKey1")))
-	err = ts.TreeNodeDB.Update(testKey1, func(_ BinaryMarshalUnmarshaler) (node BinaryMarshalUnmarshaler, err error) {
+	err = ts.TreeNodeDB.Update(&testKey1, func(_ BinaryMarshalUnmarshaler) (node BinaryMarshalUnmarshaler, err error) {
 		node = testNode1
 		return
 	})
@@ -48,13 +48,13 @@ func TestTreeNodeDB(t *testing.T) {
 		t.Errorf("failed to add treenode to database: %v", err)
 	}
 
-	treeNodeData, err := ts.TreeNodeDB.Get(testKey1)
+	treeNodeData, err := ts.TreeNodeDB.Get(&testKey1)
 	if err != nil {
 		t.Errorf("failed to retrieved treenode from database: %v", err)
 	}
 
-	checkTestNode1 := treeNodeData.(TreeNode)
-	if checkTestNode1 != testNode1 {
-		t.Errorf("retrieved treenode did not match: %v != %v", checkTestNode1, testNode1)
+	checkTestNode1 := treeNodeData.(*TreeNode)
+	if *checkTestNode1 != *testNode1 {
+		t.Errorf("retrieved treenode did not match: %v != %v", *checkTestNode1, *testNode1)
 	}
 }
