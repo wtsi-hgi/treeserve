@@ -57,6 +57,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	//log.SetFormatter(&log.JSONFormatter{})
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}

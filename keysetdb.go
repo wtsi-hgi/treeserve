@@ -107,10 +107,10 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 				"firstKeySetKey": firstKeySetKey,
 			}).Debug("have stride, getting keyset")
 		}
-		var keySetKey Md5Key
 		k, v, err := cur.Get(nil, nil, lmdb.NextMultiple)
 		if lmdb.IsNotFound(err) {
 			log.Debug("nextmultiple not found, this key only has one key in the keyset")
+			keySetKey := Md5Key{}
 			copy(keySetKey[:], firstKeySetKey)
 			keySetKeys = append(keySetKeys, &keySetKey)
 			err = nil
@@ -161,6 +161,7 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 			}
 			for i := 0; i < multi.Len(); i++ {
 				keySetCount++
+				keySetKey := Md5Key{}
 				copy(keySetKey[:], multi.Val(i))
 				if ts.Debug {
 					log.WithFields(log.Fields{

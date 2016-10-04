@@ -892,6 +892,11 @@ func (ts *TreeServe) aggregateSubtreePath(subtreePath string, nodeVisitor NodeVi
 }
 
 func (ts *TreeServe) aggregateSubtree(node *Md5Key, nodeVisitor NodeVisitor) (err error) {
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"node": node,
+		}).Debug("aggregateSubtree pre-order")
+	}
 	childKeys, err := ts.GetChildren(node)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -911,9 +916,14 @@ func (ts *TreeServe) aggregateSubtree(node *Md5Key, nodeVisitor NodeVisitor) (er
 				"node":      node,
 				"childKey":  childKey,
 				"childKeys": childKeys,
-			}).Debug("aggregateSubtree recursing")
+			}).Debug("aggregateSubtree in-order recursing")
 		}
 		ts.aggregateSubtree(childKey, nodeVisitor)
+	}
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"node": node,
+		}).Debug("aggregateSubtree post-order calling nodeVisitor")
 	}
 	err = nodeVisitor(node)
 	if err != nil {
