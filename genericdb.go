@@ -90,6 +90,12 @@ func (gdb *GenericDB) Update(key encoding.BinaryMarshaler, update UpdateData) (e
 			}
 		} else if err == nil {
 			existing = gdb.NewData()
+			if ts.Debug {
+				log.WithFields(log.Fields{
+					"keyBytes":      keyBytes,
+					"existingBytes": existingBytes,
+				}).Debug("genericdb: got data for key, unmarshalling")
+			}
 			err = existing.UnmarshalBinary(existingBytes)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -159,6 +165,7 @@ func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmar
 		log.WithFields(log.Fields{
 			"err": err,
 		}).Error("could not marshal key")
+		return
 	}
 	var dataBytes []byte
 	data = gdb.NewData()
@@ -170,7 +177,7 @@ func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmar
 		log.WithFields(log.Fields{
 			"err": err,
 			"gdb": gdb,
-		}).Warning("key not found")
+		}).Debug("key not found")
 		return
 	} else if err != nil {
 		log.WithFields(log.Fields{
@@ -184,6 +191,37 @@ func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmar
 			"err":       err,
 			"dataBytes": dataBytes,
 		}).Fatal("failed to unmarshal data")
+	}
+	return
+}
+
+func (gdb *GenericDB) Exists(key encoding.BinaryMarshaler) (exists bool, err error) {
+	ts := gdb.TS
+	keyBytes, err := key.MarshalBinary()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("could not marshal key")
+		return
+	}
+	err = ts.LMDBEnv.View(func(txn *lmdb.Txn) (err error) {
+		_, err = txn.Get(gdb.DBI, keyBytes)
+		return
+	})
+	if lmdb.IsNotFound(err) {
+		log.WithFields(log.Fields{
+			"err": err,
+			"gdb": gdb,
+		}).Debug("key not found")
+		err = nil
+		exists = false
+	} else if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"gdb": gdb,
+		}).Fatal("failed to get node from database")
+	} else {
+		exists = true
 	}
 	return
 }

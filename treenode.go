@@ -1,10 +1,12 @@
 package treeserve
 
-import (
-	log "github.com/Sirupsen/logrus"
-)
+import log "github.com/Sirupsen/logrus"
 
 // TreeNode is defined in gencode schema
+
+func NewTreeNode() *TreeNode {
+	return &TreeNode{}
+}
 
 func (tn *TreeNode) MarshalBinary() (data []byte, err error) {
 	data, err = tn.Marshal(nil)

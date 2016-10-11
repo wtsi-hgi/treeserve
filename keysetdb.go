@@ -12,8 +12,15 @@ type KeySetDB struct {
 	DBCommon
 }
 
-func (ksdb *KeySetDB) AddKeyToKeySet(key encoding.BinaryMarshaler, setKey encoding.BinaryMarshaler) (err error) {
+func (ksdb *KeySetDB) AddKeyToKeySet(key encoding.BinaryMarshaler, setkey encoding.BinaryMarshaler) (err error) {
 	ts := ksdb.TS
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"ksdb":   ksdb,
+			"key":    key,
+			"setkey": setkey,
+		}).Debug("AddKeyToKeySet")
+	}
 	keyBytes, err := key.MarshalBinary()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -21,32 +28,59 @@ func (ksdb *KeySetDB) AddKeyToKeySet(key encoding.BinaryMarshaler, setKey encodi
 		}).Error("could not marshal key")
 		return
 	}
-	setKeyBytes, err := setKey.MarshalBinary()
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"key":      key,
+			"keyBytes": keyBytes,
+		}).Debug("AddKeyToKeySet got keyBytes")
+	}
+	setkeyBytes, err := setkey.MarshalBinary()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Error("could not marshal setKey")
+		}).Error("could not marshal setkey")
 		return
 	}
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"key":         key,
+			"setkeyBytes": setkeyBytes,
+		}).Debug("AddKeyToKeySet got setkeyBytes")
+	}
 
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"ksdb.DBI":    ksdb.DBI,
+			"keyBytes":    keyBytes,
+			"setkeyBytes": setkeyBytes,
+		}).Debug("AddKeyToKeySet calling Update")
+	}
 	err = ts.LMDBEnv.Update(func(txn *lmdb.Txn) (err error) {
-		err = txn.Put(ksdb.DBI, keyBytes, setKeyBytes, lmdb.NoDupData)
+		err = txn.Put(ksdb.DBI, keyBytes, setkeyBytes, lmdb.NoDupData)
 		return
 	})
+	if ts.Debug {
+		log.WithFields(log.Fields{
+			"ksdb.DBI":    ksdb.DBI,
+			"keyBytes":    keyBytes,
+			"setkeyBytes": setkeyBytes,
+			"err":         err,
+		}).Debug("AddKeyToKeySet update returned")
+	}
 	if lmdb.IsErrno(err, lmdb.KeyExist) {
 		if ts.Debug {
 			log.WithFields(log.Fields{
 				"key":    key,
-				"setKey": setKey,
-			}).Debug("setKey is already in the key set for key")
+				"setkey": setkey,
+			}).Debug("setkey is already in the key set for key")
 		}
 		err = nil
 	} else if err != nil {
 		log.WithFields(log.Fields{
 			"key":    key,
-			"setKey": setKey,
+			"setkey": setkey,
 			"err":    err,
-		}).Error("failed to add setKey to key set for key")
+		}).Error("failed to add setkey to key set for key")
 		return
 	}
 	return
@@ -111,7 +145,7 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 		if lmdb.IsNotFound(err) {
 			log.Debug("nextmultiple not found, this key only has one key in the keyset")
 			keySetKey := Md5Key{}
-			copy(keySetKey[:], firstKeySetKey)
+			keySetKey.UnmarshalBinary(firstKeySetKey)
 			keySetKeys = append(keySetKeys, &keySetKey)
 			err = nil
 			return
@@ -162,7 +196,7 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 			for i := 0; i < multi.Len(); i++ {
 				keySetCount++
 				keySetKey := Md5Key{}
-				copy(keySetKey[:], multi.Val(i))
+				keySetKey.UnmarshalBinary(multi.Val(i))
 				if ts.Debug {
 					log.WithFields(log.Fields{
 						"keySetKey":   keySetKey,

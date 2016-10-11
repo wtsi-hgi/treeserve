@@ -8,3 +8,4 @@ bin/testTreeBuilder
 bin/testTreeNode
 gopath
 treeserve
+venv/

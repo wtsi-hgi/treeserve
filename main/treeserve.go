@@ -19,12 +19,11 @@ package main
 
 import (
 	"flag"
-	"os"
 	"runtime"
-	"runtime/pprof"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/pkg/profile"
 	"github.com/wtsi-hgi/treeserve"
 )
 
@@ -35,11 +34,15 @@ var inputWorkers int
 var costReferenceTime int64
 var lmdbMapSize int64
 var nodesCreatedInfoEveryN int64
-var stopAfterNLines int64
+var stopInputAfterNLines int64
+var nodesFinalizedInfoEveryN int64
+var stopFinalizeAfterNNodes int64
 var finalizeWorkers int
 var maxProcs int
 var debug bool
 var cpuProfilePath string
+var memProfilePath string
+var blockProfilePath string
 
 func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
@@ -48,11 +51,15 @@ func init() {
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
 	flag.Int64Var(&costReferenceTime, "costReferenceTime", time.Now().Unix(), "The time to use for cost calculations in seconds since the epoch")
 	flag.Int64Var(&nodesCreatedInfoEveryN, "nodesCreatedInfoEveryN", 10000, "Number of node creations between info logs")
-	flag.Int64Var(&stopAfterNLines, "stopAfterNLines", -1, "Stop processing input after this number of lines (-1 to process all input)")
+	flag.Int64Var(&stopInputAfterNLines, "stopInputAfterNLines", -1, "Stop processing input after this number of lines (-1 to process all input)")
+	flag.Int64Var(&stopFinalizeAfterNNodes, "stopFinalizeAfterNNodes", -1, "Stop finalizing after this number of nodes (-1 to finalize all nodes)")
+	flag.Int64Var(&nodesFinalizedInfoEveryN, "nodesFinalizedInfoEveryN", 10000, "Number of node creations between info logs")
 	flag.IntVar(&finalizeWorkers, "finalizeWorkers", 10, "Number of parallel workers to use for finalizing the tree")
 	flag.IntVar(&maxProcs, "maxProcs", runtime.GOMAXPROCS(0), "Maximum number of CPUs to use simultaneously (default: $GOMAXPROCS)")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
-	flag.StringVar(&cpuProfilePath, "cpuProfilePath", "", "Write cpu profile to file")
+	flag.StringVar(&cpuProfilePath, "cpuProfilePath", "", "Write CPU profile to path")
+	flag.StringVar(&memProfilePath, "memProfilePath", "", "Write Memory profile to path")
+	flag.StringVar(&blockProfilePath, "blockProfilePath", "", "Write Block (contention) profile to path")
 }
 
 func main() {
@@ -67,12 +74,14 @@ func main() {
 		"maxProcs":       maxProcs,
 	}).Info("set GOMAXPROCS")
 	if cpuProfilePath != "" {
-		f, err := os.Create(cpuProfilePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+		defer profile.Start(profile.CPUProfile, profile.ProfilePath(cpuProfilePath)).Stop()
+	}
+	if memProfilePath != "" {
+		defer profile.Start(profile.MemProfileRate(4096), profile.ProfilePath(memProfilePath)).Stop()
+	}
+	if blockProfilePath != "" {
+		runtime.SetBlockProfileRate(1)
+		defer profile.Start(profile.BlockProfile, profile.ProfilePath(blockProfilePath)).Stop()
 	}
 	flag_fields := log.Fields{}
 	flag.VisitAll(func(f *flag.Flag) {
@@ -82,7 +91,7 @@ func main() {
 		log.WithFields(flag_fields).Debug("entered main()")
 	}
 
-	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopAfterNLines, debug)
+	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopInputAfterNLines, nodesFinalizedInfoEveryN, stopFinalizeAfterNNodes, debug)
 	err := ts.OpenLMDB()
 	if err != nil {
 		log.WithFields(log.Fields{
