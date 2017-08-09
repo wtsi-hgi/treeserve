@@ -1,4 +1,4 @@
-src/*.o
+!*.dat.gz
 *~
 bin/testDatum
 bin/testIndexedMap
@@ -9,3 +9,5 @@ bin/testTreeNode
 gopath
 treeserve
 venv/
+__pycache__/
+.DS_Store

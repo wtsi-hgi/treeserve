@@ -1,0 +1,42 @@
+{
+  "child_dirs": [],
+  "data": {
+    "atime": {
+      "<gid|*>": {
+        "<uid|*>": {
+          "<file_type|*>": ""
+        }
+      }
+    },
+    "count": {
+      "<gid|*>": {
+        "<uid|*>": {
+          "<file_type|*>": "<number>"
+        }
+      }
+    },
+    "ctime": {
+      "<gid|*>": {
+        "<uid|*>": {
+          "<file_type|*>": ""
+        }
+      }
+    },
+    "mtime": {
+      "<gid|*>": {
+        "<uid|*>": {
+          "<file_type|*>": ""
+        }
+      }
+    },
+    "size": {
+      "<gid|*>": {
+        "<uid|*>": {
+          "<file_type|*>": "<number>"
+        }
+      }
+    }
+  },
+  "name": "<path.split('/')[-1]>",
+  "path": "<path>"
+}
