@@ -15,9 +15,10 @@ type AggregateStats struct {
 	AccessCost   *Bigint
 }
 
+// Add adds aggregate values where a set of group/user/tag is in the StatMappings
+// of both. If not found return error
 func (stats *AggregateStats) Add(addend *AggregateStats) (err error) {
-	//	allKeys := stats.StatMappingKeys.Union(*addend.StatMappingKeys)
-	//	stats.StatMappingKeys = &allKeys
+	// check it's there
 	for _, k := range addend.StatMappings.Keys() {
 		_, have := stats.StatMappings.Get(k)
 		if !have {
@@ -41,6 +42,138 @@ func (stats *AggregateStats) Add(addend *AggregateStats) (err error) {
 
 func (stats *AggregateStats) String() (s string) {
 	// TODO
-	s = fmt.Sprintf("size: %v", stats.Size.Text(10))
+
+	s = fmt.Sprintf("size: %v ", stats.Size.Text(10))
+	s += fmt.Sprintf(" count: %v ", stats.Count.Text(10))
+	s += fmt.Sprintf(" acost: %v ", stats.AccessCost.Text(10))
+	s += fmt.Sprintf(" mcost: %v ", stats.ModifyCost.Text(10))
+	s += fmt.Sprintf(" ccost: %v ", stats.CreateCost.Text(10))
+	r := stats.StatMappings.Values()
+	for j := range r {
+		s += fmt.Sprintf(" mappings: %v, %v, %v ", r[j].Group, r[j].User, r[j].Tag)
+	}
+
+	return
+}
+
+// take an array of AggregateStats that could have repeated StatMappings and combine the entries
+func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats, err error) {
+
+	flattened := make(map[Md5Key]AggregateStats)
+
+	for i := range input {
+
+		keys := input[i].StatMappings.Keys()
+		for k := range keys {
+			val, ok := input[i].StatMappings.Get(keys[k])
+			if !ok {
+				log.Error("value not found for key in statmappings")
+				break // not found
+			}
+
+			a := AggregateStats{}
+			//a.StatMappings = &StatMappings{}
+			s := NewStatMappings()
+
+			s.Add(keys[k], val)
+
+			a.StatMappings = s
+			a.AccessCost = input[i].AccessCost
+			a.ModifyCost = input[i].ModifyCost
+			a.CreateCost = input[i].CreateCost
+			a.Size = input[i].Size
+			a.Count = input[i].Count
+
+			got, OK := flattened[keys[k]] // does this combination already exist?
+			if !OK {
+				flattened[keys[k]] = a
+
+			} else {
+				fmt.Println(flattened[keys[k]])
+				b1 := NewBigint()
+
+				b1.Add(a.AccessCost, got.AccessCost)
+				a.AccessCost = b1
+
+				b2 := NewBigint()
+				b2.Add(a.ModifyCost, got.ModifyCost)
+				a.ModifyCost = b2
+
+				b3 := NewBigint()
+				b3.Add(a.CreateCost, got.CreateCost)
+				a.CreateCost = b3
+
+				b4 := NewBigint()
+				b4.Add(a.Size, got.Size)
+				a.Size = b4
+
+				b5 := NewBigint()
+				b5.Add(a.Count, got.Count)
+				a.Count = b5
+
+				flattened[keys[k]] = a
+			}
+
+		}
+
+	}
+
+	// now we have a set of aggregates with one tag set per number set. Regroup
+
+	// well for now just regenerate (could regroup)
+	c2 := []AggregateStats{}
+	for _, v := range flattened {
+		//	fmt.Println("**", v, &v)
+
+		//combined = append(combined, &v)
+		c2 = append(c2, v)
+
+		//	fmt.Println("****", c2)
+
+	}
+
+	for i := range c2 {
+		combined = append(combined, &c2[i])
+		//	fmt.Println("******", combined)
+	}
+	return
+}
+
+func (ts *TreeServe) saveAggregateStats(node *Md5Key, aggregateStats []*AggregateStats) (err error) {
+	log.Info("SAVING AGGREGATE STATS")
+
+	// aggregate stats contains a statmappings which is a map of keys to statmapping structs (group, user, tag)
+	// it also contains the five aggregate values which apply to each statmapping
+	// so save for each key in the map TO DO sort the error handling and what shoudl be in local aggregate?
+	for i := range aggregateStats {
+
+		// for each set of aggregate stats, add the stats and the mapping to the database
+		for k, v := range aggregateStats[i].StatMappings.m {
+
+			// get and add the key to link the aggregate stats to a set of Group/User/Tag mappings and aggregate stats
+
+			k1, _, _ := ts.GenerateAggregateKeys(node, &k)
+			err = ts.StatMappingsDB.AddKeyToKeySet(node, k1)
+
+			err = ts.StatMappingDB.Add(k1, v, true)
+
+			err = ts.AggregateAccessCostDB.Add(k1, aggregateStats[i].AccessCost, true)
+			//err = ts.AggregateAccessCostDB.Add(localKey, aggregateStats.AccessCost, true)
+
+			err = ts.AggregateModifyCostDB.Add(k1, aggregateStats[i].ModifyCost, true)
+			//err = ts.AggregateModifyCostDB.Add(localKey, aggregateStats.ModifyCost, true)
+
+			err = ts.AggregateCreateCostDB.Add(k1, aggregateStats[i].CreateCost, true)
+			//err = ts.AggregateCreateCostDB.Add(localKey, aggregateStats.CreateCost, true)
+
+			err = ts.AggregateSizeDB.Add(k1, aggregateStats[i].Size, true)
+			//err = ts.AggregateSizeDB.Add(localKey, aggregateStats.Size, true)
+
+			err = ts.AggregateCountDB.Add(k1, aggregateStats[i].Count, true)
+			//err = ts.AggregateCountDB.Add(localKey, aggregateStats.Count, true)
+		}
+
+	}
+
 	return
 }

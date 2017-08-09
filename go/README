@@ -1,0 +1,49 @@
+NOT READY TO USE
+
+Generate LMDB database from the mpistat output file and allow querying of it via a rest api.
+
+The size of the file (~50,000,000 rows) means that speed of processing is vital.
+As well as transferring the data to the database the file processing generates two sets of aggregate 
+statistics for each node (file or directory)
+
+Local Aggregates are the totals of various types of file in a directory and its immediate children.
+Global Aggregates are the totals for all children from the directory downwards.
+
+The 5 aggregate statistics are count, size, creation cost, access cost and modification cost. 
+The costs depend on the time elapsed and the size. They are further broken down into types, such as 
+Uncompressed, compressed, index and so on, listed in the SetFileCategoryPathChecks function.
+
+The calculation is in CalculateAggregateStats.
+
+MD5 keys are used as the LMDB keys because they give a unique short key derived from the data.
+
+Commandline something like...
+
+bin/treeserve -lstat bin/114_1.dat.gz -dump=bin/tree.bin -logtostderr -gzip_buf 64 -port 8000
+
+Format of fields in the data file are :
+
+* a prefix (the lustre volume number)
+* base64 encoding of the path (to handle unprintable characters in paths)
+* size of the object
+* owner
+* group
+* atime
+* mtime
+* ctime
+* object type (dir, normal file, symlink etc.)
+* inode #
+* number of hardlinks
+* device id
+
+## Testing
+
+To compare to the original program on test data run the C++ treeserve locally using a command line like 
+
+./treeserve-docker-dev.sh <datafile> <port>
+
+after checking the shell script settings ... it calls treeserve and maps the data file user file and password file to the Docker container
+
+
+
+

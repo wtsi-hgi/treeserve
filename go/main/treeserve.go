@@ -14,17 +14,19 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <http://www.gnu.org/licenses/>.
 //
+// example start command
 
 package main
 
 import (
 	"flag"
+	"fmt"
 	"runtime"
 	"time"
 
+	"github.com/SJChacko/treeserveGo"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/profile"
-	"github.com/wtsi-hgi/treeserve"
 )
 
 // Variables set by command-line flags
@@ -67,6 +69,8 @@ func main() {
 	//log.SetFormatter(&log.JSONFormatter{})
 	if debug {
 		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 	formerMaxProcs := runtime.GOMAXPROCS(maxProcs)
 	log.WithFields(log.Fields{
@@ -87,9 +91,8 @@ func main() {
 	flag.VisitAll(func(f *flag.Flag) {
 		flag_fields[f.Name] = f.Value
 	})
-	if debug {
-		log.WithFields(flag_fields).Debug("entered main()")
-	}
+
+	log.WithFields(flag_fields).Debug("entered main()")
 
 	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopInputAfterNLines, nodesFinalizedInfoEveryN, stopFinalizeAfterNNodes, debug)
 	err := ts.OpenLMDB()
@@ -102,9 +105,10 @@ func main() {
 	}
 	defer ts.CloseLMDB()
 
-MainStateMachine:
+	//MainStateMachine:
 	for {
 		state, err := ts.GetState()
+		fmt.Println("state ", state, err)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Fatal("failed to get state")
 		}
@@ -131,12 +135,14 @@ MainStateMachine:
 			if err != nil {
 				nextState = "treeReady"
 			}
-			nextState = "finalize"
-			break MainStateMachine // for development only
+			nextState = "treeReady"
+			//break MainStateMachine // for development only
 		case "treeReady":
 			log.Info("main state machine: tree ready")
-			break MainStateMachine
+			ts.Webserver()
+
 		case "failed":
+
 			log.WithFields(log.Fields{
 				"err": err,
 			}).Fatal("main state machine: failed")
