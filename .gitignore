@@ -6,3 +6,6 @@ bin/testProxygen
 bin/testTree
 bin/testTreeBuilder
 bin/testTreeNode
+gopath
+treeserve
+venv/

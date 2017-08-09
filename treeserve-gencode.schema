@@ -1,0 +1,21 @@
+struct TreeNode {
+        Name string
+        ParentKey [16]byte
+        Stats NodeStats
+}
+
+struct NodeStats {
+	FileSize uint64
+	Uid uint64
+	Gid uint64
+	AccessTime int64
+	ModificationTime int64
+	CreationTime int64
+	FileType byte
+}
+
+struct StatMapping {
+       User string
+       Group string
+       Tag string
+}
