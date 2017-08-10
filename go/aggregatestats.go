@@ -1,11 +1,14 @@
 package treeserve
 
 import (
+	"errors"
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 )
 
+// Aggregate stats contains the rolled up values for a node, with the associated mapping to group/user/tag
+// the mapping may have more than one set of Goup/User/Tag for which the numbers are the same.
 type AggregateStats struct {
 	StatMappings *StatMappings
 	Size         *Bigint
@@ -41,8 +44,6 @@ func (stats *AggregateStats) Add(addend *AggregateStats) (err error) {
 }
 
 func (stats *AggregateStats) String() (s string) {
-	// TODO
-
 	s = fmt.Sprintf("size: %v ", stats.Size.Text(10))
 	s += fmt.Sprintf(" count: %v ", stats.Count.Text(10))
 	s += fmt.Sprintf(" acost: %v ", stats.AccessCost.Text(10))
@@ -56,7 +57,7 @@ func (stats *AggregateStats) String() (s string) {
 	return
 }
 
-// take an array of AggregateStats that could have repeated StatMappings and combine the entries
+// combineAggregateStats takes an array of AggregateStats that could have repeated StatMappings and combines the entries
 func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats, err error) {
 
 	flattened := make(map[Md5Key]AggregateStats)
@@ -119,17 +120,10 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 	}
 
 	// now we have a set of aggregates with one tag set per number set. Regroup
-
 	// well for now just regenerate (could regroup)
 	c2 := []AggregateStats{}
 	for _, v := range flattened {
-		//	fmt.Println("**", v, &v)
-
-		//combined = append(combined, &v)
 		c2 = append(c2, v)
-
-		//	fmt.Println("****", c2)
-
 	}
 
 	for i := range c2 {
@@ -139,37 +133,68 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 	return
 }
 
+// saveAggregateStats saves a set of stats to the databases.
 func (ts *TreeServe) saveAggregateStats(node *Md5Key, aggregateStats []*AggregateStats) (err error) {
 	log.Info("SAVING AGGREGATE STATS")
 
-	// aggregate stats contains a statmappings which is a map of keys to statmapping structs (group, user, tag)
-	// it also contains the five aggregate values which apply to each statmapping
-	// so save for each key in the map TO DO sort the error handling and what shoudl be in local aggregate?
 	for i := range aggregateStats {
 
 		// for each set of aggregate stats, add the stats and the mapping to the database
 		for k, v := range aggregateStats[i].StatMappings.m {
 
 			// get and add the key to link the aggregate stats to a set of Group/User/Tag mappings and aggregate stats
+			if aggregateStats[i].Count.isZero() {
+				err = errors.New("Node with zero count stat")
+				return
+			}
 
 			k1, _, _ := ts.GenerateAggregateKeys(node, &k)
 			err = ts.StatMappingsDB.AddKeyToKeySet(node, k1)
+			if err != nil {
+				logError(err)
+				return
+			}
 
 			err = ts.StatMappingDB.Add(k1, v, true)
+			if err != nil {
+				logError(err)
+				return
+			}
 
 			err = ts.AggregateAccessCostDB.Add(k1, aggregateStats[i].AccessCost, true)
+			if err != nil {
+				logError(err)
+				return
+			}
 			//err = ts.AggregateAccessCostDB.Add(localKey, aggregateStats.AccessCost, true)
 
 			err = ts.AggregateModifyCostDB.Add(k1, aggregateStats[i].ModifyCost, true)
+			if err != nil {
+				logError(err)
+				return
+			}
 			//err = ts.AggregateModifyCostDB.Add(localKey, aggregateStats.ModifyCost, true)
 
 			err = ts.AggregateCreateCostDB.Add(k1, aggregateStats[i].CreateCost, true)
+			if err != nil {
+				logError(err)
+				return
+			}
 			//err = ts.AggregateCreateCostDB.Add(localKey, aggregateStats.CreateCost, true)
 
 			err = ts.AggregateSizeDB.Add(k1, aggregateStats[i].Size, true)
-			//err = ts.AggregateSizeDB.Add(localKey, aggregateStats.Size, true)
+			if err != nil {
+				logError(err)
+				return
+			}
 
 			err = ts.AggregateCountDB.Add(k1, aggregateStats[i].Count, true)
+			if err != nil {
+				logError(err)
+				return
+			}
+			//err = ts.AggregateSizeDB.Add(localKey, aggregateStats.Size, true)
+
 			//err = ts.AggregateCountDB.Add(localKey, aggregateStats.Count, true)
 		}
 

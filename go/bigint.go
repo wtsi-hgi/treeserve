@@ -6,12 +6,14 @@ type Bigint struct {
 	i *big.Int
 }
 
+// NewBigint returns a pointer to a Bigint initialised to zero
 func NewBigint() *Bigint {
 	bi := Bigint{}
 	bi.i = &big.Int{}
 	return &bi
 }
 
+// MarshalBinary returns a Bigint converted to bytes for LMDB storage
 func (bi *Bigint) MarshalBinary() (data []byte, err error) {
 	data = bi.i.Bytes()
 	return
@@ -56,6 +58,11 @@ func Divide(x, y *Bigint) (f string) {
 	f = f3.Text('e', 16)
 	return
 
+}
+
+func (bi *Bigint) isZero() bool {
+	x := NewBigint()
+	return (bi.i.Cmp(x.i) == 0)
 }
 
 // Equals returne true if two Bigints are equal

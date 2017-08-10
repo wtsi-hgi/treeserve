@@ -117,7 +117,7 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 // buildTree does a recursive tree build passing in level and depth so it will stop appropriately
 // Returning a few levels from the chosen directory means that recursion is not to expensive here.
 func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree, err error) {
-	fmt.Println("buildTree ", level, depth)
+	logInfo(fmt.Sprintf("buildTree level %d depth %d", level, depth))
 	t = dirTree{key: rootKey}
 
 	if level >= depth {
@@ -159,10 +159,10 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	// recursion and build file summary
 	for j := range children {
-		fmt.Println("level", level, "depth", depth, "child", j)
+		logInfo(fmt.Sprintf("level %d depth %d child %d", level, depth, j))
 
 		temp, _ := ts.GetTreeNode(children[j])
-		fmt.Println(temp.Name, temp.Stats.FileType)
+		logInfo(fmt.Sprintf("Name %s, Type %s", temp.Name, string(temp.Stats.FileType)))
 		if temp.Stats.FileType != 'f' {
 			t2, err := ts.buildTree(children[j], level+1, depth) /// make next level tree for each child
 			if err != nil {
@@ -203,8 +203,8 @@ a.Atime[g][u][t] = 3
 a.Ctime[g][u][t] = 4
 a.Mtime[g][u][t] = 5
 a.Count[g][u][t] = 6
-a.Size[g][u][t] = *big.NewInt(7)
-// but can't add to an empty map
+a.Size[g][u][t] = 7
+// but can't add to an empty map so work out which map levels exist
 */
 func organiseCosts(costs []Aggregates) (a webAggData, err error) {
 
@@ -298,12 +298,10 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 		mg[g] = mu
 
 		*theMap = mg
-		//fmt.Println("** len Atime ", len(a.Atime))
 
-		//a.Atime = map[string]map[string]map[string]string{g: map[string]map[string]string{u: map[string]string{tag: *b}}}
 	} else if _, ok := (*theMap)[g]; ok { // g exists in map
 		if _, ok2 := (*theMap)[g][u]; !ok2 { // but u doesn't}
-			//fmt.Println("first making Atime[g][u], g exists")
+
 			mt := make(map[string]string)
 			if scaleMap {
 				mt[tag] = convertCostsForOutput(theValue)
@@ -314,7 +312,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 			(*theMap)[g][u] = mt
 		} else {
 			// key tag does not exist in map
-			//fmt.Println("first making Atime[g][u][tag], g and u exist")
+
 			if scaleMap {
 				(*theMap)[g][u][tag] = convertCostsForOutput(theValue)
 			} else {
@@ -386,6 +384,7 @@ func (ts *TreeServe) GetCosts(nodekey *Md5Key) (data []Aggregates, err error) {
 
 }
 
+// error logging with file and line number
 func logError(err error) {
 
 	buf := os.Stderr
@@ -397,10 +396,11 @@ func logError(err error) {
 
 func logInfo(str string) {
 
-	buf := os.Stdout
-	_, f, l, _ := runtime.Caller(1)
-	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-	logger.Println(str)
+	/*
+		buf := os.Stdout
+		_, f, l, _ := runtime.Caller(1)
+		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
+		logger.Println(str)*/
 
 }
 
@@ -462,6 +462,7 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 }
 
+// subtract aggregates subtracts one set of aggregates from another provided the mappings are the same, else error
 func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 	if a.Group != b.Group {
@@ -532,7 +533,7 @@ func arrayFromAggregateMap(in map[string]Aggregates) (out []Aggregates) {
 }
 
 // subtractAggregateMap subtracts a child map from a parent map and returns an error if a child key
-// is not present in the parent.
+// is not present in the parent. If count becomes zero the entry is not returned
 func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]Aggregates, err error) {
 	out = parent
 	for k, v := range child {
@@ -542,8 +543,11 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 			if err != nil {
 				return out, err
 			}
-
-			out[k] = temp
+			if temp.Count.isZero() {
+				delete(out, k)
+			} else {
+				out[k] = temp
+			}
 
 		} else {
 			err := errors.New("Child key not found in parent " + k)
