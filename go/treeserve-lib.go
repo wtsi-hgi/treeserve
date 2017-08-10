@@ -357,8 +357,8 @@ func (ts *TreeServe) addChildToParent(parentKey *Md5Key, nodeKey *Md5Key) (err e
 	return
 }
 
-// GetChildren returns the keys of the chilren of a node as an array of pointers
-func (ts *TreeServe) GetChildren(nodeKey *Md5Key) (children []*Md5Key, err error) {
+// children returns the keys of the chilren of a node as an array of pointers
+func (ts *TreeServe) children(nodeKey *Md5Key) (children []*Md5Key, err error) {
 	dbDataSet, err := ts.ChildrenDB.GetKeySet(nodeKey)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -948,7 +948,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 	//	nodeVisitor := subtreeWork.NodeVisitor
 	level := subtreeWork.Depth
 
-	childKeys, err := ts.GetChildren(node)
+	childKeys, err := ts.children(node)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err":      err,

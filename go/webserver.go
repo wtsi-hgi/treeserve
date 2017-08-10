@@ -83,7 +83,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 // and returns the data or a 404 error
 func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 
-	path, depth := getQueryParameters(r)
+	path, depth := queryParameters(r)
 
 	nodeKey := ts.getPathKey(path)
 
@@ -135,20 +135,20 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	_, file := filepath.Split(t.Path)
 	t.Name = file
 
-	costs, err := ts.GetCosts(rootKey)
+	costs, err := ts.aggregates(rootKey)
 	if err != nil {
 		logError(err)
 		return
 	}
 
-	a, err := organiseCosts(costs)
+	a, err := organiseAggregates(costs)
 	if err != nil {
 		logError(err)
 		return
 	}
 	t.Data = a
 
-	children, err := ts.GetChildren(rootKey)
+	child, err := ts.children(rootKey)
 	if err != nil {
 		logError(err)
 		return
@@ -158,13 +158,13 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	childCosts := []Aggregates{}
 
 	// recursion and build file summary
-	for j := range children {
+	for j := range child {
 		logInfo(fmt.Sprintf("level %d depth %d child %d", level, depth, j))
 
-		temp, _ := ts.GetTreeNode(children[j])
+		temp, _ := ts.GetTreeNode(child[j])
 		logInfo(fmt.Sprintf("Name %s, Type %s", temp.Name, string(temp.Stats.FileType)))
 		if temp.Stats.FileType != 'f' {
-			t2, err := ts.buildTree(children[j], level+1, depth) /// make next level tree for each child
+			t2, err := ts.buildTree(child[j], level+1, depth) /// make next level tree for each child
 			if err != nil {
 				logError(err)
 			}
@@ -173,9 +173,16 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 			}
 		}
 
-		// for the tree of local file data combine aggregates
-		next, _ := ts.GetCosts(children[j])
-		childCosts = append(childCosts, next...)
+		// for the tree of local file data combine grandchild aggregates
+		grandChildren, err := ts.children(child[j])
+		if err != nil {
+			logError(err)
+		}
+
+		for j2 := range grandChildren {
+			next, _ := ts.aggregates(grandChildren[j2])
+			childCosts = append(childCosts, next...)
+		}
 
 	}
 
@@ -185,7 +192,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	}
 	agg := arrayFromAggregateMap(temp2)
 
-	w, err := organiseCosts(agg)
+	w, err := organiseAggregates(agg)
 	if err != nil {
 		logError(err)
 	}
@@ -194,7 +201,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	return
 }
 
-/// organiseCosts returns a map to to get the correct json from the array of Aggregate Costs
+/// organiseAggregates returns a map to to get the correct json from the array of Aggregate Costs
 // for the node this is the format.
 // because some of the keys are dynamic (users, groups and tags) so can't be
 // just a struct.
@@ -206,7 +213,7 @@ a.Count[g][u][t] = 6
 a.Size[g][u][t] = 7
 // but can't add to an empty map so work out which map levels exist
 */
-func organiseCosts(costs []Aggregates) (a webAggData, err error) {
+func organiseAggregates(costs []Aggregates) (a webAggData, err error) {
 
 	if err != nil {
 		logError(err)
@@ -261,7 +268,7 @@ func (t *dirTree) addChild(child *dirTree) {
 
 // get path and depth from request, or use defaults
 // /lustre/scratch115/realdata/mdt0 is an example
-func getQueryParameters(r *http.Request) (string, int) {
+func queryParameters(r *http.Request) (string, int) {
 	url := r.URL
 	vals := url.Query()
 
@@ -324,10 +331,10 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 
 }
 
-// GetCosts takes a node key and returns the array of costs associated with it
+// aggregates takes a node key and returns the array of costs associated with it
 // Used for output after the database has been built up. Returns an error if the node has no costs associated
 // which may be the case for the parent of the root node but nothing else
-func (ts *TreeServe) GetCosts(nodekey *Md5Key) (data []Aggregates, err error) {
+func (ts *TreeServe) aggregates(nodekey *Md5Key) (data []Aggregates, err error) {
 	data = []Aggregates{}
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
 	if err != nil {
