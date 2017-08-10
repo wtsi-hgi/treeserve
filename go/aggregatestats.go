@@ -90,7 +90,7 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 				flattened[keys[k]] = a
 
 			} else {
-				fmt.Println(flattened[keys[k]])
+
 				b1 := NewBigint()
 
 				b1.Add(a.AccessCost, got.AccessCost)
@@ -128,14 +128,14 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 
 	for i := range c2 {
 		combined = append(combined, &c2[i])
-		//	fmt.Println("******", combined)
+
 	}
 	return
 }
 
 // saveAggregateStats saves a set of stats to the databases.
 func (ts *TreeServe) saveAggregateStats(node *Md5Key, aggregateStats []*AggregateStats) (err error) {
-	log.Info("SAVING AGGREGATE STATS")
+	//log.Info("SAVING AGGREGATE STATS")
 
 	for i := range aggregateStats {
 

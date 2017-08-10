@@ -914,7 +914,6 @@ WaitForResults:
 	for {
 		select {
 		case _ = <-startnodeResults:
-			//fmt.Println(results)
 
 			break WaitForResults
 		case _ = <-nodesFinalized:
@@ -969,7 +968,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 			// this child has been successfully queued for finalizeWorker processing
 		default:
 			// could not be queued for concurrent processing, recurse using this goroutine
-			log.Info("recursion")
+			logInfo("recursion")
 			err = ts.aggregateSubtree(ctx, WorkerID, childWork, finalizeWorkQueue, nodesFinalized)
 			if err != nil {
 				return

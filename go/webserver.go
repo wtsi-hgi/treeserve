@@ -86,7 +86,7 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 	path, depth := getQueryParameters(r)
 
 	nodeKey := ts.getPathKey(path)
-	//fmt.Println(path, nodeKey)
+
 	j := []byte{}
 
 	t, err := ts.buildTree(nodeKey, 0, depth)
@@ -154,7 +154,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		return
 	}
 
-	// for the tree of local file data, found by subtracting child data from the node data
+	// for the tree of local file data, found by subtracting grandchild data from the node data
 	childCosts := []Aggregates{}
 
 	// recursion and build file summary
@@ -189,7 +189,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	if err != nil {
 		logError(err)
 	}
-	summaryTree := dirTree{Name: "*.*", Path: t.Path, Data: w}
+	summaryTree := dirTree{Name: "*.*", Path: t.Path + "/*.*", Data: w}
 	t.addChild(&summaryTree)
 	return
 }
@@ -254,7 +254,7 @@ func organiseCosts(costs []Aggregates) (a webAggData, err error) {
 
 // addChild adds a child dirTree to a dirTree
 func (t *dirTree) addChild(child *dirTree) {
-	//fmt.Println("addChild ", child)
+
 	t.ChildDirs = append(t.ChildDirs, child)
 
 }
@@ -264,7 +264,6 @@ func (t *dirTree) addChild(child *dirTree) {
 func getQueryParameters(r *http.Request) (string, int) {
 	url := r.URL
 	vals := url.Query()
-	////fmt.Println("vals: ", vals)
 
 	//defaults
 	path := "/"
@@ -284,7 +283,7 @@ func getQueryParameters(r *http.Request) (string, int) {
 // updateMap takes a new set of category tags and a value and updates the three level map (this is needed so that json.Marshal outputs the correct format)
 func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, theValue *Bigint, g string, u string, tag string) {
 	if len(*theMap) == 0 {
-		//fmt.Println("**first making Atime")
+
 		mt := make(map[string]string)
 		if scaleMap {
 			mt[tag] = convertCostsForOutput(theValue)

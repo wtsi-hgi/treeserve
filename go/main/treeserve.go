@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"runtime"
 	"time"
 
@@ -108,7 +107,7 @@ func main() {
 	//MainStateMachine:
 	for {
 		state, err := ts.GetState()
-		fmt.Println("state ", state, err)
+
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Fatal("failed to get state")
 		}
