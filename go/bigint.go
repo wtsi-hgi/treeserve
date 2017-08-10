@@ -41,6 +41,10 @@ func (bi *Bigint) Add(x, y *Bigint) {
 	bi.i.Add(x.i, y.i)
 }
 
+func (bi *Bigint) Subtract(x, y *Bigint) {
+	bi.i.Sub(x.i, y.i)
+}
+
 func (bi *Bigint) Text(base int) (s string) {
 	s = bi.i.Text(base)
 	return

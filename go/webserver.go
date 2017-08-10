@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// Aggregate values are converted from bytes and secodns to Tebibytes and year on output
 const secondsInYear = 60 * 60 * 24 * 365
 const costPerTibYear = 150.0
 
@@ -27,6 +28,7 @@ type dirTree struct {
 	Path      string     `json:"path"`
 }
 
+// v2 of the original C++ added this
 type fullTree struct {
 	Date string  `json:"date"`
 	Tree dirTree `json:"tree"`
@@ -42,10 +44,24 @@ type webAggData struct {
 	Size  map[string]map[string]map[string]string `json:"size"`
 }
 
+// Aggregates is one set of cost values, which will apply to one set of categories
+type Aggregates struct {
+	Group string `json:"group"`
+	User  string `json:"user"`
+	Tag   string `json:"tag"`
+
+	Size         *Bigint `json:"size"`
+	Count        *Bigint `json:"count"`
+	CreationCost *Bigint `json:"ccost"`
+	AccessCost   *Bigint `json:"acost"`
+	ModifyCost   *Bigint `json:"mcost"`
+}
+
+/*
 type NodeData struct {
 	NodePath string
 	NodeType string
-}
+}*/
 
 //Webserver listens for requests of the form
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
@@ -55,7 +71,7 @@ func (ts *TreeServe) Webserver() {
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
 	http.ListenAndServe(":"+port, nil)
-	fmt.Println("Webserver started")
+	logInfo("Webserver started")
 
 }
 
@@ -63,7 +79,8 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Listening on port 8000")
 }
 
-// process requests of the form <url>/api/v2?maxdepth=1&path=/lustre/scratch115/projects
+// tree handles requests of the form <url>/api/v2?maxdepth=1&path=/lustre/scratch115/projects
+// and returns the data or a 404 error
 func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 
 	path, depth := getQueryParameters(r)
@@ -97,7 +114,8 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// recursive tree build passing in level and depth so we can stop it
+// buildTree does a recursive tree build passing in level and depth so it will stop appropriately
+// Returning a few levels from the chosen directory means that recursion is not to expensive here.
 func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree, err error) {
 	fmt.Println("buildTree ", level, depth)
 	t = dirTree{key: rootKey}
@@ -110,7 +128,6 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	if err != nil {
 		logError(err)
 		return
-
 	}
 
 	t.Path = strings.TrimSuffix(temp.Name, "/")
@@ -121,36 +138,32 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	costs, err := ts.GetCosts(rootKey)
 	if err != nil {
 		logError(err)
-
+		return
 	}
-	a, err := ts.organiseCosts(costs)
 
+	a, err := organiseCosts(costs)
 	if err != nil {
 		logError(err)
-
+		return
 	}
-
-	fmt.Println("buildTree ", t.Path, level, depth)
-
-	//fmt.Println(a)
 	t.Data = a
 
 	children, err := ts.GetChildren(rootKey)
 	if err != nil {
 		logError(err)
-
+		return
 	}
 
-	fmt.Println("number of children", len(children))
-	starDotStar := dirTree{Name: "*.*", Path: t.Path + "/*.*", Data: webAggData{}}
-	starDotStarMap := make(map[string](Aggregates))
+	// for the tree of local file data, found by subtracting child data from the node data
+	childCosts := []Aggregates{}
 
+	// recursion and build file summary
 	for j := range children {
 		fmt.Println("level", level, "depth", depth, "child", j)
 
 		temp, _ := ts.GetTreeNode(children[j])
 		fmt.Println(temp.Name, temp.Stats.FileType)
-		if true /*temp.Stats.FileType == 'd'*/ {
+		if temp.Stats.FileType != 'f' {
 			t2, err := ts.buildTree(children[j], level+1, depth) /// make next level tree for each child
 			if err != nil {
 				logError(err)
@@ -160,46 +173,29 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 			}
 		}
 
-		// also, add to file summary
-
-		newCosts, _ := ts.GetCosts(children[j])
-		/*
-			if j == 0 {
-				//fmt.Println("***", costs)
-				newCosts = append(newCosts, costs...) // include parent costs .. work out how to do this, not all costs just specific to parent
-			}*/
-
-		for i := range newCosts {
-			key := newCosts[i].Group + ":" + newCosts[i].User + ":" + newCosts[i].Tag
-			if val, ok := starDotStarMap[key]; !ok {
-				starDotStarMap[key] = newCosts[i]
-			} else {
-				val2, err := addAggregates(val, newCosts[i])
-				if err != nil {
-					logError(err)
-				}
-
-				starDotStarMap[key] = val2
-			}
-		}
+		// for the tree of local file data combine aggregates
+		next, _ := ts.GetCosts(children[j])
+		childCosts = append(childCosts, next...)
 
 	}
-	// add the file summary *.*
-	agg := []Aggregates{}
-	for _, v := range starDotStarMap {
-		agg = append(agg, v)
-	}
-	w, err := ts.organiseCosts(agg)
+
+	temp2, err := subtractAggregateMap(mapFromAggregateArray(costs), mapFromAggregateArray(childCosts))
 	if err != nil {
 		logError(err)
 	}
-	starDotStar.Data = w
-	t.ChildDirs = append(t.ChildDirs, &starDotStar)
+	agg := arrayFromAggregateMap(temp2)
+
+	w, err := organiseCosts(agg)
+	if err != nil {
+		logError(err)
+	}
+	summaryTree := dirTree{Name: "*.*", Path: t.Path, Data: w}
+	t.addChild(&summaryTree)
 	return
 }
 
-/// to get the correct json from the array of Aggregate Costs for the node
-// this is the format.
+/// organiseCosts returns a map to to get the correct json from the array of Aggregate Costs
+// for the node this is the format.
 // because some of the keys are dynamic (users, groups and tags) so can't be
 // just a struct.
 /*  The idea is:
@@ -210,7 +206,7 @@ a.Count[g][u][t] = 6
 a.Size[g][u][t] = *big.NewInt(7)
 // but can't add to an empty map
 */
-func (ts *TreeServe) organiseCosts(costs []Aggregates) (a webAggData, err error) {
+func organiseCosts(costs []Aggregates) (a webAggData, err error) {
 
 	if err != nil {
 		logError(err)
@@ -225,7 +221,10 @@ func (ts *TreeServe) organiseCosts(costs []Aggregates) (a webAggData, err error)
 		u := costsItem.User
 		tag := costsItem.Tag
 
-		fmt.Println("Tag", tag, "user", u, "group", g, "error", err)
+		z := NewBigint()
+		if costsItem.Count.Equals(z) {
+			break // don't add empty sets of aggregates
+		}
 
 		//Access Cost
 		b := costsItem.AccessCost
@@ -253,6 +252,7 @@ func (ts *TreeServe) organiseCosts(costs []Aggregates) (a webAggData, err error)
 
 //--------------------------------------------------------------
 
+// addChild adds a child dirTree to a dirTree
 func (t *dirTree) addChild(child *dirTree) {
 	//fmt.Println("addChild ", child)
 	t.ChildDirs = append(t.ChildDirs, child)
@@ -333,9 +333,6 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 func (ts *TreeServe) GetCosts(nodekey *Md5Key) (data []Aggregates, err error) {
 	data = []Aggregates{}
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
-
-	//fmt.Println(c)
-
 	if err != nil {
 		logError(err)
 		return
@@ -387,19 +384,6 @@ func (ts *TreeServe) GetCosts(nodekey *Md5Key) (data []Aggregates, err error) {
 
 	return
 
-}
-
-// Aggregates is one set of cost values, which will apply to one set of categories
-type Aggregates struct {
-	Group string `json:"group"`
-	User  string `json:"user"`
-	Tag   string `json:"tag"`
-
-	Size         *Bigint `json:"size"`
-	Count        *Bigint `json:"count"`
-	CreationCost *Bigint `json:"ccost"`
-	AccessCost   *Bigint `json:"acost"`
-	ModifyCost   *Bigint `json:"mcost"`
 }
 
 func logError(err error) {
@@ -474,6 +458,100 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 	temp5 := NewBigint()
 	temp5.Add(a.ModifyCost, b.ModifyCost)
 	c.ModifyCost = temp5
+	return
+
+}
+
+func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
+
+	if a.Group != b.Group {
+		err = errors.New("addAggregates ... groups don't match")
+	} else {
+		c.Group = a.Group
+	}
+	if a.User != b.User {
+		err = errors.New("addAggregates ... users don't match")
+	} else {
+		c.User = a.User
+	}
+	if a.Tag != b.Tag {
+		err = errors.New("addAggregates ... tags don't match")
+	} else {
+		c.Tag = a.Tag
+	}
+
+	temp := NewBigint()
+
+	temp.Subtract(a.Count, b.Count)
+	c.Count = temp
+
+	temp2 := NewBigint()
+	temp2.Add(a.Size, b.Size)
+	c.Size = temp2
+
+	temp3 := NewBigint()
+	temp3.Subtract(a.AccessCost, b.AccessCost)
+	c.AccessCost = temp3
+
+	temp4 := NewBigint()
+	temp4.Subtract(a.CreationCost, b.CreationCost)
+	c.CreationCost = temp4
+
+	temp5 := NewBigint()
+	temp5.Subtract(a.ModifyCost, b.ModifyCost)
+	c.ModifyCost = temp5
+	return
+
+}
+
+// mapFromAggregates returns a map with key Group:User:Tag and aggregate values added for same key
+func mapFromAggregateArray(in []Aggregates) (out map[string]Aggregates) {
+	out = make(map[string]Aggregates)
+	for i := range in {
+		key := in[i].Group + ":" + in[i].User + ":" + in[i].Tag
+		if val, ok := out[key]; !ok {
+			out[key] = in[i]
+		} else {
+			val2, err := addAggregates(val, in[i])
+			if err != nil {
+				logError(err)
+			}
+			out[key] = val2
+		}
+	}
+	return
+}
+
+// arrayFromAggregateMap returns an array of the values in the map
+func arrayFromAggregateMap(in map[string]Aggregates) (out []Aggregates) {
+
+	for _, v := range in {
+		out = append(out, v)
+	}
+	return
+}
+
+// subtractAggregateMap subtracts a child map from a parent map and returns an error if a child key
+// is not present in the parent.
+func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]Aggregates, err error) {
+	out = parent
+	for k, v := range child {
+		if val, ok := out[k]; ok {
+
+			temp, err := subtractAggregates(val, v)
+			if err != nil {
+				return out, err
+			}
+
+			out[k] = temp
+
+		} else {
+			err := errors.New("Child key not found in parent " + k)
+			return out, err
+		}
+
+	}
+
 	return
 
 }

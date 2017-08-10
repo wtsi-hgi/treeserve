@@ -24,9 +24,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/SJChacko/treeserveGo"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/profile"
+	"github.com/wtsi-hgi/treeserve/go"
 )
 
 // Variables set by command-line flags
