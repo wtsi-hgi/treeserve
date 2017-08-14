@@ -987,6 +987,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 		for {
 			select {
 			case <-ctx.Done():
+				// Sarah shoudl I make sure all is saved here first? WHere is ctx.Done set?
 				return
 			case childAggregateStats = <-childResults:
 				//aggregateStats.Add(childAggregateStats)
@@ -1000,10 +1001,10 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 	aggregateStats, _ = combineAggregateStats(aggregateStats)
 	subtreeWork.Results <- aggregateStats
 	// save here .... sarah
-	/*
-		x, _ := ts.GetTreeNode(node)
-		fmt.Println("saving for " + x.Name)
-	*/
+
+	x, _ := ts.GetTreeNode(node)
+	logInfo("saving for " + x.Name)
+
 	ts.saveAggregateStats(node, aggregateStats)
 	//
 	select {

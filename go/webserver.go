@@ -1,6 +1,7 @@
 package treeserve
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,11 @@ import (
 // Aggregate values are converted from bytes and secodns to Tebibytes and year on output
 const secondsInYear = 60 * 60 * 24 * 365
 const costPerTibYear = 150.0
+
+var userMap map[string]string
+var groupMap map[string]string
+var groupfile = "/tmp/groups"
+var userfile = "/tmp/users"
 
 // recursive tree structure, non binary tree, data at each level
 type dirTree struct {
@@ -67,6 +73,8 @@ type NodeData struct {
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
 // and returns nodes in json
 func (ts *TreeServe) Webserver() {
+	userMap = buildMap(userfile, ":", 2, 0)
+	groupMap = buildMap(groupfile, ":", 2, 0)
 	port := "8000"
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
@@ -135,7 +143,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	_, file := filepath.Split(t.Path)
 	t.Name = file
 
-	costs, err := ts.aggregates(rootKey)
+	costs, err := ts.retrieveAggregates(rootKey)
 	if err != nil {
 		logError(err)
 		return
@@ -161,7 +169,10 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	for j := range child {
 		logInfo(fmt.Sprintf("level %d depth %d child %d", level, depth, j))
 
-		temp, _ := ts.GetTreeNode(child[j])
+		temp, err := ts.GetTreeNode(child[j])
+		if err != nil {
+			logError(err)
+		}
 		logInfo(fmt.Sprintf("Name %s, Type %s", temp.Name, string(temp.Stats.FileType)))
 		if temp.Stats.FileType != 'f' {
 			t2, err := ts.buildTree(child[j], level+1, depth) /// make next level tree for each child
@@ -180,7 +191,11 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		}
 
 		for j2 := range grandChildren {
-			next, _ := ts.aggregates(grandChildren[j2])
+			next, err := ts.retrieveAggregates(grandChildren[j2])
+			if err != nil {
+				logError(err)
+			}
+
 			childCosts = append(childCosts, next...)
 		}
 
@@ -268,23 +283,28 @@ func (t *dirTree) addChild(child *dirTree) {
 
 // get path and depth from request, or use defaults
 // /lustre/scratch115/realdata/mdt0 is an example
-func queryParameters(r *http.Request) (string, int) {
+func queryParameters(r *http.Request) (path string, depth int) {
 	url := r.URL
 	vals := url.Query()
 
 	//defaults
-	path := "/"
-	depth := 2
+	path = "/lustre"
+	depth = 2
+	var err error
 
 	if val, ok := vals["path"]; ok {
 		path = val[0]
 	}
 	if val, ok := vals["depth"]; ok {
-		depth, _ = strconv.Atoi(val[0])
+		depth, err = strconv.Atoi(val[0])
+		if err != nil {
+			logError(err)
+		}
 	}
 
 	path = filepath.Clean(path)
-	return path, depth
+	return
+
 }
 
 // updateMap takes a new set of category tags and a value and updates the three level map (this is needed so that json.Marshal outputs the correct format)
@@ -334,7 +354,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 // aggregates takes a node key and returns the array of costs associated with it
 // Used for output after the database has been built up. Returns an error if the node has no costs associated
 // which may be the case for the parent of the root node but nothing else
-func (ts *TreeServe) aggregates(nodekey *Md5Key) (data []Aggregates, err error) {
+func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err error) {
 	data = []Aggregates{}
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
 	if err != nil {
@@ -352,27 +372,45 @@ func (ts *TreeServe) aggregates(nodekey *Md5Key) (data []Aggregates, err error) 
 
 		ag := Aggregates{}
 
-		vals, _ := ts.StatMappingDB.Get(x)
-		ag.Group = vals.(*StatMapping).Group
-		ag.User = vals.(*StatMapping).User
+		vals, err := ts.StatMappingDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
+		ag.Group = group(vals.(*StatMapping).Group)
+		ag.User = user(vals.(*StatMapping).User)
 		ag.Tag = vals.(*StatMapping).Tag
 
-		temp, _ := ts.AggregateSizeDB.Get(x)
+		temp, err := ts.AggregateSizeDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
 		size := temp.(*Bigint)
 		ag.Size = size
 
-		temp, _ = ts.AggregateCountDB.Get(x)
+		temp, err = ts.AggregateCountDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
 
 		count := temp.(*Bigint)
 		ag.Count = count
 
-		temp, _ = ts.AggregateAccessCostDB.Get(x)
+		temp, err = ts.AggregateAccessCostDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
 		ag.AccessCost = temp.(*Bigint)
 
-		temp, _ = ts.AggregateModifyCostDB.Get(x)
+		temp, err = ts.AggregateModifyCostDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
 		ag.ModifyCost = temp.(*Bigint)
 
-		temp, _ = ts.AggregateCreateCostDB.Get(x)
+		temp, err = ts.AggregateCreateCostDB.Get(x)
+		if err != nil {
+			logError(err)
+		}
 		ag.CreationCost = temp.(*Bigint)
 
 		z := NewBigint()
@@ -556,7 +594,7 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 			}
 
 		} else {
-			err := errors.New("Child key not found in parent " + k)
+			err := errors.New("Child key not found in parent map " + k)
 			return out, err
 		}
 
@@ -564,4 +602,67 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 
 	return
 
+}
+
+// build a map from a file where each line in the file has two fields among others in a string separated by another string
+// at known positions (general for building user and group maps from linux getent data)
+// Format several fields, colon separated, groupname or username first, groupid or userid third
+// Used to get group and user names from ids
+func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[string]string) {
+	theMap = make(map[string]string)
+	// open the file
+	if file, err := os.Open(inputfile); err == nil {
+
+		// make sure it gets closed
+		defer file.Close()
+
+		// create a new scanner and read the file line by line
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			a := strings.Split(scanner.Text(), sep)
+			if len(a) > max(posKey, posValue) {
+				theMap[a[2]] = a[0]
+			}
+		}
+
+		// check for errors
+		if err = scanner.Err(); err != nil {
+			logError(err)
+		}
+
+	} else {
+		// if the file is not found, log it but not a disaster
+		logError(err)
+
+	}
+
+	return
+
+}
+
+func group(id string) (val string) {
+	var ok bool
+	if val, ok = groupMap[id]; !ok {
+
+		val = id
+	}
+
+	return
+}
+
+func user(id string) (val string) {
+	var ok bool
+	if val, ok = userMap[id]; !ok {
+
+		val = id
+	}
+
+	return
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
