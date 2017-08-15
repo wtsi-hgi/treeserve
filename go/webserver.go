@@ -126,7 +126,6 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 // Returning a few levels from the chosen directory means that recursion is not to expensive here.
 func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree, err error) {
 	logInfo(fmt.Sprintf("buildTree level %d depth %d", level, depth))
-	t = dirTree{key: rootKey}
 
 	if level >= depth {
 		return
@@ -138,32 +137,29 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		return
 	}
 
+	t = dirTree{key: rootKey}
 	t.Path = strings.TrimSuffix(temp.Name, "/")
-
 	_, file := filepath.Split(t.Path)
 	t.Name = file
 
-	costs, err := ts.retrieveAggregates(rootKey)
+	stats, err := ts.retrieveAggregates(rootKey)
 	if err != nil {
-		logError(err)
 		return
 	}
 
-	a, err := organiseAggregates(costs)
+	a, err := organiseAggregates(stats)
 	if err != nil {
-		logError(err)
 		return
 	}
 	t.Data = a
 
 	child, err := ts.children(rootKey)
 	if err != nil {
-		logError(err)
 		return
 	}
 
 	// for the tree of local file data, found by subtracting grandchild data from the node data
-	childCosts := []Aggregates{}
+	grandchildstats := []Aggregates{}
 
 	// recursion and build file summary
 	for j := range child {
@@ -175,48 +171,66 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		}
 		logInfo(fmt.Sprintf("Name %s, Type %s", temp.Name, string(temp.Stats.FileType)))
 		if temp.Stats.FileType != 'f' {
+			grandchildstats = ts.addGrandChildStats(grandchildstats, child[j])
 			t2, err := ts.buildTree(child[j], level+1, depth) /// make next level tree for each child
 			if err != nil {
 				logError(err)
-			}
-			if t2.Path != "" {
-				t.ChildDirs = append(t.ChildDirs, &t2)
+			} else if t2.Path != "" {
+				t.addChild(&t2)
 			}
 		}
 
-		// for the tree of local file data combine grandchild aggregates
-		grandChildren, err := ts.children(child[j])
+	}
+
+	summaryTree := getSummaryTree(stats, grandchildstats)
+
+	t.addChild(&summaryTree)
+
+	return
+}
+
+func getSummaryTree(stats []Aggregates, grandchildstats []Aggregates) (t dirTree) {
+	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
+	temp2, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
+	if err != nil {
+		logError(err)
+
+	} else {
+		agg := arrayFromAggregateMap(temp2)
+
+		w, err := organiseAggregates(agg)
 		if err != nil {
 			logError(err)
 		}
 
-		for j2 := range grandChildren {
-			next, err := ts.retrieveAggregates(grandChildren[j2])
-			if err != nil {
-				logError(err)
-			}
+		t = dirTree{Name: "*.*", Path: t.Path + "/*.*", Data: w}
+	}
 
-			childCosts = append(childCosts, next...)
+	return
+
+}
+
+// build up the set of stats of grandchildren of a node
+func (ts *TreeServe) addGrandChildStats(g []Aggregates, key *Md5Key) (newg []Aggregates) {
+	// for the tree of local file data combine grandchild aggregates
+	grandChildren, err := ts.children(key)
+	if err != nil {
+		logError(err)
+	}
+
+	for j2 := range grandChildren {
+		next, err := ts.retrieveAggregates(grandChildren[j2])
+		if err != nil {
+			logError(err)
 		}
 
+		newg = append(g, next...)
 	}
-
-	temp2, err := subtractAggregateMap(mapFromAggregateArray(costs), mapFromAggregateArray(childCosts))
-	if err != nil {
-		logError(err)
-	}
-	agg := arrayFromAggregateMap(temp2)
-
-	w, err := organiseAggregates(agg)
-	if err != nil {
-		logError(err)
-	}
-	summaryTree := dirTree{Name: "*.*", Path: t.Path + "/*.*", Data: w}
-	t.addChild(&summaryTree)
+	fmt.Println("***", g, newg)
 	return
 }
 
-/// organiseAggregates returns a map to to get the correct json from the array of Aggregate Costs
+/// organiseAggregates returns a map to to get the correct json from the array of Aggregate stats
 // for the node this is the format.
 // because some of the keys are dynamic (users, groups and tags) so can't be
 // just a struct.
@@ -228,44 +242,44 @@ a.Count[g][u][t] = 6
 a.Size[g][u][t] = 7
 // but can't add to an empty map so work out which map levels exist
 */
-func organiseAggregates(costs []Aggregates) (a webAggData, err error) {
+func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 	if err != nil {
 		logError(err)
 		return
 	}
 
-	for i := range costs {
+	for i := range stats {
 
-		costsItem := costs[i]
+		statsItem := stats[i]
 
-		g := costsItem.Group
-		u := costsItem.User
-		tag := costsItem.Tag
+		g := statsItem.Group
+		u := statsItem.User
+		tag := statsItem.Tag
 
 		z := NewBigint()
-		if costsItem.Count.Equals(z) {
+		if statsItem.Count.Equals(z) {
 			break // don't add empty sets of aggregates
 		}
 
 		//Access Cost
-		b := costsItem.AccessCost
+		b := statsItem.AccessCost
 		updateMap(true, &a.Atime, b, g, u, tag)
 
 		// Modify Cost"count ", ag.Count,
-		b = costsItem.ModifyCost
+		b = statsItem.ModifyCost
 		updateMap(true, &a.Mtime, b, g, u, tag)
 
 		// Create Cost
-		b = costsItem.CreationCost
+		b = statsItem.CreationCost
 		updateMap(true, &a.Ctime, b, g, u, tag)
 
 		// Size
-		b = costsItem.Size
+		b = statsItem.Size
 		updateMap(false, &a.Size, b, g, u, tag)
 
 		// Count
-		b = costsItem.Count
+		b = statsItem.Count
 		updateMap(false, &a.Count, b, g, u, tag)
 
 	}
@@ -313,7 +327,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 
 		mt := make(map[string]string)
 		if scaleMap {
-			mt[tag] = convertCostsForOutput(theValue)
+			mt[tag] = convertstatsForOutput(theValue)
 		} else {
 			mt[tag] = theValue.Text(10)
 		}
@@ -330,7 +344,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 
 			mt := make(map[string]string)
 			if scaleMap {
-				mt[tag] = convertCostsForOutput(theValue)
+				mt[tag] = convertstatsForOutput(theValue)
 			} else {
 				mt[tag] = theValue.Text(10)
 			}
@@ -340,7 +354,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 			// key tag does not exist in map
 
 			if scaleMap {
-				(*theMap)[g][u][tag] = convertCostsForOutput(theValue)
+				(*theMap)[g][u][tag] = convertstatsForOutput(theValue)
 			} else {
 				(*theMap)[g][u][tag] = theValue.Text(10)
 			}
@@ -351,8 +365,8 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 
 }
 
-// retrieveAggregates takes a node key and returns the array of costs associated with it
-// Used for output after the database has been built up. Returns an error if the node has no costs associated
+// retrieveAggregates takes a node key and returns the array of stats associated with it
+// Used for output after the database has been built up. Returns an error if the node has no stats associated
 // which may be the case for the parent of the root node but nothing else
 func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err error) {
 	data = []Aggregates{}
@@ -379,6 +393,10 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		ag.Group = lookupGID(vals.(*StatMapping).Group)
 		ag.User = lookupUID(vals.(*StatMapping).User)
 		ag.Tag = vals.(*StatMapping).Tag
+
+		if ag.Tag == "type_\u0000" {
+			fmt.Println("Empty tag")
+		}
 
 		temp, err := ts.AggregateSizeDB.Get(x)
 		if err != nil {
@@ -414,12 +432,13 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		ag.CreationCost = temp.(*Bigint)
 
 		z := NewBigint()
-		if !count.Equals(z) {
+		if !count.Equals(z) && ag.Tag != "type_\u0000" {
 			// This is a hack as there should not be zero count aggregates in the database.
 			// find out where they come from (think just parent of root but shouldn't be there)
 			data = append(data, ag)
 		} else {
-			logError(errors.New("Zero count for node "))
+			ns, _ := ts.GetTreeNode(nodekey)
+			logError(errors.New("Zero count for node " + ns.Name))
 		}
 
 	}
@@ -450,7 +469,7 @@ func logInfo(str string) {
 // The original version had times in years and sizes in tebibytes (2^40 bytes)
 // This one uses Big package to keep sizes in bytes and times in seconds
 // The conversion factor was #150 per tebibyte year
-func convertCostsForOutput(b *Bigint) (s string) {
+func convertstatsForOutput(b *Bigint) (s string) {
 	sizeConv := NewBigint()
 	sizeConv.SetInt64(1024 * 1024 * 1024 * 1024) // tebibytes
 	timeConv := NewBigint()
@@ -586,7 +605,7 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 			if err != nil {
 				return out, err
 			}
-			if temp.Count.isZero() {
+			if temp.Count.isNegative() { // includes zero
 				delete(out, k)
 			} else {
 				out[k] = temp
@@ -665,3 +684,18 @@ func max(x, y int) int {
 	}
 	return y
 }
+
+/*
+func checkError(err error, level int) {
+	if err == nil {
+		return
+	}
+	switch level {
+	case 0:
+		logError(err)
+	case 1:
+		logError(err)
+	case 2:
+		logError(err)
+	}
+}*/

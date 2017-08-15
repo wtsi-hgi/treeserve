@@ -65,6 +65,11 @@ func (bi *Bigint) isZero() bool {
 	return (bi.i.Cmp(x.i) == 0)
 }
 
+func (bi *Bigint) isNegative() bool {
+	x := NewBigint()
+	return (bi.i.Cmp(x.i) <= 0)
+}
+
 // Equals returne true if two Bigints are equal
 func (bi *Bigint) Equals(x *Bigint) (ans bool) {
 	ans = (bi.i.Cmp(x.i) == 0)

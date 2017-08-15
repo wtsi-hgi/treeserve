@@ -759,11 +759,11 @@ func (ts *TreeServe) GetStatMappings(tn *TreeNode) (statMappings *StatMappings) 
 // Calculate AggregateStats finds the aggregate costs breakdown for a node, worked out from the
 // size and elapsed time.
 func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *AggregateStats, err error) {
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"nodeKey": nodeKey,
-		}).Debug("CalculateAggregateStats()")
-	}
+
+	log.WithFields(log.Fields{
+		"nodeKey": nodeKey,
+	}).Debug("CalculateAggregateStats()")
+
 	treeNode, err := ts.GetTreeNode(nodeKey)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -772,12 +772,11 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 		}).Error("CalculateAggregateStats() failed to get tree node")
 		return
 	}
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"nodeKey":       nodeKey,
-			"treeNode.Name": treeNode.Name,
-		}).Debug("CalculateAggregateStats() got treeNode")
-	}
+
+	log.WithFields(log.Fields{
+		"nodeKey":       nodeKey,
+		"treeNode.Name": treeNode.Name,
+	}).Debug("CalculateAggregateStats() got treeNode")
 
 	statMappings := ts.GetStatMappings(treeNode)
 
