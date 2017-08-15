@@ -266,18 +266,6 @@ func (ts *TreeServe) CloseLMDB() {
 	ts.LMDBEnv.Close()
 }
 
-func (ts *TreeServe) lookupUid(uid uint64) (user string) {
-	// TODO implement
-	user = strconv.FormatUint(uid, 10)
-	return
-}
-
-func (ts *TreeServe) lookupGid(gid uint64) (group string) {
-	// TODO implement
-	group = strconv.FormatUint(gid, 10)
-	return
-}
-
 func (ts *TreeServe) getPathKey(path string) (pathKeyPtr *Md5Key) {
 	pathKey := Md5Key{}
 	pathKey.Sum([]byte(path))
@@ -831,62 +819,21 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
 
 	// Ensure aggregation databases are reset
-	err = ts.StatMappingDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset stat mapping database")
-	}
-	err = ts.StatMappingsDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset stat mappings database")
-	}
-	err = ts.AggregateSizeDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate size database")
-	}
-	err = ts.AggregateCountDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate count database")
-	}
-	err = ts.AggregateCreateCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate create cost database")
-	}
-	err = ts.AggregateModifyCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate modify cost database")
-	}
-	err = ts.AggregateAccessCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate access cost database")
-	}
+	ts.resetAggregationDatabases()
 
+	// set up context for cancelling workers.
+	//Package errgroup provides synchronization, error propagation,
+	//and Context cancelation for groups of goroutines working on subtasks of a common task.
+	// an error cancels the group.
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "workers", workers)
 	ctx, cancel := context.WithCancel(ctx)
 	finalizeWorkerGroup, ctx := errgroup.WithContext(ctx)
 
+	// finalizeWorkQueue has node, depth, results channel
 	finalizeWorkQueue := make(chan *FinalizeWork) // unbuffered channel
+
+	// nodesFinalized has key of finalised node, number or workers
 	nodesFinalized := make(chan *Md5Key, workers)
 	WorkerIDs := make(chan int)
 
@@ -896,6 +843,7 @@ func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
 		finalizeWorkerGroup.Go(func() (err error) {
 			id := <-WorkerIDs
 			err = ts.FinalizeWorker(ctx, id, finalizeWorkQueue, nodesFinalized)
+			logError(err)
 			return err
 		})
 		WorkerIDs <- WorkerID
@@ -914,11 +862,12 @@ WaitForResults:
 	for {
 		select {
 		case _ = <-startnodeResults:
-
+			logInfo("Start node results back")
 			break WaitForResults
 		case _ = <-nodesFinalized:
 
 			ts.NodesFinalized++
+			logInfo(" Nodes Finalised: " + strconv.Itoa(int(ts.NodesFinalized)))
 			if ts.StopFinalizeAfterNNodes >= 0 && ts.NodesFinalized > ts.StopFinalizeAfterNNodes {
 
 				break WaitForResults
@@ -987,7 +936,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 		for {
 			select {
 			case <-ctx.Done():
-				// Sarah shoudl I make sure all is saved here first? WHere is ctx.Done set?
+
 				return
 			case childAggregateStats = <-childResults:
 				//aggregateStats.Add(childAggregateStats)
@@ -1000,7 +949,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 
 	aggregateStats, _ = combineAggregateStats(aggregateStats)
 	subtreeWork.Results <- aggregateStats
-	// save here .... sarah
+	// save here as node is finished.... sarah
 
 	x, _ := ts.GetTreeNode(node)
 	logInfo("saving for " + x.Name)
@@ -1052,4 +1001,58 @@ func (ts *TreeServe) openLMDBDBI(lmdbEnv *lmdb.Env, dbName string, flags uint) (
 }
 
 func init() {
+}
+
+func (ts *TreeServe) resetAggregationDatabases() (err error) {
+	err = ts.StatMappingDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset stat mapping database")
+	}
+	err = ts.StatMappingsDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset stat mappings database")
+	}
+	err = ts.AggregateSizeDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset aggregate size database")
+	}
+	err = ts.AggregateCountDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset aggregate count database")
+	}
+	err = ts.AggregateCreateCostDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset aggregate create cost database")
+	}
+	err = ts.AggregateModifyCostDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset aggregate modify cost database")
+	}
+	err = ts.AggregateAccessCostDB.Reset()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"ts":  ts,
+		}).Fatal("failed to reset aggregate access cost database")
+	}
+
+	return
 }

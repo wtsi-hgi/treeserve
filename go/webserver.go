@@ -351,7 +351,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 
 }
 
-// aggregates takes a node key and returns the array of costs associated with it
+// retrieveAggregates takes a node key and returns the array of costs associated with it
 // Used for output after the database has been built up. Returns an error if the node has no costs associated
 // which may be the case for the parent of the root node but nothing else
 func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err error) {
@@ -376,8 +376,8 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		if err != nil {
 			logError(err)
 		}
-		ag.Group = group(vals.(*StatMapping).Group)
-		ag.User = user(vals.(*StatMapping).User)
+		ag.Group = lookupGID(vals.(*StatMapping).Group)
+		ag.User = lookupUID(vals.(*StatMapping).User)
 		ag.Tag = vals.(*StatMapping).Tag
 
 		temp, err := ts.AggregateSizeDB.Get(x)
@@ -440,11 +440,10 @@ func logError(err error) {
 
 func logInfo(str string) {
 
-	/*
-		buf := os.Stdout
-		_, f, l, _ := runtime.Caller(1)
-		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-		logger.Println(str)*/
+	buf := os.Stdout
+	_, f, l, _ := runtime.Caller(1)
+	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
+	logger.Println(str)
 
 }
 
@@ -640,7 +639,7 @@ func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[st
 
 }
 
-func group(id string) (val string) {
+func lookupGID(id string) (val string) {
 	var ok bool
 	if val, ok = groupMap[id]; !ok {
 
@@ -650,7 +649,7 @@ func group(id string) (val string) {
 	return
 }
 
-func user(id string) (val string) {
+func lookupUID(id string) (val string) {
 	var ok bool
 	if val, ok = userMap[id]; !ok {
 

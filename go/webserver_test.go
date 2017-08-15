@@ -1,11 +1,14 @@
 package treeserve
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"testing"
 )
+
+func TestBuildTree(t *testing.T) {}
 
 func TestUpdateMap(t *testing.T) {
 }
@@ -14,6 +17,29 @@ func TestGetQueryParameters(t *testing.T) {
 }
 
 func TestAddChild(t *testing.T) {
+
+}
+
+func TestOrganiseAggregates(t *testing.T) {
+	b1 := NewBigint()
+	b1.SetInt64(100)
+	b2 := NewBigint()
+	b2.SetInt64(10000)
+	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
+	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
+	f := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
+
+	m, err := organiseAggregates([]Aggregates{a, b, f})
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	j, err := json.Marshal(m)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	fmt.Println(string(j))
 
 }
 
@@ -26,7 +52,17 @@ func TestAddAggregates(t *testing.T) {
 	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
 	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
 
-	fmt.Println(addAggregates(a, b))
+	c, err := addAggregates(a, b)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	fmt.Println(c)
+
+	c1 := NewBigint()
+	c1.SetInt64(10100)
+	if !c.Count.Equals(c1) {
+		t.Errorf("wanted %+v, got %+v", c1, c.Count)
+	}
 
 }
 
