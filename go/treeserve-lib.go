@@ -277,8 +277,8 @@ func (ts *TreeServe) GetTreeNode(nodeKey *Md5Key) (treeNode *TreeNode, err error
 	dbData, err := ts.TreeNodeDB.Get(nodeKey)
 	if err != nil {
 		log.WithFields(log.Fields{
-		//"ts":      ts,
-		//"nodeKey": nodeKey,
+			"ts":      ts,
+			"nodeKey": nodeKey,
 		}).Error("failed to get tree node")
 	}
 	treeNode = dbData.(*TreeNode)
@@ -842,7 +842,9 @@ func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
 		finalizeWorkerGroup.Go(func() (err error) {
 			id := <-WorkerIDs
 			err = ts.FinalizeWorker(ctx, id, finalizeWorkQueue, nodesFinalized)
-			logError(err)
+			if err != nil {
+				logError(err)
+			}
 			return err
 		})
 		WorkerIDs <- WorkerID

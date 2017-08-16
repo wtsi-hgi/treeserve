@@ -78,6 +78,7 @@ func (ts *TreeServe) Webserver() {
 	port := "8000"
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
+	http.HandleFunc("/raw", ts.raw)
 	http.ListenAndServe(":"+port, nil)
 	logInfo("Webserver started")
 
@@ -123,7 +124,7 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildTree does a recursive tree build passing in level and depth so it will stop appropriately
-// Returning a few levels from the chosen directory means that recursion is not to expensive here.
+// Returning a few levels from the chosen directory means that recursion is not too expensive here.
 func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree, err error) {
 	logInfo(fmt.Sprintf("buildTree level %d depth %d", level, depth))
 
@@ -145,6 +146,9 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	stats, err := ts.retrieveAggregates(rootKey)
 	if err != nil {
 		return
+	}
+	if len(stats) == 0 {
+		logInfo(" Blank stats at " + t.Path)
 	}
 
 	a, err := organiseAggregates(stats)
@@ -182,28 +186,28 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	}
 
-	summaryTree := getSummaryTree(stats, grandchildstats)
+	summaryTree := getSummaryTree(t.Path, stats, grandchildstats)
 
 	t.addChild(&summaryTree)
 
 	return
 }
 
-func getSummaryTree(stats []Aggregates, grandchildstats []Aggregates) (t dirTree) {
+func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree) {
 	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
-	temp2, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
+	temp, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
 	if err != nil {
 		logError(err)
 
 	} else {
-		agg := arrayFromAggregateMap(temp2)
+		agg := arrayFromAggregateMap(temp)
 
 		w, err := organiseAggregates(agg)
 		if err != nil {
 			logError(err)
 		}
 
-		t = dirTree{Name: "*.*", Path: t.Path + "/*.*", Data: w}
+		t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
 	}
 
 	return
@@ -212,6 +216,7 @@ func getSummaryTree(stats []Aggregates, grandchildstats []Aggregates) (t dirTree
 
 // build up the set of stats of grandchildren of a node
 func (ts *TreeServe) addGrandChildStats(g []Aggregates, key *Md5Key) (newg []Aggregates) {
+	copy(newg, g)
 	// for the tree of local file data combine grandchild aggregates
 	grandChildren, err := ts.children(key)
 	if err != nil {
@@ -223,8 +228,10 @@ func (ts *TreeServe) addGrandChildStats(g []Aggregates, key *Md5Key) (newg []Agg
 		if err != nil {
 			logError(err)
 		}
+		if len(next) != 0 {
+			newg = append(newg, next...)
+		}
 
-		newg = append(g, next...)
 	}
 	fmt.Println("***", g, newg)
 	return
@@ -259,6 +266,14 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 		z := NewBigint()
 		if statsItem.Count.Equals(z) {
+			break // don't add empty sets of aggregates
+		}
+		if g == "0" || g == "root" {
+			fmt.Println(" Zero Group")
+			break // don't add empty sets of aggregates
+		}
+		if u == "0" {
+			fmt.Println("Zero User")
 			break // don't add empty sets of aggregates
 		}
 
@@ -370,6 +385,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 // which may be the case for the parent of the root node but nothing else
 func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err error) {
 	data = []Aggregates{}
+	// all keys mapping this node to sets of aggregate stats
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
 	if err != nil {
 		logError(err)
