@@ -139,7 +139,6 @@ func main() {
 		case "treeReady":
 			log.Info("main state machine: tree ready")
 			ts.Webserver()
-
 		case "failed":
 
 			log.WithFields(log.Fields{
@@ -158,8 +157,6 @@ func main() {
 			}).Fatal("failed to set state")
 		}
 	}
-
-	log.Debug("leaving main()")
 
 	return
 }

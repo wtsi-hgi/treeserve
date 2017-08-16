@@ -3,7 +3,6 @@ package treeserve
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,10 +15,12 @@ import (
 	"time"
 )
 
-// Aggregate values are converted from bytes and secodns to Tebibytes and year on output
+// Aggregate values are converted from bytes and seconds to Tebibytes and year on output
 const secondsInYear = 60 * 60 * 24 * 365
 const costPerTibYear = 150.0
 
+// The files are made using getent group and getent passwd
+// the maps use the files to map GID and UID to the names
 var userMap map[string]string
 var groupMap map[string]string
 var groupfile = "/tmp/groups"
@@ -63,12 +64,6 @@ type Aggregates struct {
 	ModifyCost   *Bigint `json:"mcost"`
 }
 
-/*
-type NodeData struct {
-	NodePath string
-	NodeType string
-}*/
-
 //Webserver listens for requests of the form
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
 // and returns nodes in json
@@ -89,7 +84,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 // tree handles requests of the form <url>/api/v2?maxdepth=1&path=/lustre/scratch115/projects
-// and returns the data or a 404 error
+// and returns the data in json format, or a 404 error
 func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 
 	path, depth := queryParameters(r)
@@ -162,37 +157,37 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		return
 	}
 
-	// for the tree of local file data, found by subtracting grandchild data from the node data
+	// the tree of local file data is found by subtracting grandchild data from the node data
 	grandchildstats := []Aggregates{}
 
 	// recursion and build file summary
 	for j := range child {
-		logInfo(fmt.Sprintf("level %d depth %d child %d", level, depth, j))
-
 		temp, err := ts.GetTreeNode(child[j])
-		if err != nil {
-			logError(err)
-		}
-		logInfo(fmt.Sprintf("Name %s, Type %s", temp.Name, string(temp.Stats.FileType)))
+		logError(err)
+
 		if temp.Stats.FileType != 'f' {
-			grandchildstats = ts.addGrandChildStats(grandchildstats, child[j])
-			t2, err := ts.buildTree(child[j], level+1, depth) /// make next level tree for each child
+
+			t2, err := ts.buildTree(child[j], level+1, depth) /// recursion ...make next level tree for each child
 			if err != nil {
 				logError(err)
 			} else if t2.Path != "" {
 				t.addChild(&t2)
 			}
+
+			grandchildstats = ts.appendChildStats(grandchildstats, child[j])
 		}
 
 	}
 
 	summaryTree := getSummaryTree(t.Path, stats, grandchildstats)
-
 	t.addChild(&summaryTree)
 
 	return
 }
 
+// getSummaryTree makes an entry with path *.* that contains stats for the node itseld and it's children.
+// Calculated from node stats by subtracting grandchild stats.
+// (Could save during rollup and retrieve instead of calculating on output)
 func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree) {
 	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
 	temp, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
@@ -203,19 +198,16 @@ func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregate
 		agg := arrayFromAggregateMap(temp)
 
 		w, err := organiseAggregates(agg)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 
 		t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
 	}
 
 	return
-
 }
 
-// build up the set of stats of grandchildren of a node
-func (ts *TreeServe) addGrandChildStats(g []Aggregates, key *Md5Key) (newg []Aggregates) {
+// build up the set of stats of grandchildren of a node by appending the data for children of a child
+func (ts *TreeServe) appendChildStats(g []Aggregates, key *Md5Key) (newg []Aggregates) {
 	copy(newg, g)
 	// for the tree of local file data combine grandchild aggregates
 	grandChildren, err := ts.children(key)
@@ -225,22 +217,16 @@ func (ts *TreeServe) addGrandChildStats(g []Aggregates, key *Md5Key) (newg []Agg
 
 	for j2 := range grandChildren {
 		next, err := ts.retrieveAggregates(grandChildren[j2])
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		if len(next) != 0 {
 			newg = append(newg, next...)
 		}
-
 	}
-	fmt.Println("***", g, newg)
 	return
 }
 
-/// organiseAggregates returns a map to to get the correct json from the array of Aggregate stats
-// for the node this is the format.
-// because some of the keys are dynamic (users, groups and tags) so can't be
-// just a struct.
+/// organiseAggregates returns a three level map to to get the correct json from the array of Aggregate stats
+// because some of the keys are dynamic (users, groups and tags) so can't be just a struct.
 /*  The idea is:
 a.Atime[g][u][t] = 3
 a.Ctime[g][u][t] = 4
@@ -251,31 +237,19 @@ a.Size[g][u][t] = 7
 */
 func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
-	if err != nil {
-		logError(err)
-		return
-	}
-
+	errorCount := 0
 	for i := range stats {
-
 		statsItem := stats[i]
+
+		// check non zero count
+		if statsItem.Count.isZero() {
+			errorCount++
+			break // don't add empty sets of aggregates
+		}
 
 		g := statsItem.Group
 		u := statsItem.User
 		tag := statsItem.Tag
-
-		z := NewBigint()
-		if statsItem.Count.Equals(z) {
-			break // don't add empty sets of aggregates
-		}
-		if g == "0" || g == "root" {
-			fmt.Println(" Zero Group")
-			break // don't add empty sets of aggregates
-		}
-		if u == "0" {
-			fmt.Println("Zero User")
-			break // don't add empty sets of aggregates
-		}
 
 		//Access Cost
 		b := statsItem.AccessCost
@@ -298,6 +272,10 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 		updateMap(false, &a.Count, b, g, u, tag)
 
 	}
+
+	if errorCount > 0 {
+		err = fmt.Errorf("%d examples of zero counts in organiseAggregates", errorCount)
+	}
 	return
 }
 
@@ -305,9 +283,7 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 // addChild adds a child dirTree to a dirTree
 func (t *dirTree) addChild(child *dirTree) {
-
 	t.ChildDirs = append(t.ChildDirs, child)
-
 }
 
 // get path and depth from request, or use defaults
@@ -326,9 +302,7 @@ func queryParameters(r *http.Request) (path string, depth int) {
 	}
 	if val, ok := vals["depth"]; ok {
 		depth, err = strconv.Atoi(val[0])
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 	}
 
 	path = filepath.Clean(path)
@@ -392,94 +366,65 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		return
 	}
 	if len(aggregateKeys) == 0 {
-		logError(errors.New("No stats found for node"))
+		logError(fmt.Errorf("No stats found for node"))
 		return
 	}
 
 	for i := range aggregateKeys {
 
 		x := aggregateKeys[i].(*Md5Key)
-
 		ag := Aggregates{}
 
 		vals, err := ts.StatMappingDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		ag.Group = lookupGID(vals.(*StatMapping).Group)
 		ag.User = lookupUID(vals.(*StatMapping).User)
 		ag.Tag = vals.(*StatMapping).Tag
 
-		if ag.Tag == "type_\u0000" {
-			fmt.Println("Empty tag")
-		}
-
 		temp, err := ts.AggregateSizeDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		size := temp.(*Bigint)
 		ag.Size = size
 
 		temp, err = ts.AggregateCountDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 
 		count := temp.(*Bigint)
 		ag.Count = count
 
 		temp, err = ts.AggregateAccessCostDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		ag.AccessCost = temp.(*Bigint)
 
 		temp, err = ts.AggregateModifyCostDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		ag.ModifyCost = temp.(*Bigint)
 
 		temp, err = ts.AggregateCreateCostDB.Get(x)
-		if err != nil {
-			logError(err)
-		}
+		logError(err)
 		ag.CreationCost = temp.(*Bigint)
-
-		z := NewBigint()
-		if !count.Equals(z) && ag.Tag != "type_\u0000" {
-			// This is a hack as there should not be zero count aggregates in the database.
-			// find out where they come from (think just parent of root but shouldn't be there)
-			data = append(data, ag)
-		} else {
-			ns, _ := ts.GetTreeNode(nodekey)
-			logError(errors.New("Zero count for node " + ns.Name))
-		}
+		data = append(data, ag)
 
 	}
-
 	return
-
 }
 
 // error logging with file and line number
 func logError(err error) {
-
+	if err == nil {
+		return
+	}
 	buf := os.Stderr
 	_, f, l, _ := runtime.Caller(1)
 	logger := log.New(buf, "ERROR: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
 	logger.Println(err)
-
 }
 
 func logInfo(str string) {
-
 	buf := os.Stdout
 	_, f, l, _ := runtime.Caller(1)
 	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
 	logger.Println(str)
-
 }
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)
@@ -498,20 +443,21 @@ func convertstatsForOutput(b *Bigint) (s string) {
 	return
 }
 
+// addAggregates adds two sets of aggregate data after checking that the statmappings match
 func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 	if a.Group != b.Group {
-		err = errors.New("addAggregates ... groups don't match")
+		err = fmt.Errorf("addAggregates ... groups don't match (%s, %s)", a.Group, b.Group)
 	} else {
 		c.Group = a.Group
 	}
 	if a.User != b.User {
-		err = errors.New("addAggregates ... users don't match")
+		err = fmt.Errorf("addAggregates ... users don't match (%s, %s)", a.User, b.User)
 	} else {
 		c.User = a.User
 	}
 	if a.Tag != b.Tag {
-		err = errors.New("addAggregates ... tags don't match")
+		err = fmt.Errorf("addAggregates ... tags don't match (%s, %s)", a.Tag, b.Tag)
 	} else {
 		c.Tag = a.Tag
 	}
@@ -540,21 +486,21 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 }
 
-// subtract aggregates subtracts one set of aggregates from another provided the mappings are the same, else error
+// subtract aggregates subtracts one set of aggregates from another after checking that the statmappings match
 func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 	if a.Group != b.Group {
-		err = errors.New("addAggregates ... groups don't match")
+		err = fmt.Errorf("addAggregates ... groups don't match (%s, %s)", a.Group, b.Group)
 	} else {
 		c.Group = a.Group
 	}
 	if a.User != b.User {
-		err = errors.New("addAggregates ... users don't match")
+		err = fmt.Errorf("addAggregates ... users don't match (%s, %s)", a.User, b.User)
 	} else {
 		c.User = a.User
 	}
 	if a.Tag != b.Tag {
-		err = errors.New("addAggregates ... tags don't match")
+		err = fmt.Errorf("addAggregates ... tags don't match (%s, %s)", a.Tag, b.Tag)
 	} else {
 		c.Tag = a.Tag
 	}
@@ -611,37 +557,33 @@ func arrayFromAggregateMap(in map[string]Aggregates) (out []Aggregates) {
 }
 
 // subtractAggregateMap subtracts a child map from a parent map and returns an error if a child key
-// is not present in the parent. If count becomes zero the entry is not returned
+// is not present in the parent. If count becomes zero the entry is deleted
 func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]Aggregates, err error) {
 	out = parent
 	for k, v := range child {
-		if val, ok := out[k]; ok {
-
-			temp, err := subtractAggregates(val, v)
-			if err != nil {
-				return out, err
-			}
-			if temp.Count.isNegative() { // includes zero
-				delete(out, k)
-			} else {
-				out[k] = temp
-			}
-
-		} else {
-			err := errors.New("Child key not found in parent map " + k)
+		var val Aggregates
+		var ok bool
+		if val, ok = out[k]; !ok {
+			err = fmt.Errorf("Child key %s not found in parent map ", k)
+			return
+		}
+		temp, err := subtractAggregates(val, v)
+		if err != nil {
 			return out, err
 		}
-
+		if temp.Count.isNegative() { // includes zero
+			delete(out, k)
+		} else {
+			out[k] = temp
+		}
 	}
-
 	return
-
 }
 
-// build a map from a file where each line in the file has two fields among others in a string separated by another string
+// buildMap builds a map from a file where each line in the file has two fields among others in a string separated by another string
 // at known positions (general for building user and group maps from linux getent data)
 // Format several fields, colon separated, groupname or username first, groupid or userid third
-// Used to get group and user names from ids
+// Used to get group and user names from ids using the getent format from group and passwd name:x:id:
 func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[string]string) {
 	theMap = make(map[string]string)
 	// open the file
@@ -659,7 +601,6 @@ func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[st
 			}
 		}
 
-		// check for errors
 		if err = scanner.Err(); err != nil {
 			logError(err)
 		}
@@ -667,13 +608,11 @@ func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[st
 	} else {
 		// if the file is not found, log it but not a disaster
 		logError(err)
-
 	}
-
 	return
-
 }
 
+// get the group name from the map if it exists
 func lookupGID(id string) (val string) {
 	var ok bool
 	if val, ok = groupMap[id]; !ok {
@@ -684,6 +623,7 @@ func lookupGID(id string) (val string) {
 	return
 }
 
+// get the user name from the map if it exists
 func lookupUID(id string) (val string) {
 	var ok bool
 	if val, ok = userMap[id]; !ok {
@@ -694,24 +634,10 @@ func lookupUID(id string) (val string) {
 	return
 }
 
+// max returns max of two ints
 func max(x, y int) int {
 	if x > y {
 		return x
 	}
 	return y
 }
-
-/*
-func checkError(err error, level int) {
-	if err == nil {
-		return
-	}
-	switch level {
-	case 0:
-		logError(err)
-	case 1:
-		logError(err)
-	case 2:
-		logError(err)
-	}
-}*/
