@@ -1,0 +1,2 @@
+/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out
+/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out

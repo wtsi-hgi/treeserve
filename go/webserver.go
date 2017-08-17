@@ -421,10 +421,11 @@ func logError(err error) {
 }
 
 func logInfo(str string) {
-	buf := os.Stdout
-	_, f, l, _ := runtime.Caller(1)
-	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-	logger.Println(str)
+	/*
+		buf := os.Stdout
+		_, f, l, _ := runtime.Caller(1)
+		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
+		logger.Println(str)*/
 }
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)

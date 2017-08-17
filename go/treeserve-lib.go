@@ -45,6 +45,7 @@ type FinalizeWork struct {
 	Depth       int
 	Results     chan []*AggregateStats
 }
+
 type TreeServe struct {
 	LMDBPath                 string
 	LMDBMapSize              int64
@@ -121,24 +122,24 @@ func (ts *TreeServe) NewStatMappingDB(dbName string) (gdb GenericDB, err error) 
 func (ts *TreeServe) NewBigintDB(dbName string) (gdb GenericDB, err error) {
 	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewBigint() }}
 	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"ts":     ts,
-			"dbName": dbName,
-		}).Debug("opened BigintDB")
-	}
+
+	log.WithFields(log.Fields{
+		"ts":     ts,
+		"dbName": dbName,
+	}).Debug("opened BigintDB")
+
 	return
 }
 
 func (ts *TreeServe) NewKeySetDB(dbName string) (ksdb KeySetDB, err error) {
 	ksdb = KeySetDB{DBCommon{TS: ts, Name: dbName}}
 	ksdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, ksdb.Name, (lmdb.Create | lmdb.DupSort | lmdb.DupFixed))
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"ts":     ts,
-			"dbName": dbName,
-		}).Debug("opened  Key Set database")
-	}
+
+	log.WithFields(log.Fields{
+		"ts":     ts,
+		"dbName": dbName,
+	}).Debug("opened  Key Set database")
+
 	return
 }
 
@@ -183,9 +184,9 @@ func (ts *TreeServe) SetFileCategoryPathChecks() {
 }
 
 func (ts *TreeServe) OpenLMDB() (err error) {
-	if ts.Debug {
-		log.WithFields(log.Fields{"ts": ts}).Debug("configuring and opening LMDB environment")
-	}
+
+	log.WithFields(log.Fields{"ts": ts}).Debug("configuring and opening LMDB environment")
+
 	ts.LMDBEnv, err = lmdb.NewEnv()
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("failed to create new LMDB environment")
@@ -299,14 +300,15 @@ func (ts *TreeServe) GetStatMapping(statMappingKey *Md5Key) (treeNode *StatMappi
 
 // ensureDirectoryInTree checks whether a directory node exists and adds it if not
 func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey *Md5Key, err error) {
+
 	dirPathKey = ts.getPathKey(dirPath)
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"dirPath": dirPath,
-			//"dirPathKey": dirPathKey,
-			//"ts.LMDBEnv": ts.LMDBEnv,
-		}).Debug("entered ensureDirectoryInTree()")
-	}
+
+	log.WithFields(log.Fields{
+		"dirPath": dirPath,
+		//"dirPathKey": dirPathKey,
+		//"ts.LMDBEnv": ts.LMDBEnv,
+	}).Debug("entered ensureDirectoryInTree()")
+
 	haveDir, err := ts.TreeNodeDB.HasKey(dirPathKey)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -316,17 +318,17 @@ func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey *Md5Key, 
 		}).Fatal("failed to check if directory exists in tree")
 	}
 	if !haveDir {
-		if ts.Debug {
-			log.WithFields(log.Fields{
-				"dirPath": dirPath,
-			}).Debug("parent does not exist, attempting to create")
-		}
+
+		log.WithFields(log.Fields{
+			"dirPath": dirPath,
+		}).Debug("parent does not exist, attempting to create")
+
 		err = ts.createTreeNode(dirPath, "d", NodeStats{})
 		if err != nil {
 			log.WithFields(log.Fields{
 				"dirPath": dirPath,
 				"err":     err,
-			}).Fatal("failed to create tree node")
+			}).Error("failed to create tree node")
 		}
 	}
 	return
@@ -408,42 +410,61 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 		}
 	}
 	node := &TreeNode{nodePath, parentKey.GetFixedBytes(), nodeStats}
-	err = ts.TreeNodeDB.Update(nodeKey, func(existingDbData BinaryMarshalUnmarshaler) (updatedNode BinaryMarshalUnmarshaler, err error) {
+	if strings.HasPrefix(nodePath, "/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out") {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+	/*
+		err = ts.TreeNodeDB.Update(nodeKey, func(existingDbData BinaryMarshalUnmarshaler) (updatedNode BinaryMarshalUnmarshaler, err error) {
 
-		log.WithFields(log.Fields{
-			"existingDbData": existingDbData,
-			"node":           node,
-			//	"nodeKey.String()": nodeKey.String(),
-			"nodePath": nodePath,
-		}).Debug("createTreeNode update")
+			log.WithFields(log.Fields{
+				"existingDbData": existingDbData,
+				"node":           node,
+				//	"nodeKey.String()": nodeKey.String(),
+				"nodePath": nodePath,
+			}).Debug("createTreeNode update")
 
-		if existingDbData != nil {
-			existing := existingDbData.(*TreeNode)
-			if existing.Name != node.Name {
-				err = fmt.Errorf("existing node Name '%v' does not match update Name '%v'", existing.Name, node.Name)
+			if existingDbData != nil {
+				existing := existingDbData.(*TreeNode)
+				if existing.Name != node.Name {
+					err = fmt.Errorf("existing node Name '%v' does not match update Name '%v'", existing.Name, node.Name)
+				}
+				if existing.ParentKey != node.ParentKey {
+					err = fmt.Errorf("existing node ParentKey '%v' does not match update ParentKey '%v'", existing.ParentKey, node.ParentKey)
+				}
+				if err != nil {
+					log.WithFields(log.Fields{
+						"existing": existing,
+						"node":     node,
+						"err":      err,
+						"nodeKey":  nodeKey,
+						"nodePath": nodePath,
+					}).Error("existing node did not match update")
+					return
+				}
 			}
-			if existing.ParentKey != node.ParentKey {
-				err = fmt.Errorf("existing node ParentKey '%v' does not match update ParentKey '%v'", existing.ParentKey, node.ParentKey)
-			}
-			if err != nil {
-				log.WithFields(log.Fields{
-					"existing": existing,
-					"node":     node,
-					"err":      err,
-					"nodeKey":  nodeKey,
-					"nodePath": nodePath,
-				}).Error("existing node did not match update")
-				return
-			}
-		}
-		updatedNode = node
-		if ts.Debug {
+			updatedNode = node
+
 			log.WithFields(log.Fields{
 				"updatedNode": updatedNode,
 			}).Debug("returning updated node")
-		}
-		return
-	})
+
+
+
+			return
+		})*/
+
+	overwrite := true
+	// only overwrite an existing node if this is the read node data (not blank parent entry)
+	// in which case the times will not be zero
+	log.Info(node.Name)
+	if node.Stats.AccessTime == 0 {
+		overwrite = false
+	}
+
+	err = ts.TreeNodeDB.Add(nodeKey, node, overwrite)
+
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err":     err,
@@ -452,20 +473,21 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 		}).Error("failed to add tree node")
 	}
 	if nodePath != "/" {
-		if ts.Debug {
-			log.WithFields(log.Fields{
-				"nodePath": nodePath,
-				//	"nodeKey":    nodeKey,
-				"parentPath": parentPath,
-				//	"parentKey":  parentKey,
-			}).Debug("adding node to parent")
-		}
+
+		log.WithFields(log.Fields{
+			"nodePath": nodePath,
+			//	"nodeKey":    nodeKey,
+			"parentPath": parentPath,
+			//	"parentKey":  parentKey,
+		}).Debug("adding node to parent")
+
 		err = ts.addChildToParent(parentKey, nodeKey)
 		if err != nil {
 			log.WithFields(log.Fields{
 				//	"parentKey": parentKey,
 				//	"nodeKey":   nodeKey,
-				"err": err,
+				"node": node,
+				"err":  err,
 			}).Error("failed to add node to parent")
 			return
 		}

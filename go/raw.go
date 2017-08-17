@@ -12,6 +12,7 @@ import (
 type DatabaseEntries struct {
 	Path         string
 	Node         TreeNode
+	Parent       string
 	Children     []string
 	StatMappings []string
 }
@@ -71,6 +72,12 @@ func (ts *TreeServe) databaseEntries(path string) (j []byte, err error) {
 	}
 	sort.Strings(temp3)
 	data.StatMappings = temp3
+
+	pk := Md5Key{}
+	pk.SetBytes(data.Node.ParentKey[:])
+	temp4, err := ts.GetTreeNode(&pk)
+
+	data.Parent = temp4.Name
 
 	j, err = json.Marshal(data)
 	if err != nil {
