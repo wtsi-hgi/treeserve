@@ -896,9 +896,12 @@ WaitForResults:
 			}
 			if ts.NodesFinalized%ts.NodesFinalizedInfoEveryN == 0 {
 
-				log.WithFields(log.Fields{
-					"ts.NodesFinalised": ts.NodesFinalized,
-				}).Info("Finalised nodes")
+				/*
+					log.WithFields(log.Fields{
+						"ts.NodesFinalised": ts.NodesFinalized,
+					}).Info("Finalised nodes") */
+
+				log.Info(fmt.Sprintf(" %d nodes finalised,  %d nodes left", ts.NodesFinalized, ts.NodesCreated-ts.NodesFinalized))
 
 			}
 

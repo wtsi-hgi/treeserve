@@ -148,12 +148,14 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	a, err := organiseAggregates(stats)
 	if err != nil {
+		logError(err)
 		return
 	}
 	t.Data = a
 
 	child, err := ts.children(rootKey)
 	if err != nil {
+		logError(err)
 		return
 	}
 
@@ -170,7 +172,8 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 			t2, err := ts.buildTree(child[j], level+1, depth) /// recursion ...make next level tree for each child
 			if err != nil {
 				logError(err)
-			} else if t2.Path != "" {
+			}
+			if t2.Path != "" {
 				t.addChild(&t2)
 			}
 
