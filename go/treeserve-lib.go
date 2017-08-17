@@ -98,24 +98,24 @@ func NewTreeServe(lmdbPath string, lmdbMapSize int64, costReferenceTime int64, n
 func (ts *TreeServe) NewTreeNodeDB(dbName string) (gdb GenericDB, err error) {
 	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewTreeNode() }}
 	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"ts":     ts,
-			"dbName": dbName,
-		}).Debug("opened TreeNode database")
-	}
+
+	log.WithFields(log.Fields{
+		"ts":     ts,
+		"dbName": dbName,
+	}).Debug("opened TreeNode database")
+
 	return
 }
 
 func (ts *TreeServe) NewStatMappingDB(dbName string) (gdb GenericDB, err error) {
 	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewStatMapping() }}
 	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"ts":     ts,
-			"dbName": dbName,
-		}).Debug("opened StatMapping database")
-	}
+
+	log.WithFields(log.Fields{
+		"ts":     ts,
+		"dbName": dbName,
+	}).Debug("opened StatMapping database")
+
 	return
 }
 
@@ -211,9 +211,8 @@ func (ts *TreeServe) OpenLMDB() (err error) {
 	}
 
 	ts.TreeServeDBI, err = ts.openLMDBDBI(ts.LMDBEnv, "TreeServe", lmdb.Create)
-	if ts.Debug {
-		log.WithFields(log.Fields{"ts": ts}).Debug("opened TreeServe database")
-	}
+
+	log.WithFields(log.Fields{"ts": ts}).Debug("opened TreeServe database")
 
 	ts.TreeNodeDB, err = ts.NewTreeNodeDB("TreeNode")
 	if err != nil {
@@ -328,7 +327,7 @@ func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey *Md5Key, 
 			log.WithFields(log.Fields{
 				"dirPath": dirPath,
 				"err":     err,
-			}).Error("failed to create tree node")
+			}).Fatal("failed to create tree node")
 		}
 	}
 	return
@@ -410,11 +409,12 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 		}
 	}
 	node := &TreeNode{nodePath, parentKey.GetFixedBytes(), nodeStats}
-	if strings.HasPrefix(nodePath, "/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out") {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
+	/*
+		if strings.HasPrefix(nodePath, "/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out") {
+			log.SetLevel(log.DebugLevel)
+		} else {
+			log.SetLevel(log.InfoLevel)
+		}*/
 	/*
 		err = ts.TreeNodeDB.Update(nodeKey, func(existingDbData BinaryMarshalUnmarshaler) (updatedNode BinaryMarshalUnmarshaler, err error) {
 
@@ -458,7 +458,7 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 	overwrite := true
 	// only overwrite an existing node if this is the read node data (not blank parent entry)
 	// in which case the times will not be zero
-	log.Info(node.Name)
+	//log.Info(node.Name)
 	if node.Stats.AccessTime == 0 {
 		overwrite = false
 	}
@@ -698,9 +698,8 @@ func (ts *TreeServe) ProcessInput(inputPath string, workers int) (err error) {
 		})
 	}
 
-	if ts.Debug {
-		log.WithFields(log.Fields{"inputPath": inputPath}).Debug("opening input")
-	}
+	log.WithFields(log.Fields{"inputPath": inputPath}).Debug("opening input")
+
 	inputFile, err := os.Open(inputPath)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -897,6 +896,10 @@ WaitForResults:
 			}
 			if ts.NodesFinalized%ts.NodesFinalizedInfoEveryN == 0 {
 
+				log.WithFields(log.Fields{
+					"ts.NodesFinalised": ts.NodesFinalized,
+				}).Info("Finalised nodes")
+
 			}
 
 		}
@@ -989,12 +992,12 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 }
 
 func (ts *TreeServe) openLMDBDBI(lmdbEnv *lmdb.Env, dbName string, flags uint) (dbi lmdb.DBI, err error) {
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"lmdbEnv": lmdbEnv,
-			"dbName":  dbName,
-		}).Debug("Opening (creating if necessary) the LMDB dbi")
-	}
+
+	log.WithFields(log.Fields{
+		"lmdbEnv": lmdbEnv,
+		"dbName":  dbName,
+	}).Debug("Opening (creating if necessary) the LMDB dbi")
+
 	err = lmdbEnv.Update(func(txn *lmdb.Txn) (err error) {
 		dbi, err = txn.OpenDBI(dbName, flags)
 		return
