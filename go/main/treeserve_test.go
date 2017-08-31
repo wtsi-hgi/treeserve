@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -14,15 +18,69 @@ import (
 )
 
 func TestMain(t *testing.T) {
+	filename := "/tmp/test.dat.gz"
+	fmt.Println(1, os.Stdout, os.Stderr)
 
 	test := generateTestData(10000000, 5)
-	err := writeFile(test, "/tmp/test.dat.gz")
+
+	err := writeFile(test, filename)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	cmd := exec.Command("go run treeserve.go -inputPath=/tmp/test.dat.gz")
-	cmd.Run()
 
+	//cmd := exec.Command("go build -o ./test")
+	outfile, err := os.Create("./out.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer outfile.Close()
+
+	app := "./test"
+
+	//arg1 := "-debug=true"
+	arg0 := "-inputPath=" + filename
+
+	cmd := exec.Command(app, arg0)
+	cmd.Stdout = outfile
+	cmd.Stderr = outfile
+	err = cmd.Run()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+}
+
+// get the json from the url and parse to interface
+func TestGetJson(t *testing.T) {
+	aURL := "http://localhost:8000/tree?depth=2&path=/lustre/test"
+	res, err := http.Get(aURL)
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// if response is 200, get the last request - Head will follow redirects upto 10 times (create your own http.Client to configure this)
+
+	fmt.Println(res.Status)
+	j, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	fmt.Println(jsonPrettyPrint(string(j)))
+
+}
+
+func jsonPrettyPrint(in string) string {
+	var out bytes.Buffer
+	err := json.Indent(&out, []byte(in), "", "\t")
+	if err != nil {
+		return in
+	}
+	return out.String()
 }
 
 // generate a test file in the same format as the treeserve input files
