@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strconv"
 	"testing"
 	"time"
@@ -19,6 +20,9 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
+	cmd := exec.Command("go run treeserve.go -inputPath=/tmp/test.dat.gz")
+	cmd.Run()
+
 }
 
 // generate a test file in the same format as the treeserve input files
@@ -94,7 +98,7 @@ func writeFile(data []string, filename string) (err error) {
 	//zw.ModTime = time.Now()
 
 	for i := range data {
-		fmt.Println("line ", i)
+		//	fmt.Println("line ", i)
 		n, err := zw.Write([]byte(data[i]))
 		if n <= 0 {
 			return fmt.Errorf("Bytes written was %d", n)
