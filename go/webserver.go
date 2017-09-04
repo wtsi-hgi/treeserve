@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/handlers"
 )
 
 // Aggregate values are converted from bytes and seconds to Tebibytes and year on output
@@ -74,7 +76,11 @@ func (ts *TreeServe) Webserver() {
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
 	http.HandleFunc("/raw", ts.raw)
-	http.ListenAndServe(":"+port, nil)
+	//http.ListenAndServe(":"+port, nil)
+	err := http.ListenAndServe("127.0.0.1:"+port, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux))
+
+	logError(err)
+
 	logInfo("Webserver started")
 
 }

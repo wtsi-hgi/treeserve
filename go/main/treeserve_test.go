@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"testing"
 	"time"
@@ -21,7 +20,7 @@ func TestMain(t *testing.T) {
 	filename := "/tmp/test.dat.gz"
 	fmt.Println(1, os.Stdout, os.Stderr)
 
-	test := generateTestData(10000000, 5)
+	test := generateTestData(10000000, 2)
 
 	err := writeFile(test, filename)
 	if err != nil {
@@ -29,27 +28,27 @@ func TestMain(t *testing.T) {
 	}
 
 	//cmd := exec.Command("go build -o ./test")
-	outfile, err := os.Create("./out.txt")
+	outfile, err := os.Create("/tmp/test_out.txt")
 	if err != nil {
-		panic(err)
+		t.Errorf(err.Error())
 	}
 	defer outfile.Close()
+	/*
+		app := "./test"
 
-	app := "./test"
+		//arg1 := "-debug=true"
+		arg0 := "-inputPath=" + filename
 
-	//arg1 := "-debug=true"
-	arg0 := "-inputPath=" + filename
+		cmd := exec.Command(app, arg0)
+		cmd.Stdout = outfile
+		cmd.Stderr = outfile
+		err = cmd.Run()
 
-	cmd := exec.Command(app, arg0)
-	cmd.Stdout = outfile
-	cmd.Stderr = outfile
-	err = cmd.Run()
-
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	*/
 }
 
 // get the json from the url and parse to interface
@@ -117,13 +116,13 @@ func generateTestData(baseTime, levels int) (lines []string) {
 
 		}
 		// directories ... two, one empty and one becomes next current plus 2 links
-		for j := 0; j < 2; j++ {
+		for j := 3; j < 5; j++ {
 
 			line, _ = getLineData(currentDir, "l", baseTime, i, j, r)
 			lines = append(lines, line)
 
 		}
-		for j := 0; j < 2; j++ {
+		for j := 5; j < 7; j++ {
 
 			line, nextDir = getLineData(currentDir, "d", baseTime, i, j, r)
 			//	fmt.Println("***", nextDir)
