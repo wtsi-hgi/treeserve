@@ -188,8 +188,10 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	}
 
-	summaryTree := getSummaryTree(t.Path, stats, grandchildstats)
-	t.addChild(&summaryTree)
+	summaryTree, ok := getSummaryTree(t.Path, stats, grandchildstats)
+	if ok {
+		t.addChild(&summaryTree)
+	}
 
 	return
 }
@@ -197,19 +199,27 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 // getSummaryTree makes an entry with path *.* that contains stats for the node itseld and it's children.
 // Calculated from node stats by subtracting grandchild stats.
 // (Could save during rollup and retrieve instead of calculating on output)
-func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree) {
+func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree, ok bool) {
 	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
+	ok = true
+
 	temp, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
 	if err != nil {
 		logError(err)
+		ok = false
 
 	} else {
 		agg := arrayFromAggregateMap(temp)
+		if len(agg) > 0 {
 
-		w, err := organiseAggregates(agg)
-		logError(err)
+			w, err := organiseAggregates(agg)
+			logError(err)
 
-		t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
+			t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
+		} else {
+			ok = false
+		}
+
 	}
 
 	return
@@ -582,6 +592,11 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 			return out, err
 		}
 		if temp.Count.isNegative() { // includes zero
+			delete(out, k)
+		} else {
+			out[k] = temp
+		}
+		if temp.Size.isZero() { // includes zero
 			delete(out, k)
 		} else {
 			out[k] = temp

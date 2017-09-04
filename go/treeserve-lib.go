@@ -409,55 +409,9 @@ func (ts *TreeServe) createTreeNode(nodePath string, fileType string, nodeStats 
 		}
 	}
 	node := &TreeNode{nodePath, parentKey.GetFixedBytes(), nodeStats}
-	/*
-		if strings.HasPrefix(nodePath, "/lustre/scratch118/compgen/vertann/sf5/VMRs/cufflinks_out/female2.bam_cuff.out") {
-			log.SetLevel(log.DebugLevel)
-		} else {
-			log.SetLevel(log.InfoLevel)
-		}*/
-	/*
-		err = ts.TreeNodeDB.Update(nodeKey, func(existingDbData BinaryMarshalUnmarshaler) (updatedNode BinaryMarshalUnmarshaler, err error) {
-
-			log.WithFields(log.Fields{
-				"existingDbData": existingDbData,
-				"node":           node,
-				//	"nodeKey.String()": nodeKey.String(),
-				"nodePath": nodePath,
-			}).Debug("createTreeNode update")
-
-			if existingDbData != nil {
-				existing := existingDbData.(*TreeNode)
-				if existing.Name != node.Name {
-					err = fmt.Errorf("existing node Name '%v' does not match update Name '%v'", existing.Name, node.Name)
-				}
-				if existing.ParentKey != node.ParentKey {
-					err = fmt.Errorf("existing node ParentKey '%v' does not match update ParentKey '%v'", existing.ParentKey, node.ParentKey)
-				}
-				if err != nil {
-					log.WithFields(log.Fields{
-						"existing": existing,
-						"node":     node,
-						"err":      err,
-						"nodeKey":  nodeKey,
-						"nodePath": nodePath,
-					}).Error("existing node did not match update")
-					return
-				}
-			}
-			updatedNode = node
-
-			log.WithFields(log.Fields{
-				"updatedNode": updatedNode,
-			}).Debug("returning updated node")
-
-
-
-			return
-		})*/
-
 	overwrite := true
 	// only overwrite an existing node if this is the read node data (not blank parent entry)
-	// in which case the times will not be zero
+	// in which case the times will never be zero
 	//log.Info(node.Name)
 	if node.Stats.AccessTime == 0 {
 		overwrite = false
@@ -949,6 +903,10 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 			logInfo("recursion")
 			err = ts.aggregateSubtree(ctx, WorkerID, childWork, finalizeWorkQueue, nodesFinalized)
 			if err != nil {
+				log.WithFields(log.Fields{
+					"err":      err,
+					"WorkerID": WorkerID,
+				}).Error("recursion error")
 				return
 			}
 		}
