@@ -63,7 +63,10 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 	flattened := make(map[Md5Key]AggregateStats)
 
 	for i := range input {
-
+		//fmt.Println(i, input[i])
+		if input[i] == nil {
+			continue
+		}
 		keys := input[i].StatMappings.Keys()
 		for k := range keys {
 			val, ok := input[i].StatMappings.Get(keys[k])

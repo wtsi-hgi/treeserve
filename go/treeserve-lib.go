@@ -732,7 +732,8 @@ func (ts *TreeServe) GetStatMappings(tn *TreeNode) (statMappings *StatMappings) 
 }
 
 // Calculate AggregateStats finds the aggregate costs breakdown for a node, worked out from the
-// size and elapsed time.
+// size and elapsed time. If there is no file entry for a node (shown by
+// zero create time return empty )
 func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *AggregateStats, err error) {
 
 	log.WithFields(log.Fields{
@@ -740,11 +741,17 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 	}).Debug("CalculateAggregateStats()")
 
 	treeNode, err := ts.GetTreeNode(nodeKey)
+
 	if err != nil {
 		log.WithFields(log.Fields{
 			"nodeKey": nodeKey,
 			"err":     err,
 		}).Error("CalculateAggregateStats() failed to get tree node")
+		return
+	}
+
+	if treeNode.Stats.CreationTime == 0 {
+		logError(fmt.Errorf("No file entry, or empty file entry, for node %s ", treeNode.Name))
 		return
 	}
 
@@ -914,6 +921,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 
 	// calculate aggregate stats for this node itself
 	a, err := ts.CalculateAggregateStats(node)
+
 	aggregateStats := []*AggregateStats{a}
 
 	for range childKeys {

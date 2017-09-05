@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
@@ -22,46 +23,43 @@ func TestMain(t *testing.T) {
 
 	test := generateTestData(10000000, 2)
 
-	err := writeFile(test, filename)
+	err := writeFile(test, filename, true)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
 	//cmd := exec.Command("go build -o ./test")
-	outfile, err := os.Create("/tmp/test_out.txt")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	defer outfile.Close()
 	/*
-		app := "./test"
-
-		//arg1 := "-debug=true"
-		arg0 := "-inputPath=" + filename
-
-		cmd := exec.Command(app, arg0)
-		cmd.Stdout = outfile
-		cmd.Stderr = outfile
-		err = cmd.Run()
-
+		outfile, err := os.Create("/tmp/test_out.txt")
 		if err != nil {
-			fmt.Println(err.Error())
-			return
+			t.Errorf(err.Error())
 		}
+		defer outfile.Close()
+
+			app := "./test"
+
+			//arg1 := "-debug=true"
+			arg0 := "-inputPath=" + filename
+
+			cmd := exec.Command(app, arg0)
+			cmd.Stdout = outfile
+			cmd.Stderr = outfile
+			err = cmd.Run()
+
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
 	*/
 }
 
 // get the json from the url and parse to interface
 func TestGetJson(t *testing.T) {
-	aURL := "http://localhost:8000/tree?depth=2&path=/lustre/test"
+	aURL := "http://localhost:8000/tree?depth=2&path=/lustre"
 	res, err := http.Get(aURL)
-
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	// if response is 200, get the last request - Head will follow redirects upto 10 times (create your own http.Client to configure this)
-
 	fmt.Println(res.Status)
 	j, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
@@ -70,6 +68,7 @@ func TestGetJson(t *testing.T) {
 	}
 
 	fmt.Println(jsonPrettyPrint(string(j)))
+	writeFile([]string{jsonPrettyPrint(string(j))}, "/tmp/out.json", false)
 
 }
 
@@ -139,7 +138,7 @@ func generateTestData(baseTime, levels int) (lines []string) {
 
 }
 
-func writeFile(data []string, filename string) (err error) {
+func writeFile(data []string, filename string, compressed bool) (err error) {
 
 	f, err := os.Create(filename)
 	if err != nil {
@@ -147,26 +146,35 @@ func writeFile(data []string, filename string) (err error) {
 	}
 	defer f.Close()
 
-	zw := gzip.NewWriter(f)
-
-	// Setting the Header fields is optional.
-	//zw.Name = filename
-	//zw.Comment = "test data for treeserve"
-	//zw.ModTime = time.Now()
-
-	for i := range data {
-		//	fmt.Println("line ", i)
-		n, err := zw.Write([]byte(data[i]))
-		if n <= 0 {
-			return fmt.Errorf("Bytes written was %d", n)
+	if compressed {
+		zw := gzip.NewWriter(f)
+		for i := range data {
+			//	fmt.Println("line ", i)
+			n, err := zw.Write([]byte(data[i]))
+			if n <= 0 {
+				return fmt.Errorf("Bytes written was %d", n)
+			}
+			if err != nil {
+				return err
+			}
 		}
-		if err != nil {
-			return err
-		}
-	}
 
-	if err := zw.Close(); err != nil {
-		log.Fatal(err)
+		if err := zw.Close(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		w := bufio.NewWriter(f)
+		for i := range data {
+			//	fmt.Println("line ", i)
+			n, err := w.Write([]byte(data[i]))
+			if n <= 0 {
+				return fmt.Errorf("Bytes written was %d", n)
+			}
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
 	return
@@ -192,7 +200,7 @@ func getLineData(currentDir, nodetype string, baseTime, level, count int, r *ran
 		n = currentDir + "node" + strconv.Itoa(level) + strconv.Itoa(count)
 	}
 	if nodetype == "d" {
-		nextDir = currentDir + "node" + strconv.Itoa(level) + "0/"
+		nextDir = currentDir + "node" + strconv.Itoa(level) + "5/"
 	}
 	//fmt.Println(n)
 	nextName := base64.StdEncoding.EncodeToString([]byte(n))
