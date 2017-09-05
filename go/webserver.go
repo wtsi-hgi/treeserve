@@ -196,9 +196,9 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	return
 }
 
-// getSummaryTree makes an entry with path *.* that contains stats for the node itseld and it's children.
+// getSummaryTree makes an entry with path *.* that contains stats for the node itself and it's children.
 // Calculated from node stats by subtracting grandchild stats.
-// (Could save during rollup and retrieve instead of calculating on output)
+// No *.* is added for empty directories
 func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree, ok bool) {
 	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
 	ok = true
@@ -210,7 +210,7 @@ func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregate
 
 	} else {
 		agg := arrayFromAggregateMap(temp)
-		if len(agg) > 0 {
+		if len(agg) > 0 && !agg[0].Count.isZero() {
 
 			w, err := organiseAggregates(agg)
 			logError(err)
