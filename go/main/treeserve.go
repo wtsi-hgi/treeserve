@@ -71,6 +71,7 @@ func main() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+	starttime := time.Now()
 	formerMaxProcs := runtime.GOMAXPROCS(maxProcs)
 	log.WithFields(log.Fields{
 		"formerMaxProcs": formerMaxProcs,
@@ -137,7 +138,8 @@ func main() {
 			nextState = "treeReady"
 			//break MainStateMachine // for development only
 		case "treeReady":
-			log.Info("main state machine: tree ready")
+			log.Info("main state machine: tree ready after " + time.Since(starttime).String())
+
 			ts.Webserver()
 		case "failed":
 

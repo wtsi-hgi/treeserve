@@ -60,7 +60,7 @@ func TestGetJson(t *testing.T) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Println(res.Status)
+	//fmt.Println(res.Status)
 	j, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
@@ -259,4 +259,70 @@ func getRootData(rootDir string, baseTime int) (line string) {
 	line += term
 
 	return
+}
+
+// compare two json representations of the directory tree allowing for different organisation
+// and differences due to floating point rounding errors. The URLs should be the old and new
+// tree builds from the same data file
+// NOTE depth different check
+func TestCompareJson(t *testing.T) {
+	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=2"
+	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
+
+	res, err := http.Get(newURL)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	jNew, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	res.Body.Close()
+
+	res, err = http.Get(oldURL)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	jOld, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	res.Body.Close()
+
+	var vNew interface{}
+	err = json.Unmarshal(jNew, &vNew)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	var vOld interface{}
+	err = json.Unmarshal(jOld, &vOld)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	/*
+		fmt.Printf("old %+v", vOld)
+		fmt.Println()
+		fmt.Println()
+		fmt.Printf("new %+v", vNew)
+	*/
+
+	// these are triple maps inside an outer wrapper of date and tree
+
+	// go through the old and check in the new for the values of the same mappings
+
+	mOld := vOld.(map[string]interface{})
+	treeOld := mOld["tree"]
+	mTree := treeOld.(map[string]interface{})
+	fmt.Println(mTree["name"], mTree["path"])
+	fmt.Println(mTree["data"])
+
+	mNew := vNew.(map[string]interface{})
+	treeNew := mNew["tree"]
+	mTreeNew := treeNew.(map[string]interface{})
+	fmt.Println(mTreeNew["name"], mTreeNew["path"])
+	fmt.Println(mTreeNew["data"])
+
 }

@@ -25,8 +25,8 @@ const costPerTibYear = 150.0
 // the maps use the files to map GID and UID to the names
 var userMap map[string]string
 var groupMap map[string]string
-var groupfile = "/tmp/groups"
-var userfile = "/tmp/users"
+var groupfile = "/home/sjc/testdata/g"
+var userfile = "/home/sjc/testdata/p"
 
 // recursive tree structure, non binary tree, data at each level
 type dirTree struct {
@@ -79,7 +79,7 @@ func (ts *TreeServe) Webserver() {
 	//http.ListenAndServe(":"+port, nil)
 	err := http.ListenAndServe("127.0.0.1:"+port, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux))
 
-	logError(err)
+	LogError(err)
 
 	logInfo("Webserver started")
 
@@ -108,7 +108,7 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 
-		logError(err)
+		LogError(err)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
@@ -135,7 +135,7 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	temp, err := ts.GetTreeNode(rootKey)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 
@@ -154,14 +154,14 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	a, err := organiseAggregates(stats)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 	t.Data = a
 
 	child, err := ts.children(rootKey)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 
@@ -171,13 +171,13 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	// recursion and build file summary
 	for j := range child {
 		temp, err := ts.GetTreeNode(child[j])
-		logError(err)
+		LogError(err)
 
 		if temp.Stats.FileType != 'f' {
 
 			t2, err := ts.buildTree(child[j], level+1, depth) /// recursion ...make next level tree for each child
 			if err != nil {
-				logError(err)
+				LogError(err)
 			}
 			if t2.Path != "" {
 				t.addChild(&t2)
@@ -205,7 +205,7 @@ func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregate
 
 	temp, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
 	if err != nil {
-		logError(err)
+		LogError(err)
 		ok = false
 
 	} else {
@@ -213,7 +213,7 @@ func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregate
 		if len(agg) > 0 && !agg[0].Count.isZero() {
 
 			w, err := organiseAggregates(agg)
-			logError(err)
+			LogError(err)
 
 			t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
 		} else {
@@ -231,12 +231,12 @@ func (ts *TreeServe) appendChildStats(g []Aggregates, key *Md5Key) (newg []Aggre
 	// for the tree of local file data combine grandchild aggregates
 	grandChildren, err := ts.children(key)
 	if err != nil {
-		logError(err)
+		LogError(err)
 	}
 
 	for j2 := range grandChildren {
 		next, err := ts.retrieveAggregates(grandChildren[j2])
-		logError(err)
+		LogError(err)
 		if len(next) != 0 {
 			newg = append(newg, next...)
 		}
@@ -260,10 +260,13 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 	for i := range stats {
 		statsItem := stats[i]
 
+		//fmt.Println(statsItem.Group, statsItem.User, statsItem.Tag)
+
 		// check non zero count
 		if statsItem.Count.isZero() {
 			errorCount++
-			break // don't add empty sets of aggregates
+			//	fmt.Println(statsItem.Count, statsItem.Size, statsItem)
+			continue // don't add empty sets of aggregates
 		}
 
 		g := statsItem.Group
@@ -288,6 +291,7 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 		// Count
 		b = statsItem.Count
+		fmt.Println("Adding:", b.Text(10), g, u, tag)
 		updateMap(false, &a.Count, b, g, u, tag)
 
 	}
@@ -321,7 +325,7 @@ func queryParameters(r *http.Request) (path string, depth int) {
 	}
 	if val, ok := vals["depth"]; ok {
 		depth, err = strconv.Atoi(val[0])
-		logError(err)
+		LogError(err)
 	}
 
 	path = filepath.Clean(path)
@@ -346,6 +350,19 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 		mg[g] = mu
 
 		*theMap = mg
+
+	} else if _, ok := (*theMap)[g]; !ok { // g doesn't exist in map
+
+		mt := make(map[string]string)
+		if scaleMap {
+			mt[tag] = convertstatsForOutput(theValue)
+		} else {
+			mt[tag] = theValue.Text(10)
+		}
+
+		mu := make(map[string]map[string]string)
+		mu[u] = mt
+		(*theMap)[g] = mu
 
 	} else if _, ok := (*theMap)[g]; ok { // g exists in map
 		if _, ok2 := (*theMap)[g][u]; !ok2 { // but u doesn't}
@@ -381,11 +398,11 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 	// all keys mapping this node to sets of aggregate stats
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 	if len(aggregateKeys) == 0 {
-		logError(fmt.Errorf("No stats found for node"))
+		LogError(fmt.Errorf("No stats found for node"))
 		return
 	}
 
@@ -395,32 +412,32 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		ag := Aggregates{}
 
 		vals, err := ts.StatMappingDB.Get(x)
-		logError(err)
+		LogError(err)
 		ag.Group = lookupGID(vals.(*StatMapping).Group)
 		ag.User = lookupUID(vals.(*StatMapping).User)
 		ag.Tag = vals.(*StatMapping).Tag
 
 		temp, err := ts.AggregateSizeDB.Get(x)
-		logError(err)
+		LogError(err)
 		size := temp.(*Bigint)
 		ag.Size = size
 
 		temp, err = ts.AggregateCountDB.Get(x)
-		logError(err)
+		LogError(err)
 
 		count := temp.(*Bigint)
 		ag.Count = count
 
 		temp, err = ts.AggregateAccessCostDB.Get(x)
-		logError(err)
+		LogError(err)
 		ag.AccessCost = temp.(*Bigint)
 
 		temp, err = ts.AggregateModifyCostDB.Get(x)
-		logError(err)
+		LogError(err)
 		ag.ModifyCost = temp.(*Bigint)
 
 		temp, err = ts.AggregateCreateCostDB.Get(x)
-		logError(err)
+		LogError(err)
 		ag.CreationCost = temp.(*Bigint)
 		data = append(data, ag)
 
@@ -429,7 +446,7 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 }
 
 // error logging with file and line number
-func logError(err error) {
+func LogError(err error) {
 	if err == nil {
 		return
 	}
@@ -559,7 +576,7 @@ func mapFromAggregateArray(in []Aggregates) (out map[string]Aggregates) {
 		} else {
 			val2, err := addAggregates(val, in[i])
 			if err != nil {
-				logError(err)
+				LogError(err)
 			}
 			out[key] = val2
 		}
@@ -627,12 +644,12 @@ func buildMap(inputfile string, sep string, posKey, posValue int) (theMap map[st
 		}
 
 		if err = scanner.Err(); err != nil {
-			logError(err)
+			LogError(err)
 		}
 
 	} else {
 		// if the file is not found, log it but not a disaster
-		logError(err)
+		LogError(err)
 	}
 	return
 }

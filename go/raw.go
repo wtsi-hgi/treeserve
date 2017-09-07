@@ -27,7 +27,7 @@ func (ts *TreeServe) raw(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 
-		logError(err)
+		LogError(err)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
@@ -53,21 +53,21 @@ func (ts *TreeServe) databaseEntries(path string) (j []byte, err error) {
 	temp, err := ts.GetTreeNode(ts.getPathKey(path))
 
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 	data.Node = *temp
 
 	temp2, err := ts.databaseChildren(path)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 	data.Children = temp2
 
 	temp3, err := ts.databaseStatMappings(path)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 	sort.Strings(temp3)
@@ -81,7 +81,7 @@ func (ts *TreeServe) databaseEntries(path string) (j []byte, err error) {
 
 	j, err = json.Marshal(data)
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 
@@ -94,14 +94,14 @@ func (ts *TreeServe) databaseChildren(path string) (s []string, err error) {
 	temp, err := ts.children(key)
 
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 
 	for i := range temp {
 		x, err := ts.GetTreeNode(temp[i])
 		if err != nil {
-			logError(err)
+			LogError(err)
 
 		}
 		s = append(s, x.Name)
@@ -116,7 +116,7 @@ func (ts *TreeServe) databaseStatMappings(path string) (s []string, err error) {
 	temp, err := ts.retrieveAggregates(key)
 
 	if err != nil {
-		logError(err)
+		LogError(err)
 		return
 	}
 

@@ -29,6 +29,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bmatsuo/lmdb-go/lmdb"
@@ -751,7 +752,7 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 	}
 
 	if treeNode.Stats.CreationTime == 0 {
-		logError(fmt.Errorf("No file entry, or empty file entry, for node %s ", treeNode.Name))
+		LogError(fmt.Errorf("No file entry, or empty file entry, for node %s ", treeNode.Name))
 		return
 	}
 
@@ -825,7 +826,7 @@ func (ts *TreeServe) Finalize(startPath string, workers int) (err error) {
 			id := <-WorkerIDs
 			err = ts.FinalizeWorker(ctx, id, finalizeWorkQueue, nodesFinalized)
 			if err != nil {
-				logError(err)
+				LogError(err)
 			}
 			return err
 		})
@@ -862,7 +863,7 @@ WaitForResults:
 						"ts.NodesFinalised": ts.NodesFinalized,
 					}).Info("Finalised nodes") */
 
-				log.Info(fmt.Sprintf(" %d nodes finalised,  %d nodes left", ts.NodesFinalized, ts.NodesCreated-ts.NodesFinalized))
+				log.Info(fmt.Sprintf(" %d nodes finalised,  %d nodes left, %s", ts.NodesFinalized, ts.NodesCreated-ts.NodesFinalized, time.Now().String()))
 
 			}
 

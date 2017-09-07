@@ -111,3 +111,17 @@ func TestBuildMap(t *testing.T) {
 	}
 
 }
+
+func TestLookUpUID(t *testing.T) {
+	userMap = buildMap("/home/sjc/testdata/p", ":", 2, 0)
+	groupMap = buildMap("/home/sjc/testdata/g", ":", 2, 0)
+	fmt.Println(lookupUID("*"))
+	fmt.Println(lookupUID("0"))
+}
+
+func TestLookUpGID(t *testing.T) {
+	userMap = buildMap("/home/sjc/testdata/p", ":", 2, 0)
+	groupMap = buildMap("/home/sjc/testdata/g", ":", 2, 0)
+	fmt.Println(lookupGID("*"))
+	fmt.Println(lookupGID("0"))
+}

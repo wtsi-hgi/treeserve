@@ -154,46 +154,46 @@ func (ts *TreeServe) saveAggregateStats(node *Md5Key, aggregateStats []*Aggregat
 			k1, _, _ := ts.GenerateAggregateKeys(node, &k)
 			err = ts.StatMappingsDB.AddKeyToKeySet(node, k1)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 
 			err = ts.StatMappingDB.Add(k1, v, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 
 			err = ts.AggregateAccessCostDB.Add(k1, aggregateStats[i].AccessCost, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 			//err = ts.AggregateAccessCostDB.Add(localKey, aggregateStats.AccessCost, true)
 
 			err = ts.AggregateModifyCostDB.Add(k1, aggregateStats[i].ModifyCost, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 			//err = ts.AggregateModifyCostDB.Add(localKey, aggregateStats.ModifyCost, true)
 
 			err = ts.AggregateCreateCostDB.Add(k1, aggregateStats[i].CreateCost, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 			//err = ts.AggregateCreateCostDB.Add(localKey, aggregateStats.CreateCost, true)
 
 			err = ts.AggregateSizeDB.Add(k1, aggregateStats[i].Size, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 
 			err = ts.AggregateCountDB.Add(k1, aggregateStats[i].Count, true)
 			if err != nil {
-				logError(err)
+				LogError(err)
 				return
 			}
 			//err = ts.AggregateSizeDB.Add(localKey, aggregateStats.Size, true)
