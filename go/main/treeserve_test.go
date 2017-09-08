@@ -317,20 +317,27 @@ func TestCompareJson(t *testing.T) {
 	// these are triple maps inside an outer wrapper of date and tree
 
 	// go through the old and check in the new for the values of the same mappings
-
+	outputOld := []string{}
 	mOld := vOld.(map[string]interface{})
 	treeOld := mOld["tree"]
 	mTree := treeOld.(map[string]interface{})
 	fmt.Println(mTree["name"], mTree["path"])
 	m1 := mTree["data"].(map[string]interface{})
-	//	fmt.Println(m1["count"])
-	m2 := m1["count"].(map[string]interface{})
-	m3 := m2["*"].(map[string]interface{})
-	m4 := m3["*"].(map[string]interface{})
-	outputOld := []string{}
-	for k, v := range m4 {
-		outputOld = append(outputOld, fmt.Sprintf("For %s, C++ has: %s,%s", mTree["path"], k, v))
+
+	for k1, v1 := range m1 {
+		m2 := v1.(map[string]interface{})
+		for k2, v2 := range m2 {
+			m3 := v2.(map[string]interface{})
+			for k3, v3 := range m3 {
+				m4 := v3.(map[string]interface{})
+				for k, v := range m4 {
+
+					outputOld = append(outputOld, fmt.Sprintf("C++ has: %s, %s, %s, %s, %s,%s \n", mTree["path"], k1, k2, k3, k, v))
+				}
+			}
+		}
 	}
+
 	sort.Strings(outputOld)
 	fmt.Println(outputOld)
 
@@ -340,19 +347,27 @@ func TestCompareJson(t *testing.T) {
 	fmt.Println(mTreeNew["name"], mTreeNew["path"])
 	m1New := mTreeNew["data"].(map[string]interface{})
 	//	fmt.Println(m1New["count"])
-	m2New := m1New["count"].(map[string]interface{})
-	m3New := m2New["*"].(map[string]interface{})
-	m4New := m3New["*"].(map[string]interface{})
+	/*
+		m2New := m1New["count"].(map[string]interface{})
+		m3New := m2New["*"].(map[string]interface{})
+		m4New := m3New["*"].(map[string]interface{}) */
 
 	outputNew := []string{}
-	for k, v := range m4New {
-		outputNew = append(outputNew, fmt.Sprintf("Go has: %s,%s", k, v))
+	for k1, v1 := range m1New {
+		m2 := v1.(map[string]interface{})
+		for k2, v2 := range m2 {
+			m3 := v2.(map[string]interface{})
+			for k3, v3 := range m3 {
+				m4 := v3.(map[string]interface{})
+				for k, v := range m4 {
+
+					outputNew = append(outputNew, fmt.Sprintf("Go has: %s, %s, %s, %s, %s,%s \n", mTree["path"], k1, k2, k3, k, v))
+				}
+			}
+		}
 	}
+
 	sort.Strings(outputNew)
 	fmt.Println(outputNew)
-
-	for i := range outputOld {
-		fmt.Println(outputOld[i], outputNew[i])
-	}
 
 }
