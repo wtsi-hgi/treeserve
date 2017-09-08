@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -266,12 +267,13 @@ func getRootData(rootDir string, baseTime int) (line string) {
 // tree builds from the same data file
 // NOTE depth different check
 func TestCompareJson(t *testing.T) {
-	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=2"
-	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
+	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=1"
+	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=1"
 
 	res, err := http.Get(newURL)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("Server not running for go version: %s", err.Error())
+		return
 	}
 
 	jNew, err := ioutil.ReadAll(res.Body)
@@ -282,13 +284,16 @@ func TestCompareJson(t *testing.T) {
 
 	res, err = http.Get(oldURL)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("Server not running for C++ version: %s", err.Error())
+		return
 	}
 	jOld, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	res.Body.Close()
+
+	fmt.Printf("C++ json length %d, Go version length %d ... should be similar though number format makes a difference  \n", len(jOld), len(jNew))
 
 	var vNew interface{}
 	err = json.Unmarshal(jNew, &vNew)
@@ -317,12 +322,37 @@ func TestCompareJson(t *testing.T) {
 	treeOld := mOld["tree"]
 	mTree := treeOld.(map[string]interface{})
 	fmt.Println(mTree["name"], mTree["path"])
-	fmt.Println(mTree["data"])
+	m1 := mTree["data"].(map[string]interface{})
+	//	fmt.Println(m1["count"])
+	m2 := m1["count"].(map[string]interface{})
+	m3 := m2["*"].(map[string]interface{})
+	m4 := m3["*"].(map[string]interface{})
+	outputOld := []string{}
+	for k, v := range m4 {
+		outputOld = append(outputOld, fmt.Sprintf("For %s, C++ has: %s,%s", mTree["path"], k, v))
+	}
+	sort.Strings(outputOld)
+	fmt.Println(outputOld)
 
 	mNew := vNew.(map[string]interface{})
 	treeNew := mNew["tree"]
 	mTreeNew := treeNew.(map[string]interface{})
 	fmt.Println(mTreeNew["name"], mTreeNew["path"])
-	fmt.Println(mTreeNew["data"])
+	m1New := mTreeNew["data"].(map[string]interface{})
+	//	fmt.Println(m1New["count"])
+	m2New := m1New["count"].(map[string]interface{})
+	m3New := m2New["*"].(map[string]interface{})
+	m4New := m3New["*"].(map[string]interface{})
+
+	outputNew := []string{}
+	for k, v := range m4New {
+		outputNew = append(outputNew, fmt.Sprintf("Go has: %s,%s", k, v))
+	}
+	sort.Strings(outputNew)
+	fmt.Println(outputNew)
+
+	for i := range outputOld {
+		fmt.Println(outputOld[i], outputNew[i])
+	}
 
 }

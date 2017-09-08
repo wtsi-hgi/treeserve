@@ -210,7 +210,7 @@ func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregate
 
 	} else {
 		agg := arrayFromAggregateMap(temp)
-		if len(agg) > 0 && !agg[0].Count.isZero() {
+		if len(agg) > 1 && !agg[0].Count.isZero() { // don't add *.* if the directory has no contents (the 1 is the directory itself)
 
 			w, err := organiseAggregates(agg)
 			LogError(err)
