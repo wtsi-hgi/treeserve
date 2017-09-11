@@ -307,17 +307,10 @@ func TestCompareJson(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	/*
-		fmt.Printf("old %+v", vOld)
-		fmt.Println()
-		fmt.Println()
-		fmt.Printf("new %+v", vNew)
-	*/
-
-	// these are triple maps inside an outer wrapper of date and tree
-
 	// go through the old and check in the new for the values of the same mappings
+	countSame := 0
 	outputOld := []string{}
+	contentOld := make(map[string]string)
 	mOld, ok := vOld.(map[string]interface{})
 	if ok {
 		for kOuter, vOuter := range mOld {
@@ -338,6 +331,8 @@ func TestCompareJson(t *testing.T) {
 									for k, v := range m4 {
 
 										outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
+										key := fmt.Sprintf("%s, %s, %s, %s, %s, %s", kOuter, k0, k1, k2, k3, k)
+										contentOld[key] = v.(string)
 									}
 								}
 							}
@@ -352,6 +347,7 @@ func TestCompareJson(t *testing.T) {
 	fmt.Println(outputOld)
 
 	outputNew := []string{}
+	contentNew := make(map[string]string)
 
 	mNew, ok := vNew.(map[string]interface{})
 	if ok {
@@ -373,6 +369,16 @@ func TestCompareJson(t *testing.T) {
 									for k, v := range m4 {
 
 										outputNew = append(outputNew, fmt.Sprintf("Go has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
+										key := fmt.Sprintf("%s, %s, %s, %s, %s, %s", kOuter, k0, k1, k2, k3, k)
+
+										// keep different ones and count same ones
+										exists, ok := contentOld[key]
+										if !ok || exists != v.(string) {
+											contentNew[key] = v.(string)
+										} else {
+											countSame++
+										}
+
 									}
 								}
 							}
@@ -385,5 +391,21 @@ func TestCompareJson(t *testing.T) {
 
 	sort.Strings(outputNew)
 	fmt.Println(outputNew)
+	fmt.Println(fmt.Sprintf("Exact matches : %d out of %d", countSame, len(contentOld)))
+	for k, v := range contentNew {
+		existing, ok := contentOld[k]
+		if !ok {
+			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, "missing", v))
+		} else {
+			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, existing, v))
+		}
+	}
+	for k, v := range contentOld {
+		_, ok := contentNew[k]
+		if !ok {
+			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, v, "missing"))
+		}
+
+	}
 
 }
