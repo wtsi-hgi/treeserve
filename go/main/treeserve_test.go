@@ -264,7 +264,7 @@ func getRootData(rootDir string, baseTime int) (line string) {
 
 // compare two json representations of the directory tree allowing for different organisation
 // and differences due to floating point rounding errors. The URLs should be the old and new
-// tree builds from the same data file
+// tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
 func TestCompareJson(t *testing.T) {
 	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=1"
@@ -318,21 +318,31 @@ func TestCompareJson(t *testing.T) {
 
 	// go through the old and check in the new for the values of the same mappings
 	outputOld := []string{}
-	mOld := vOld.(map[string]interface{})
-	treeOld := mOld["tree"]
-	mTree := treeOld.(map[string]interface{})
-	fmt.Println(mTree["name"], mTree["path"])
-	m1 := mTree["data"].(map[string]interface{})
+	mOld, ok := vOld.(map[string]interface{})
+	if ok {
+		for kOuter, vOuter := range mOld {
 
-	for k1, v1 := range m1 {
-		m2 := v1.(map[string]interface{})
-		for k2, v2 := range m2 {
-			m3 := v2.(map[string]interface{})
-			for k3, v3 := range m3 {
-				m4 := v3.(map[string]interface{})
-				for k, v := range m4 {
+			mOuter, ok := vOuter.(map[string]interface{})
+			if ok {
+				for k0, v0 := range mOuter {
 
-					outputOld = append(outputOld, fmt.Sprintf("C++ has: %s, %s, %s, %s, %s,%s \n", mTree["path"], k1, k2, k3, k, v))
+					m0, ok := v0.(map[string]interface{})
+					if ok {
+
+						for k1, v1 := range m0 {
+							m2 := v1.(map[string]interface{})
+							for k2, v2 := range m2 {
+								m3 := v2.(map[string]interface{})
+								for k3, v3 := range m3 {
+									m4 := v3.(map[string]interface{})
+									for k, v := range m4 {
+
+										outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -341,27 +351,33 @@ func TestCompareJson(t *testing.T) {
 	sort.Strings(outputOld)
 	fmt.Println(outputOld)
 
-	mNew := vNew.(map[string]interface{})
-	treeNew := mNew["tree"]
-	mTreeNew := treeNew.(map[string]interface{})
-	fmt.Println(mTreeNew["name"], mTreeNew["path"])
-	m1New := mTreeNew["data"].(map[string]interface{})
-	//	fmt.Println(m1New["count"])
-	/*
-		m2New := m1New["count"].(map[string]interface{})
-		m3New := m2New["*"].(map[string]interface{})
-		m4New := m3New["*"].(map[string]interface{}) */
-
 	outputNew := []string{}
-	for k1, v1 := range m1New {
-		m2 := v1.(map[string]interface{})
-		for k2, v2 := range m2 {
-			m3 := v2.(map[string]interface{})
-			for k3, v3 := range m3 {
-				m4 := v3.(map[string]interface{})
-				for k, v := range m4 {
 
-					outputNew = append(outputNew, fmt.Sprintf("Go has: %s, %s, %s, %s, %s,%s \n", mTree["path"], k1, k2, k3, k, v))
+	mNew, ok := vNew.(map[string]interface{})
+	if ok {
+		for kOuter, vOuter := range mNew {
+
+			mOuter, ok := vOuter.(map[string]interface{})
+			if ok {
+				for k0, v0 := range mOuter {
+
+					m0, ok := v0.(map[string]interface{})
+					if ok {
+
+						for k1, v1 := range m0 {
+							m2 := v1.(map[string]interface{})
+							for k2, v2 := range m2 {
+								m3 := v2.(map[string]interface{})
+								for k3, v3 := range m3 {
+									m4 := v3.(map[string]interface{})
+									for k, v := range m4 {
+
+										outputNew = append(outputNew, fmt.Sprintf("Go has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
