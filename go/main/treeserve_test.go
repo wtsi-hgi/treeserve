@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -270,6 +270,8 @@ func TestCompareJson(t *testing.T) {
 	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=1"
 	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=1"
 
+	tolerance := .0001 // using relDif to check floating points near enough equal
+
 	res, err := http.Get(newURL)
 	if err != nil {
 		t.Errorf("Server not running for go version: %s", err.Error())
@@ -309,17 +311,23 @@ func TestCompareJson(t *testing.T) {
 
 	// go through the old and check in the new for the values of the same mappings
 	countSame := 0
-	outputOld := []string{}
+	//outputOld := []string{}
 	contentOld := make(map[string]string)
+	pathOld := ""
+
 	mOld, ok := vOld.(map[string]interface{})
+
 	if ok {
-		for kOuter, vOuter := range mOld {
+		for _, vOuter := range mOld { // tree, date
 
 			mOuter, ok := vOuter.(map[string]interface{})
-			if ok {
-				for k0, v0 := range mOuter {
 
-					m0, ok := v0.(map[string]interface{})
+			if ok {
+				for k0, v0 := range mOuter { // path, name, data
+					if k0 == "path" {
+						pathOld = v0.(string)
+					}
+					m0, ok := v0.(map[string]interface{}) // from here, break down of data for the node
 					if ok {
 
 						for k1, v1 := range m0 {
@@ -330,8 +338,8 @@ func TestCompareJson(t *testing.T) {
 									m4 := v3.(map[string]interface{})
 									for k, v := range m4 {
 
-										outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
-										key := fmt.Sprintf("%s, %s, %s, %s, %s, %s", kOuter, k0, k1, k2, k3, k)
+										//outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s, %s,%s \n", kOuter, path, k0, k1, k2, k3, k, v))
+										key := fmt.Sprintf("%s,%s,%s,%s", k1, k2, k3, k)
 										contentOld[key] = v.(string)
 									}
 								}
@@ -343,20 +351,23 @@ func TestCompareJson(t *testing.T) {
 		}
 	}
 
-	sort.Strings(outputOld)
-	fmt.Println(outputOld)
+	//sort.Strings(outputOld)
+	//fmt.Println(outputOld)
 
-	outputNew := []string{}
+	//outputNew := []string{}
 	contentNew := make(map[string]string)
+	pathNew := ""
 
 	mNew, ok := vNew.(map[string]interface{})
 	if ok {
-		for kOuter, vOuter := range mNew {
+		for _, vOuter := range mNew { // tree, date
 
 			mOuter, ok := vOuter.(map[string]interface{})
 			if ok {
-				for k0, v0 := range mOuter {
-
+				for k0, v0 := range mOuter { // path, name, data
+					if k0 == "path" {
+						pathNew = v0.(string)
+					}
 					m0, ok := v0.(map[string]interface{})
 					if ok {
 
@@ -368,14 +379,31 @@ func TestCompareJson(t *testing.T) {
 									m4 := v3.(map[string]interface{})
 									for k, v := range m4 {
 
-										outputNew = append(outputNew, fmt.Sprintf("Go has:  %s, %s, %s, %s, %s, %s,%s \n", kOuter, k0, k1, k2, k3, k, v))
-										key := fmt.Sprintf("%s, %s, %s, %s, %s, %s", kOuter, k0, k1, k2, k3, k)
+										//outputNew = append(outputNew, fmt.Sprintf("Go has:  %s, %s, %s, %s, %s, %s, %s,%s \n", kOuter, pathNew, k0, k1, k2, k3, k, v))
+										key := fmt.Sprintf("%s,%s,%s,%s", k1, k2, k3, k)
 
 										// keep different ones and count same ones
 										exists, ok := contentOld[key]
-										if !ok || exists != v.(string) {
+										// are they numbers and near enough with rounding?
+										var s1, s2 float64
+										if ok {
+
+											if sOld, err := strconv.ParseFloat(exists, 64); err == nil {
+												//fmt.Printf("Old %T, %v\n", sOld, sOld)
+												s1 = sOld
+											}
+											if sNew, err := strconv.ParseFloat(v.(string), 64); err == nil {
+												//fmt.Printf("New %T, %v\n", sNew, sNew)
+												s2 = sNew
+											}
+
+											//fmt.Println(relDif(s1, s2))
+										}
+
+										if !ok || relDif(s1, s2) > tolerance { // not found, or too different
 											contentNew[key] = v.(string)
-										} else {
+										} else { // in both, acceptable difference, remove from old
+											delete(contentOld, key)
 											countSame++
 										}
 
@@ -389,13 +417,14 @@ func TestCompareJson(t *testing.T) {
 		}
 	}
 
-	sort.Strings(outputNew)
-	fmt.Println(outputNew)
-	fmt.Println(fmt.Sprintf("Exact matches : %d out of %d", countSame, len(contentOld)))
+	//sort.Strings(outputNew)
+	//fmt.Println(outputNew)
+	fmt.Println(fmt.Sprintf("Comparing %s, %s", pathOld, pathNew))
+	fmt.Println(fmt.Sprintf("Within tolerance matches : %d out of %d", countSame, countSame+len(contentOld)))
 	for k, v := range contentNew {
 		existing, ok := contentOld[k]
 		if !ok {
-			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, "missing", v))
+			fmt.Println(fmt.Sprintf("missing from C++ at %s,  Go has %s", k, v))
 		} else {
 			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, existing, v))
 		}
@@ -403,9 +432,33 @@ func TestCompareJson(t *testing.T) {
 	for k, v := range contentOld {
 		_, ok := contentNew[k]
 		if !ok {
-			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, v, "missing"))
+			fmt.Println(fmt.Sprintf("missing from Go at %s, C++ has %s", k, v))
 		}
 
 	}
+
+}
+
+/*
+double RelDif(double a, double b)
+{
+	double c = Abs(a);
+	double d = Abs(b);
+
+	d = Max(c, d);
+
+	return d == 0.0 ? 0.0 : Abs(a - b) / d;
+}*/
+
+func relDif(a, b float64) float64 {
+
+	c := math.Abs(a)
+	d := math.Abs(b)
+
+	d = math.Max(c, d)
+
+	e := math.Abs(a-b) / d
+
+	return e
 
 }
