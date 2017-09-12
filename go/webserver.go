@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -165,8 +166,8 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 		return
 	}
 
-	// the tree of local file data is found by subtracting grandchild data from the node data
-	grandchildstats := []Aggregates{}
+	// the tree of local file data *.*
+	immediateChildStats := []*AggregateStats{}
 
 	// recursion and build file summary
 	for j := range child {
@@ -183,12 +184,16 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 				t.addChild(&t2)
 			}
 
-			grandchildstats = ts.appendChildStats(grandchildstats, child[j])
 		}
+
+		a, err := ts.CalculateAggregateStats(child[j])
+		LogError(err)
+		immediateChildStats = append(immediateChildStats, a)
 
 	}
 
-	summaryTree, ok := getSummaryTree(t.Path, stats, grandchildstats)
+	immediateChildStats, _ = combineAggregateStats(immediateChildStats)
+	summaryTree, ok := getSummaryTree(t.Path, immediateChildStats)
 	if ok {
 		t.addChild(&summaryTree)
 	}
@@ -197,29 +202,21 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 }
 
 // getSummaryTree makes an entry with path *.* that contains stats for the node itself and it's children.
-// Calculated from node stats by subtracting grandchild stats.
 // No *.* is added for empty directories
-func getSummaryTree(path string, stats []Aggregates, grandchildstats []Aggregates) (t dirTree, ok bool) {
+func getSummaryTree(path string, imm []*AggregateStats) (t dirTree, ok bool) {
 	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
 	ok = true
 
-	temp, err := subtractAggregateMap(mapFromAggregateArray(stats), mapFromAggregateArray(grandchildstats))
-	if err != nil {
+	agg := AggregatesFromAggregateStats(imm)
+
+	if len(agg) > 1 && !agg[0].Count.isZero() { // don't add *.* if the directory has no contents (the 1 is the directory itself)
+
+		w, err := organiseAggregates(agg)
 		LogError(err)
-		ok = false
 
+		t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
 	} else {
-		agg := arrayFromAggregateMap(temp)
-		if len(agg) > 1 && !agg[0].Count.isZero() { // don't add *.* if the directory has no contents (the 1 is the directory itself)
-
-			w, err := organiseAggregates(agg)
-			LogError(err)
-
-			t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
-		} else {
-			ok = false
-		}
-
+		ok = false
 	}
 
 	return
@@ -291,7 +288,7 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 		// Count
 		b = statsItem.Count
-		fmt.Println("Adding:", b.Text(10), g, u, tag)
+		//fmt.Println("Adding:", b.Text(10), g, u, tag)
 		updateMap(false, &a.Count, b, g, u, tag)
 
 	}
@@ -379,6 +376,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 			// key tag does not exist in map
 
 			if scaleMap {
+
 				(*theMap)[g][u][tag] = convertstatsForOutput(theValue)
 			} else {
 				(*theMap)[g][u][tag] = theValue.Text(10)
@@ -466,8 +464,10 @@ func logInfo(str string) {
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)
 // This one uses Big package to keep sizes in bytes and times in seconds
-// The conversion factor was #150 per tebibyte year
+// The conversion factor was #150 per tebibyte year. If the value is
+// below threshold, make it zero
 func convertstatsForOutput(b *Bigint) (s string) {
+	threshold := float64(0.000000001)
 	sizeConv := NewBigint()
 	sizeConv.SetInt64(1024 * 1024 * 1024 * 1024) // tebibytes
 	timeConv := NewBigint()
@@ -477,6 +477,11 @@ func convertstatsForOutput(b *Bigint) (s string) {
 	overallConv.Mul(sizeConv, timeConv)
 
 	s = Divide(b, overallConv)
+	sVal, err := strconv.ParseFloat(s, 64)
+	LogError(err)
+	if sVal < threshold {
+		s = "0"
+	}
 	return
 }
 
@@ -598,26 +603,27 @@ func arrayFromAggregateMap(in map[string]Aggregates) (out []Aggregates) {
 func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]Aggregates, err error) {
 	out = parent
 	for k, v := range child {
+		//fmt.Println("Child ", k, v)
 		var val Aggregates
 		var ok bool
 		if val, ok = out[k]; !ok {
 			err = fmt.Errorf("Child key %s not found in parent map ", k)
 			return
 		}
+		//fmt.Println("Parent ", val, ok)
 		temp, err := subtractAggregates(val, v)
 		if err != nil {
 			return out, err
 		}
+		//fmt.Println("subtracted ", temp.Count.Text(10))
 		if temp.Count.isNegative() { // includes zero
+			//fmt.Println("here")
 			delete(out, k)
 		} else {
 			out[k] = temp
 		}
-		if temp.Size.isZero() { // includes zero
-			delete(out, k)
-		} else {
-			out[k] = temp
-		}
+
+		//fmt.Printf("%T   %+v, %s ", out, out, k)
 	}
 	return
 }
@@ -682,4 +688,41 @@ func max(x, y int) int {
 		return x
 	}
 	return y
+}
+
+func relDif(a, b float64) float64 {
+	// conversion of Knuth algorithm from C to Go
+
+	c := math.Abs(a)
+	d := math.Abs(b)
+
+	d = math.Max(c, d)
+
+	e := math.Abs(a-b) / d
+
+	return e
+
+}
+
+func AggregatesFromAggregateStats(a []*AggregateStats) (b []Aggregates) {
+
+	for i := range a {
+		statMappings := a[i].StatMappings.Values()
+		nextCount := a[i].Count
+		nextSize := a[i].Size
+		nextACost := a[i].AccessCost
+		nextCCost := a[i].CreateCost
+		nextMCost := a[i].ModifyCost
+		for j := range statMappings {
+			nextGroup := statMappings[j].Group
+			nextUser := statMappings[j].User
+			nextTag := statMappings[j].Tag
+
+			nextEntry := Aggregates{Group: nextGroup, User: nextUser, Tag: nextTag, Count: nextCount, Size: nextSize, AccessCost: nextACost, ModifyCost: nextMCost, CreationCost: nextCCost}
+			b = append(b, nextEntry)
+		}
+	}
+
+	return
+
 }
