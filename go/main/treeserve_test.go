@@ -505,7 +505,7 @@ func nodeJSON(treeJSON []byte, nodes map[string]string, top bool) (err error) {
 		var data json.RawMessage
 		var children []json.RawMessage
 		err = json.Unmarshal(*m["path"], &path)
-		fmt.Println(path)
+		//	fmt.Println(path)
 		if err != nil {
 			fmt.Println("1", err)
 			return
@@ -657,6 +657,176 @@ func TestNodeJson(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	fmt.Println(nodes)
+	//fmt.Println(nodes)
+
+}
+
+// compare two json representations of the directory tree allowing for different organisation
+// and differences due to floating point rounding errors. The URLs should be the old and new
+// tree builds from the same data file. Relies on both servers running on ports shown.
+// NOTE depth different check
+func TestCompareTreeJson(t *testing.T) {
+	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=3"
+	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=1"
+
+	tolerance := .001 // using relDif to check floating points near enough equal
+	countSame := 0
+
+	res, err := http.Get(goURL)
+	if err != nil {
+		t.Errorf("Server not running for go version: %s", err.Error())
+		return
+	}
+
+	jNew, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	res.Body.Close()
+
+	res, err = http.Get(cppURL)
+	if err != nil {
+		t.Errorf("Server not running for C++ version: %s", err.Error())
+		return
+	}
+	jOld, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	res.Body.Close()
+
+	fmt.Printf("C++ json length %d, Go version length %d ... should be similar though number format makes a difference  \n\n", len(jOld), len(jNew))
+	nodesOld := make(map[string]string)
+	nodesNew := make(map[string]string)
+	err = nodeJSON(jOld, nodesOld, true)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = nodeJSON(jNew, nodesNew, true)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	fmt.Printf("C++ number of nodes %d, Go  %d   \n\n", len(nodesOld), len(nodesNew))
+
+	//fmt.Println(nodesOld, nodesNew)
+
+	contentOld := make(map[string]string)
+	for k, v := range nodesOld {
+		pathOld := k
+		_, ok := nodesNew[k]
+		if !ok {
+			fmt.Printf("C++ has node %s, missing in Go   \n", pathOld)
+			continue
+		}
+		var data interface{}
+		err = json.Unmarshal([]byte(v), &data)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		m0, ok := data.(map[string]interface{}) // from here, break down of data for the node
+		if ok {
+
+			for k1, v1 := range m0 { // type (eg ctime)
+				m2 := v1.(map[string]interface{})
+				for k2, v2 := range m2 { // group
+					m3 := v2.(map[string]interface{})
+					for k3, v3 := range m3 { // user
+						m4 := v3.(map[string]interface{})
+						for k, v := range m4 { // tag
+
+							//outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s, %s,%s \n", kOuter, path, k0, k1, k2, k3, k, v))
+							key := fmt.Sprintf("%s,%s,%s,%s,%s", pathOld, k1, k2, k3, k)
+							contentOld[key] = v.(string)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//sort.Strings(outputOld)
+	//fmt.Println(outputOld)
+
+	//outputNew := []string{}
+	contentNew := make(map[string]string)
+
+	for k, v := range nodesNew {
+		pathNew := k
+		_, ok := nodesOld[k]
+		if !ok {
+			fmt.Printf("Go has node %s, missing in C++   \n", pathNew)
+			continue
+		}
+		var data interface{}
+		err = json.Unmarshal([]byte(v), &data)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		m0, ok := data.(map[string]interface{}) // from here, break down of data for the node
+		if ok {
+			for k1, v1 := range m0 {
+				m2 := v1.(map[string]interface{})
+				for k2, v2 := range m2 {
+					m3 := v2.(map[string]interface{})
+					for k3, v3 := range m3 {
+						m4 := v3.(map[string]interface{})
+						for k, v := range m4 {
+
+							//outputNew = append(outputNew, fmt.Sprintf("Go has:  %s, %s, %s, %s, %s, %s, %s,%s \n", kOuter, pathNew, k0, k1, k2, k3, k, v))
+							key := fmt.Sprintf("%s,%s,%s,%s,%s", pathNew, k1, k2, k3, k)
+
+							// keep different ones and count same ones
+							exists, ok := contentOld[key]
+							// are they numbers and near enough with rounding?
+							var s1, s2 float64
+							if ok {
+
+								if sOld, err := strconv.ParseFloat(exists, 64); err == nil {
+									//fmt.Printf("Old %T, %v\n", sOld, sOld)
+									s1 = sOld
+								}
+								if sNew, err := strconv.ParseFloat(v.(string), 64); err == nil {
+									//fmt.Printf("New %T, %v\n", sNew, sNew)
+									s2 = sNew
+								}
+
+								//fmt.Println(relDif(s1, s2))
+							}
+
+							if !ok || relDif(s1, s2) > tolerance { // not found, or too different
+								contentNew[key] = v.(string)
+							} else { // in both, acceptable difference, remove from both
+								delete(contentOld, key)
+								delete(contentNew, key)
+								countSame++
+							}
+
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//sort.Strings(outputNew)
+	//fmt.Println(outputNew)
+
+	fmt.Println(fmt.Sprintf("\n Within tolerance matches : %d out of %d\n", countSame, countSame+len(contentOld)))
+	for k, v := range contentNew {
+		existing, ok := contentOld[k]
+		if !ok {
+			fmt.Println(fmt.Sprintf("missing from C++ at %s,  Go has %s", k, v))
+		} else {
+			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, existing, v))
+		}
+	}
+	for k, v := range contentOld {
+		_, ok := contentNew[k]
+		if !ok {
+			fmt.Println(fmt.Sprintf("missing from Go at %s, C++ has %s", k, v))
+		}
+
+	}
 
 }
