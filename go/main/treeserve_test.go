@@ -267,8 +267,8 @@ func getRootData(rootDir string, baseTime int) (line string) {
 // tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
 func TestCompareJson(t *testing.T) {
-	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=1"
-	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=1"
+	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=2"
+	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
 
 	tolerance := .0001 // using relDif to check floating points near enough equal
 
@@ -330,13 +330,13 @@ func TestCompareJson(t *testing.T) {
 					m0, ok := v0.(map[string]interface{}) // from here, break down of data for the node
 					if ok {
 
-						for k1, v1 := range m0 {
+						for k1, v1 := range m0 { // type (eg ctime)
 							m2 := v1.(map[string]interface{})
-							for k2, v2 := range m2 {
+							for k2, v2 := range m2 { // group
 								m3 := v2.(map[string]interface{})
-								for k3, v3 := range m3 {
+								for k3, v3 := range m3 { // user
 									m4 := v3.(map[string]interface{})
-									for k, v := range m4 {
+									for k, v := range m4 { // tag
 
 										//outputOld = append(outputOld, fmt.Sprintf("C++ has:  %s, %s, %s, %s, %s, %s, %s,%s \n", kOuter, path, k0, k1, k2, k3, k, v))
 										key := fmt.Sprintf("%s,%s,%s,%s", k1, k2, k3, k)
@@ -451,6 +451,7 @@ double RelDif(double a, double b)
 }*/
 
 func relDif(a, b float64) float64 {
+	// conversion of Knuth algorithm from C to Go
 
 	c := math.Abs(a)
 	d := math.Abs(b)
@@ -460,5 +461,202 @@ func relDif(a, b float64) float64 {
 	e := math.Abs(a-b) / d
 
 	return e
+
+}
+
+// takes a treeview format json with arbitrary depth
+/* form tree"child_dirs": [
+      {
+        "child_dirs": [
+          {
+            "data": {
+
+where each level has data, name and path and possibly an array of childirs of the same structure, to any depth
+
+and returns a one level map of path to the data json
+
+
+*/
+func nodeJSON(treeJSON []byte, nodes map[string]string, top bool) (err error) {
+	// a node has name, path, data and child_dirs top level keys
+
+	// remove top level date and tree if they exist
+	if top {
+		var m map[string]*json.RawMessage
+		err = json.Unmarshal(treeJSON, &m)
+		var tree json.RawMessage
+		err = json.Unmarshal(*m["tree"], &tree)
+
+		nodeJSON(tree, nodes, false)
+
+	} else {
+
+		var m map[string]*json.RawMessage
+		err = json.Unmarshal(treeJSON, &m)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		//	fmt.Printf("** %T, %+v", m, m)
+		//	fmt.Println()
+		//	fmt.Println()
+		var path string
+		var data json.RawMessage
+		var children []json.RawMessage
+		err = json.Unmarshal(*m["path"], &path)
+		fmt.Println(path)
+		if err != nil {
+			fmt.Println("1", err)
+			return
+		}
+		err = json.Unmarshal(*m["data"], &data)
+		if err != nil {
+			fmt.Println("2", err)
+			return
+		}
+		nodes[path] = string(data)
+		//fmt.Println(children)
+		a, ok := m["child_dirs"]
+		if !ok {
+			return
+		}
+		err = json.Unmarshal(*a, &children)
+		if err != nil {
+			fmt.Println("3", err)
+			return
+		}
+
+		for i := range children {
+			nodeJSON(children[i], nodes, false)
+		}
+
+		return
+	}
+	return
+}
+
+func TestNodeJson(t *testing.T) {
+
+	json := `{
+		"date": "unknown",
+		"tree":{
+		"child_dirs": [{
+			"child_dirs": [{
+					"child_dirs": [{
+						"data": {"1": "2"},
+							"name": "Introns",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Introns"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "Olfactory_expression",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Olfactory_expression"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "Split_CDSs",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Split_CDSs"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "brain_transcripts",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/brain_transcripts"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "cufflinks_test",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/cufflinks_test"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "Human_OLFRs",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Human_OLFRs"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "junk",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/junk"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "PhyloP",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/PhyloP"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "Ensembl_databases",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Ensembl_databases"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "Feature_sizes",
+							"path": "/lustre/scratch118/compgen/vertann/sf5/Feature_sizes"
+						}
+					],
+					"data": {"1": "2"},
+					"name": "sf5",
+					"path": "/lustre/scratch118/compgen/vertann/sf5"
+				},
+				{
+					"child_dirs": [{
+						"data": {"1": "2"},
+							"name": "proteogenomics",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/proteogenomics"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "ens_rnaseq_pipe_mouse",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/ens_rnaseq_pipe_mouse"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "vcf",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/vcf"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "ensembl_pre_88",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/ensembl_pre_88"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "tophat_cufflinks",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/tophat_cufflinks"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "STARCUFF",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/STARCUFF"
+						},
+						{
+							"data": {"1": "2"},
+							"name": "mouse",
+							"path": "/lustre/scratch118/compgen/vertann/jmg/mouse"
+						}
+					],
+					"data": {"1": "2"},
+					"name": "jmg",
+					"path": "/lustre/scratch118/compgen/vertann/jmg"
+				}
+			],
+			"data": {"1": "2"},
+			"name": "vertann",
+			"path": "/lustre/scratch118/compgen/vertann"
+		}],
+		"data": {"1": "2"},
+		"name": "compgen",
+		"path": "/lustre/scratch118/compgen"
+	}
+}
+	  `
+
+	nodes := make(map[string]string)
+	err := nodeJSON([]byte(json), nodes, true)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	fmt.Println(nodes)
 
 }
