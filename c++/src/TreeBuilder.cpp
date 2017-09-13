@@ -156,12 +156,12 @@ Tree* TreeBuilder::from_lstat(const std::vector<std::string>& lstat_files,
             }
 
             if (file_type == "d") {
-                tree->addNode(path, im);
+                tree->addNode(path, im, false);
             } else if (file_type == "f" || file_type == "l") {
                 // find last / in the path
                 size_t pos = path.find_last_of("/");
                 path = path.substr(0, pos);
-                tree->addNode(path, im);
+                tree->addNode(path, im, true);
             }
         }
         if ( !in.eof() && in.fail() ) {

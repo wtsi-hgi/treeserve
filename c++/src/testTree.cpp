@@ -25,8 +25,8 @@ int main() {
     im2.addItem("cost$hgi$user$other", fval_2);
 
     Tree tree;
-    tree.addNode("/a/b/c/d/e", im1);
-    tree.addNode("/a/b/c/d/f", im2);
+    tree.addNode("/a/b/c/d/e", im1, true);
+    tree.addNode("/a/b/c/d/f", im2, true);
     std::cout << tree.toJSON() << std::endl;
     return 0;
 }
