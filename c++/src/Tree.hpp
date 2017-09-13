@@ -18,7 +18,7 @@ class Tree {
           delete root;
         }
         
-        void addNode(std::string path, IndexedMap& im, bool is_file) {
+        void addNode(std::string path, IndexedMap& im) {
             // path will be a string of form (/)a/b/c/d(/)
             // need to create any nodes that don't exist
             // e.g. for the above path, if we are adding to an empty tree
@@ -47,9 +47,7 @@ class Tree {
                     current=tmp;
                 }
             }
-            if (is_file) {
-                current->combine(im);
-            }
+            current->combine(im);
         }
 
         TreeNode* getNodeAt(std::string path) {
