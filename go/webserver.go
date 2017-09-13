@@ -168,6 +168,10 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 
 	// the tree of local file data *.*
 	immediateChildStats := []*AggregateStats{}
+	// include this directory
+	aa, err := ts.CalculateAggregateStats(rootKey)
+	LogError(err)
+	immediateChildStats = append(immediateChildStats, aa)
 
 	// recursion and build file summary
 	for j := range child {
@@ -184,11 +188,12 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 				t.addChild(&t2)
 			}
 
+		} else {
+			// only files in the *.*
+			a, err := ts.CalculateAggregateStats(child[j])
+			LogError(err)
+			immediateChildStats = append(immediateChildStats, a)
 		}
-
-		a, err := ts.CalculateAggregateStats(child[j])
-		LogError(err)
-		immediateChildStats = append(immediateChildStats, a)
 
 	}
 
@@ -204,16 +209,11 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 // getSummaryTree makes an entry with path *.* that contains stats for the node itself and it's children.
 // No *.* is added for empty directories
 func getSummaryTree(path string, imm []*AggregateStats) (t dirTree, ok bool) {
-	// combine grandchild stats (have one entry where categories are the same) and subtract from node stats
 	ok = true
-
 	agg := AggregatesFromAggregateStats(imm)
-
-	if len(agg) > 1 && !agg[0].Count.isZero() { // don't add *.* if the directory has no contents (the 1 is the directory itself)
-
+	if len(agg) > 0 { // don't add *.* if the directory has no contents
 		w, err := organiseAggregates(agg)
 		LogError(err)
-
 		t = dirTree{Name: "*.*", Path: path + "/*.*", Data: w}
 	} else {
 		ok = false
