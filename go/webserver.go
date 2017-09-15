@@ -70,9 +70,9 @@ type Aggregates struct {
 //Webserver listens for requests of the form
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
 // and returns nodes in json
-func (ts *TreeServe) Webserver() {
-	userMap = buildMap(userfile, ":", 2, 0)
-	groupMap = buildMap(groupfile, ":", 2, 0)
+func (ts *TreeServe) Webserver(groupFile, userFile string) {
+	groupMap, userMap = buildUserGroupMaps(groupFile, userFile)
+
 	port := "8000"
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
@@ -725,4 +725,18 @@ func AggregatesFromAggregateStats(a []*AggregateStats) (b []Aggregates) {
 
 	return
 
+}
+
+// use the files of local groups and users which are built in the startup shell script to translate codes to names
+// if file not found, map is empty and webserver uses codes not names
+func buildUserGroupMaps(groupFile string, userFile string) (groups map[string]string, users map[string]string) {
+
+	userCodePos := 2
+	userNamePos := 0
+	groupCodePos := 2
+	groupNamePos := 0
+	users = buildMap(userFile, ":", userCodePos, userNamePos)
+	groups = buildMap(groupFile, ":", groupCodePos, groupNamePos)
+
+	return
 }

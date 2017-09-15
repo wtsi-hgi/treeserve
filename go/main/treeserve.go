@@ -31,6 +31,8 @@ import (
 // Variables set by command-line flags
 var inputPath string
 var lmdbPath string
+var groupFile string
+var userFile string
 var inputWorkers int
 var costReferenceTime int64
 var lmdbMapSize int64
@@ -47,6 +49,8 @@ var blockProfilePath string
 
 func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
+	flag.StringVar(&groupFile, "groupFile", "/tmp/groups.dat", "Input file")
+	flag.StringVar(&userFile, "userFile", "/tmp/users.dat", "Input file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
 	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200*1024*1024*1024, "LMDB map size (maximum)")
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
@@ -140,7 +144,7 @@ func main() {
 		case "treeReady":
 			log.Info("main state machine: tree ready after " + time.Since(starttime).String())
 
-			ts.Webserver()
+			ts.Webserver(groupFile, userFile)
 		case "failed":
 
 			log.WithFields(log.Fields{
