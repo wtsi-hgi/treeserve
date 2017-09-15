@@ -529,6 +529,7 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 }
 
 // subtract aggregates subtracts one set of aggregates from another after checking that the statmappings match
+/*
 func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
 
 	if a.Group != b.Group {
@@ -569,9 +570,10 @@ func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
 	c.ModifyCost = temp5
 	return
 
-}
+}*/
 
 // mapFromAggregates returns a map with key Group:User:Tag and aggregate values added for same key
+/*
 func mapFromAggregateArray(in []Aggregates) (out map[string]Aggregates) {
 	out = make(map[string]Aggregates)
 	for i := range in {
@@ -587,19 +589,21 @@ func mapFromAggregateArray(in []Aggregates) (out map[string]Aggregates) {
 		}
 	}
 	return
-}
+}*/
 
 // arrayFromAggregateMap returns an array of the values in the map
+/*
 func arrayFromAggregateMap(in map[string]Aggregates) (out []Aggregates) {
 
 	for _, v := range in {
 		out = append(out, v)
 	}
 	return
-}
+}*/
 
 // subtractAggregateMap subtracts a child map from a parent map and returns an error if a child key
 // is not present in the parent. If count becomes zero the entry is deleted
+/*
 func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]Aggregates, err error) {
 	out = parent
 	for k, v := range child {
@@ -626,7 +630,7 @@ func subtractAggregateMap(parent, child map[string]Aggregates) (out map[string]A
 		//fmt.Printf("%T   %+v, %s ", out, out, k)
 	}
 	return
-}
+}*/
 
 // buildMap builds a map from a file where each line in the file has two fields among others in a string separated by another string
 // at known positions (general for building user and group maps from linux getent data)
@@ -690,6 +694,7 @@ func max(x, y int) int {
 	return y
 }
 
+// to compare two floats allowing for size and rounding errors
 func relDif(a, b float64) float64 {
 	// conversion of Knuth algorithm from C to Go
 
@@ -704,6 +709,7 @@ func relDif(a, b float64) float64 {
 
 }
 
+// change the format of a set of aggregates
 func AggregatesFromAggregateStats(a []*AggregateStats) (b []Aggregates) {
 
 	for i := range a {
@@ -727,7 +733,7 @@ func AggregatesFromAggregateStats(a []*AggregateStats) (b []Aggregates) {
 
 }
 
-// use the files of local groups and users which are built in the startup shell script to translate codes to names
+// use the files of local groups and users, built in the startup shell script to translate codes to names
 // if file not found, map is empty and webserver uses codes not names
 func buildUserGroupMaps(groupFile string, userFile string) (groups map[string]string, users map[string]string) {
 

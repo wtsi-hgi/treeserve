@@ -20,6 +20,7 @@ func TestAddChild(t *testing.T) {
 
 }
 
+/*
 func TestSubtractAggregateMap(t *testing.T) {
 
 	b1 := NewBigint()
@@ -51,7 +52,7 @@ func TestSubtractAggregateMap(t *testing.T) {
 		t.Errorf("have %d, wanted %d", len(result), 2)
 	}
 
-}
+}*/
 
 func TestOrganiseAggregates(t *testing.T) {
 	b1 := NewBigint()
@@ -159,6 +160,7 @@ func TestLookUpGID(t *testing.T) {
 	fmt.Println(lookupGID("0"))
 }
 
+/*
 func TestMapFromAggregateArray(t *testing.T) {
 
 	b1 := NewBigint()
@@ -180,4 +182,4 @@ func TestMapFromAggregateArray(t *testing.T) {
 	for k, v := range m {
 		fmt.Println(k, v.Count.Text(10))
 	}
-}
+}*/

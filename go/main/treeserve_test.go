@@ -266,6 +266,7 @@ func getRootData(rootDir string, baseTime int) (line string) {
 // and differences due to floating point rounding errors. The URLs should be the old and new
 // tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
+/*
 func TestCompareJson(t *testing.T) {
 	newURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=2"
 	oldURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
@@ -437,7 +438,7 @@ func TestCompareJson(t *testing.T) {
 
 	}
 
-}
+}*/
 
 /*
 double RelDif(double a, double b)
@@ -666,8 +667,8 @@ func TestNodeJson(t *testing.T) {
 // tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
 func TestCompareTreeJson(t *testing.T) {
-	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=3"
-	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=1"
+	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=4"
+	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
 
 	tolerance := .001 // using relDif to check floating points near enough equal
 	countSame := 0
