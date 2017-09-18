@@ -31,14 +31,14 @@ func (gdb *GenericDB) Add(key encoding.BinaryMarshaler, data BinaryMarshalUnmars
 			// check if node already exists
 			_, err = txn.Get(gdb.DBI, keyBytes)
 			if err == nil {
-				if ts.Debug {
-					log.WithFields(log.Fields{
-						"keyBytes": keyBytes,
-					}).Debug("key already exists in database")
-				}
+
+				log.WithFields(log.Fields{
+					"keyBytes": keyBytes,
+				}).Debug("key already exists in database")
+
 				return
 			}
-			return
+			//return  no it's OK here
 		}
 		err = txn.Put(gdb.DBI, keyBytes, dataBytes, 0)
 		if err != nil {
@@ -49,12 +49,12 @@ func (gdb *GenericDB) Add(key encoding.BinaryMarshaler, data BinaryMarshalUnmars
 			}).Error("failed to add entry to database")
 			return
 		}
-		if ts.Debug {
-			log.WithFields(log.Fields{
-				"keyBytes": keyBytes,
-				"data":     data,
-			}).Debug("added database entry")
-		}
+
+		log.WithFields(log.Fields{
+			"keyBytes": keyBytes,
+			"data":     data,
+		}).Debug("added database entry")
+
 		return
 	})
 	return
@@ -71,6 +71,7 @@ func (gdb *GenericDB) Update(key encoding.BinaryMarshaler, update UpdateData) (e
 	}
 	var existing BinaryMarshalUnmarshaler
 	var updated BinaryMarshalUnmarshaler
+
 	err = ts.LMDBEnv.Update(func(txn *lmdb.Txn) (err error) {
 		existingBytes, err := txn.Get(gdb.DBI, keyBytes)
 		if lmdb.IsNotFound(err) {
@@ -89,13 +90,15 @@ func (gdb *GenericDB) Update(key encoding.BinaryMarshaler, update UpdateData) (e
 				return
 			}
 		} else if err == nil {
+
+			log.Debug("Found key")
 			existing = gdb.NewData()
-			if ts.Debug {
-				log.WithFields(log.Fields{
-					"keyBytes":      keyBytes,
-					"existingBytes": existingBytes,
-				}).Debug("genericdb: got data for key, unmarshalling")
-			}
+
+			log.WithFields(log.Fields{
+				"keyBytes":      keyBytes,
+				"existingBytes": existingBytes,
+			}).Debug("genericdb: got data for key, unmarshalling")
+			log.Debug("unmarshalling data")
 			err = existing.UnmarshalBinary(existingBytes)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -104,14 +107,15 @@ func (gdb *GenericDB) Update(key encoding.BinaryMarshaler, update UpdateData) (e
 				}).Error("failed to unmarshall existing data")
 				return
 			}
-			if ts.Debug {
-				log.WithFields(log.Fields{
-					"keyBytes": keyBytes,
-					"existing": existing,
-					"update":   update,
-				}).Debug("key already exists in database, calling update(existing)")
-			}
+
+			log.WithFields(log.Fields{
+				"keyBytes": keyBytes,
+				"existing": existing,
+				"update":   update,
+			}).Debug("key already exists in database, calling update(existing)")
+			log.Debug("updating")
 			updated, err = update(existing)
+
 			if err != nil {
 				log.WithFields(log.Fields{
 					"existing": existing,

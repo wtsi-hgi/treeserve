@@ -88,11 +88,10 @@ func (ksdb *KeySetDB) AddKeyToKeySet(key encoding.BinaryMarshaler, setkey encodi
 
 func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []encoding.BinaryMarshaler, err error) {
 	ts := ksdb.TS
-	if ts.Debug {
-		log.WithFields(log.Fields{
-			"key": key,
-		}).Debug("about to start read transaction")
-	}
+	log.WithFields(log.Fields{
+		"key": key,
+	}).Debug("about to start read transaction")
+
 	keyBytes, err := key.MarshalBinary()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -111,11 +110,10 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 		}
 		defer cur.Close()
 
-		if ts.Debug {
-			log.WithFields(log.Fields{
-				"key": key,
-			}).Debug("moving cursor to start of set")
-		}
+		log.WithFields(log.Fields{
+			"key": key,
+		}).Debug("moving cursor to start of set")
+
 		_, firstKeySetKey, err := cur.Get(keyBytes, nil, lmdb.Set)
 		if lmdb.IsNotFound(err) {
 			if ts.Debug {
@@ -134,13 +132,13 @@ func (ksdb *KeySetDB) GetKeySet(key encoding.BinaryMarshaler) (keySetKeys []enco
 			}).Error("failed to get key set")
 		}
 		stride := len(firstKeySetKey)
-		if ts.Debug {
-			log.WithFields(log.Fields{
-				"key":            key,
-				"stride":         stride,
-				"firstKeySetKey": firstKeySetKey,
-			}).Debug("have stride, getting keyset")
-		}
+
+		log.WithFields(log.Fields{
+			"key":            key,
+			"stride":         stride,
+			"firstKeySetKey": firstKeySetKey,
+		}).Debug("have stride, getting keyset")
+
 		k, v, err := cur.Get(nil, nil, lmdb.NextMultiple)
 		if lmdb.IsNotFound(err) {
 			log.Debug("nextmultiple not found, this key only has one key in the keyset")

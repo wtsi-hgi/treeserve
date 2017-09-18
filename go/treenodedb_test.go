@@ -18,12 +18,13 @@
 package treeserve
 
 import (
-	"crypto/md5"
-	"io/ioutil"
-	"syscall"
+	"fmt"
 	"testing"
+
+	"github.com/bmatsuo/lmdb-go/lmdb"
 )
 
+/*
 func TestTreeNodeDB(t *testing.T) {
 	lmdbPath, err := ioutil.TempDir("", "genericdb_test_treenodedb")
 	if err != nil {
@@ -57,4 +58,57 @@ func TestTreeNodeDB(t *testing.T) {
 	if *checkTestNode1 != *testNode1 {
 		t.Errorf("retrieved treenode did not match: %v != %v", *checkTestNode1, *testNode1)
 	}
+}*/
+
+func TestOutputAll(t *testing.T) {
+	lmdbPath := "/tmp/treeserve_lmdb"
+
+	LMDBEnv, err := lmdb.NewEnv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = LMDBEnv.SetMapSize(200 * 1024 * 1024 * 1024)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = LMDBEnv.SetMaxDBs(10)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = LMDBEnv.Open(lmdbPath, (lmdb.NoSubdir), 0600)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = LMDBEnv.View(func(txn *lmdb.Txn) (err error) {
+		d, _ := txn.OpenDBI("treenode", 0)
+		cur, err := txn.OpenCursor(d)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer cur.Close()
+
+		x, err := cur.Count()
+		fmt.Println(x)
+
+		for {
+			k, v, err := cur.Get(nil, nil, lmdb.Next)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			var t TreeNode
+			_, err = t.Unmarshal(v)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			fmt.Printf("%s %+v\n", k, t)
+		}
+
+	})
+
 }

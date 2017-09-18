@@ -17,12 +17,7 @@
 
 package treeserve
 
-import (
-	"crypto/md5"
-	"io/ioutil"
-	"syscall"
-	"testing"
-)
+/*
 
 func TestChildrenDB(t *testing.T) {
 	lmdbPath, err := ioutil.TempDir("", "genericdb_test_keysetdb")
@@ -55,3 +50,5 @@ func TestChildrenDB(t *testing.T) {
 		t.Errorf("retrieved keyset did not match: %v != %v", &testChildKey1, checkChildKey1)
 	}
 }
+
+*/

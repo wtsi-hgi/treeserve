@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <http://www.gnu.org/licenses/>.
 //
+// example start command
 
 package main
 
@@ -24,12 +25,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/profile"
-	"github.com/wtsi-hgi/treeserve"
+	"github.com/wtsi-hgi/treeserve/go"
 )
 
 // Variables set by command-line flags
 var inputPath string
 var lmdbPath string
+var groupFile string
+var userFile string
 var inputWorkers int
 var costReferenceTime int64
 var lmdbMapSize int64
@@ -46,6 +49,8 @@ var blockProfilePath string
 
 func init() {
 	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
+	flag.StringVar(&groupFile, "groupFile", "/tmp/groups.dat", "Input file")
+	flag.StringVar(&userFile, "userFile", "/tmp/users.dat", "Input file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
 	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200*1024*1024*1024, "LMDB map size (maximum)")
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
@@ -67,7 +72,10 @@ func main() {
 	//log.SetFormatter(&log.JSONFormatter{})
 	if debug {
 		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
+	starttime := time.Now()
 	formerMaxProcs := runtime.GOMAXPROCS(maxProcs)
 	log.WithFields(log.Fields{
 		"formerMaxProcs": formerMaxProcs,
@@ -87,9 +95,8 @@ func main() {
 	flag.VisitAll(func(f *flag.Flag) {
 		flag_fields[f.Name] = f.Value
 	})
-	if debug {
-		log.WithFields(flag_fields).Debug("entered main()")
-	}
+
+	log.WithFields(flag_fields).Debug("entered main()")
 
 	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopInputAfterNLines, nodesFinalizedInfoEveryN, stopFinalizeAfterNNodes, debug)
 	err := ts.OpenLMDB()
@@ -102,9 +109,10 @@ func main() {
 	}
 	defer ts.CloseLMDB()
 
-MainStateMachine:
+	//MainStateMachine:
 	for {
 		state, err := ts.GetState()
+
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Fatal("failed to get state")
 		}
@@ -131,12 +139,14 @@ MainStateMachine:
 			if err != nil {
 				nextState = "treeReady"
 			}
-			nextState = "finalize"
-			break MainStateMachine // for development only
+			nextState = "treeReady"
+			//break MainStateMachine // for development only
 		case "treeReady":
-			log.Info("main state machine: tree ready")
-			break MainStateMachine
+			log.Info("main state machine: tree ready after " + time.Since(starttime).String())
+
+			ts.Webserver(groupFile, userFile)
 		case "failed":
+
 			log.WithFields(log.Fields{
 				"err": err,
 			}).Fatal("main state machine: failed")
@@ -153,8 +163,6 @@ MainStateMachine:
 			}).Fatal("failed to set state")
 		}
 	}
-
-	log.Debug("leaving main()")
 
 	return
 }
