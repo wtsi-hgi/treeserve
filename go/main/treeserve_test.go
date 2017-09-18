@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -667,10 +668,10 @@ func TestNodeJson(t *testing.T) {
 // tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
 func TestCompareTreeJson(t *testing.T) {
-	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=4"
+	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=3"
 	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
 
-	tolerance := .001 // using relDif to check floating points near enough equal
+	tolerance := .01 // using relDif to check floating points near enough equal
 	countSame := 0
 
 	res, err := http.Get(goURL)
@@ -814,20 +815,48 @@ func TestCompareTreeJson(t *testing.T) {
 	//fmt.Println(outputNew)
 
 	fmt.Println(fmt.Sprintf("\n Within tolerance matches : %d out of %d\n", countSame, countSame+len(contentOld)))
+
+	missingFromGo := []string{}
+	missingFromCpp := []string{}
+	nonMatch := []string{}
+
 	for k, v := range contentNew {
 		existing, ok := contentOld[k]
 		if !ok {
-			fmt.Println(fmt.Sprintf("missing from C++ at %s,  Go has %s", k, v))
+			missingFromCpp = append(missingFromCpp, fmt.Sprintf("missing from C++ at %s,  Go has %s", k, v))
 		} else {
-			fmt.Println(fmt.Sprintf("different at %s, C++ %s, Go %s", k, existing, v))
+			nonMatch = append(nonMatch, fmt.Sprintf("different at %s, C++ %s, Go %s", k, existing, v))
 		}
 	}
 	for k, v := range contentOld {
 		_, ok := contentNew[k]
 		if !ok {
-			fmt.Println(fmt.Sprintf("missing from Go at %s, C++ has %s", k, v))
+			missingFromGo = append(missingFromGo, fmt.Sprintf("missing from Go at %s, C++ has %s", k, v))
 		}
 
+	}
+
+	fmt.Println("Missing from Go version")
+	sort.StringSlice(missingFromCpp).Sort()
+	sort.StringSlice(missingFromGo).Sort()
+	sort.StringSlice(nonMatch).Sort()
+
+	for i := range missingFromGo {
+		fmt.Println(missingFromGo[i])
+	}
+	fmt.Println("_________________")
+	fmt.Println("Missing from C++ version")
+	if len(missingFromCpp) == 0 {
+		fmt.Println("None")
+	} else {
+		for i := range missingFromCpp {
+			fmt.Println(missingFromCpp[i])
+		}
+	}
+	fmt.Println("_________________")
+	fmt.Println("Non Matches")
+	for i := range nonMatch {
+		fmt.Println(nonMatch[i])
 	}
 
 }

@@ -130,7 +130,7 @@ func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree, err error) {
 	logInfo(fmt.Sprintf("buildTree level %d depth %d", level, depth))
 
-	if level >= depth {
+	if level > depth {
 		return
 	}
 
@@ -189,18 +189,21 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 			}
 
 		} else {
-			// only files in the *.*
-			a, err := ts.CalculateAggregateStats(child[j])
-			LogError(err)
-			immediateChildStats = append(immediateChildStats, a)
+			// collect files for the *.*, and not at lowest level
+			if level < depth {
+				a, err := ts.CalculateAggregateStats(child[j])
+				LogError(err)
+				immediateChildStats = append(immediateChildStats, a)
+			}
 		}
 
 	}
-
-	immediateChildStats, _ = combineAggregateStats(immediateChildStats)
-	summaryTree, ok := getSummaryTree(t.Path, immediateChildStats)
-	if ok {
-		t.addChild(&summaryTree)
+	if level < depth { // only files in the *.*, and not at lowest level
+		immediateChildStats, _ = combineAggregateStats(immediateChildStats)
+		summaryTree, ok := getSummaryTree(t.Path, immediateChildStats)
+		if ok {
+			t.addChild(&summaryTree)
+		}
 	}
 
 	return
@@ -266,8 +269,8 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 			continue // don't add empty sets of aggregates
 		}
 
-		g := statsItem.Group
-		u := statsItem.User
+		g := lookupGID(statsItem.Group)
+		u := lookupUID(statsItem.User)
 		tag := statsItem.Tag
 
 		//Access Cost
@@ -411,8 +414,8 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 
 		vals, err := ts.StatMappingDB.Get(x)
 		LogError(err)
-		ag.Group = lookupGID(vals.(*StatMapping).Group)
-		ag.User = lookupUID(vals.(*StatMapping).User)
+		ag.Group = vals.(*StatMapping).Group
+		ag.User = vals.(*StatMapping).User
 		ag.Tag = vals.(*StatMapping).Tag
 
 		temp, err := ts.AggregateSizeDB.Get(x)
