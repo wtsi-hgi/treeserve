@@ -1,6 +1,7 @@
 package treeserve
 
 import (
+	"errors"
 	"io"
 	"time"
 	"unsafe"
@@ -88,6 +89,9 @@ func (d *TreeNode) Marshal(buf []byte) ([]byte, error) {
 }
 
 func (d *TreeNode) Unmarshal(buf []byte) (uint64, error) {
+	if len(buf) == 0 {
+		return 0, errors.New("Nothing to unmarshall")
+	}
 	i := uint64(0)
 
 	{
@@ -122,6 +126,7 @@ func (d *TreeNode) Unmarshal(buf []byte) (uint64, error) {
 		i += ni
 	}
 	return i + 0, nil
+
 }
 
 type NodeStats struct {

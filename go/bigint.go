@@ -3,57 +3,57 @@ package treeserve
 import "math/big"
 
 type Bigint struct {
-	i *big.Int
+	I *big.Int
 }
 
 // NewBigint returns a pointer to a Bigint initialised to zero
 func NewBigint() *Bigint {
 	bi := Bigint{}
-	bi.i = &big.Int{}
+	bi.I = &big.Int{}
 	return &bi
 }
 
 // MarshalBinary returns a Bigint converted to bytes for LMDB storage
 func (bi *Bigint) MarshalBinary() (data []byte, err error) {
-	data = bi.i.Bytes()
+	data = bi.I.Bytes()
 	return
 }
 
 func (bi *Bigint) UnmarshalBinary(data []byte) (err error) {
-	bi.i.SetBytes(data)
+	bi.I.SetBytes(data)
 	return
 }
 
 func (bi *Bigint) SetUint64(x uint64) {
-	bi.i.SetUint64(x)
+	bi.I.SetUint64(x)
 }
 
 func (bi *Bigint) SetInt64(x int64) {
-	bi.i.SetInt64(x)
+	bi.I.SetInt64(x)
 }
 func (bi *Bigint) SetString(x string) {
-	bi.i.SetString(x, 10)
+	bi.I.SetString(x, 10)
 }
 
 func (bi *Bigint) Mul(x, y *Bigint) {
-	bi.i.Mul(x.i, y.i)
+	bi.I.Mul(x.I, y.I)
 }
 
 func (bi *Bigint) Add(x, y *Bigint) {
-	bi.i.Add(x.i, y.i)
+	bi.I.Add(x.I, y.I)
 }
 
 func (bi *Bigint) Subtract(x, y *Bigint) {
-	bi.i.Sub(x.i, y.i)
+	bi.I.Sub(x.I, y.I)
 }
 
 func (bi *Bigint) Text(base int) (s string) {
-	s = bi.i.Text(base)
+	s = bi.I.Text(base)
 	return
 }
 func Divide(x, y *Bigint) (f string) {
-	f1 := new(big.Float).SetInt(x.i)
-	f2 := new(big.Float).SetInt(y.i)
+	f1 := new(big.Float).SetInt(x.I)
+	f2 := new(big.Float).SetInt(y.I)
 	f3 := new(big.Float).Quo(f1, f2)
 	f = f3.Text('e', 16)
 	return
@@ -62,16 +62,16 @@ func Divide(x, y *Bigint) (f string) {
 
 func (bi *Bigint) isZero() bool {
 	x := NewBigint()
-	return (bi.i.Cmp(x.i) == 0)
+	return (bi.I.Cmp(x.I) == 0)
 }
 
 func (bi *Bigint) isNegative() bool {
 	x := NewBigint()
-	return (bi.i.Cmp(x.i) <= 0)
+	return (bi.I.Cmp(x.I) <= 0)
 }
 
 // Equals returne true if two Bigints are equal
 func (bi *Bigint) Equals(x *Bigint) (ans bool) {
-	ans = (bi.i.Cmp(x.i) == 0)
+	ans = (bi.I.Cmp(x.I) == 0)
 	return
 }

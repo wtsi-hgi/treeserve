@@ -70,6 +70,16 @@ func init() {
 func main() {
 	flag.Parse()
 	//log.SetFormatter(&log.JSONFormatter{})
+	// profiling
+	//f1, err := os.Create("/tmp/cpu.dat")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	//pprof.StartCPUProfile(f1)
+	//defer pprof.StopCPUProfile()
+
+	//
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -143,7 +153,7 @@ func main() {
 			//break MainStateMachine // for development only
 		case "treeReady":
 			log.Info("main state machine: tree ready after " + time.Since(starttime).String())
-
+			//pprof.StopCPUProfile()
 			ts.Webserver(groupFile, userFile)
 		case "failed":
 

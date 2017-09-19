@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"math"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -60,18 +61,20 @@ type Aggregates struct {
 	User  string `json:"user"`
 	Tag   string `json:"tag"`
 
-	Size         *Bigint `json:"size"`
-	Count        *Bigint `json:"count"`
-	CreationCost *Bigint `json:"ccost"`
-	AccessCost   *Bigint `json:"acost"`
-	ModifyCost   *Bigint `json:"mcost"`
+	Size         *big.Int `json:"size"`
+	Count        *big.Int `json:"count"`
+	CreationCost *big.Int `json:"ccost"`
+	AccessCost   *big.Int `json:"acost"`
+	ModifyCost   *big.Int `json:"mcost"`
 }
 
 //Webserver listens for requests of the form
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
 // and returns nodes in json
 func (ts *TreeServe) Webserver(groupFile, userFile string) {
+
 	groupMap, userMap = buildUserGroupMaps(groupFile, userFile)
+	logInfo("Built Maps")
 
 	port := "8000"
 	http.HandleFunc("/", hello)
@@ -95,11 +98,14 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func (ts *TreeServe) tree(w http.ResponseWriter, r *http.Request) {
 
 	path, depth := queryParameters(r)
+	logInfo(fmt.Sprintf("Getting path %s, depth %d", path, depth))
 
 	nodeKey := ts.getPathKey(path)
+	logInfo("gotPathKey")
 
 	j := []byte{}
 
+	logInfo("Calling build tree")
 	t, err := ts.buildTree(nodeKey, 0, depth)
 
 	if err == nil {
@@ -135,31 +141,35 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	}
 
 	temp, err := ts.GetTreeNode(rootKey)
+
 	if err != nil {
 		LogError(err)
 		return
 	}
+	logInfo("got treenode " + temp.Name)
 
 	t = dirTree{key: rootKey}
 	t.Path = strings.TrimSuffix(temp.Name, "/")
 	_, file := filepath.Split(t.Path)
 	t.Name = file
 
+	logInfo("About to retrieve aggregates")
 	stats, err := ts.retrieveAggregates(rootKey)
 	if err != nil {
+		LogError(err)
 		return
 	}
 	if len(stats) == 0 {
 		logInfo(" Blank stats at " + t.Path)
 	}
-
+	logInfo("About to organise aggregates")
 	a, err := organiseAggregates(stats)
 	if err != nil {
 		LogError(err)
 		return
 	}
 	t.Data = a
-
+	logInfo("About to retrieve children")
 	child, err := ts.children(rootKey)
 	if err != nil {
 		LogError(err)
@@ -262,8 +272,7 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 
 		//fmt.Println(statsItem.Group, statsItem.User, statsItem.Tag)
 
-		// check non zero count
-		if statsItem.Count.isZero() {
+		if statsItem.Count.Cmp(big.NewInt(0)) == 0 {
 			errorCount++
 			//	fmt.Println(statsItem.Count, statsItem.Size, statsItem)
 			continue // don't add empty sets of aggregates
@@ -334,7 +343,7 @@ func queryParameters(r *http.Request) (path string, depth int) {
 }
 
 // updateMap takes a new set of category tags and a value and updates the three level map (this is needed so that json.Marshal outputs the correct format)
-func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, theValue *Bigint, g string, u string, tag string) {
+func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, theValue *big.Int, g string, u string, tag string) {
 	if len(*theMap) == 0 {
 
 		mt := make(map[string]string)
@@ -395,6 +404,7 @@ func updateMap(scaleMap bool, theMap *map[string]map[string]map[string]string, t
 // Used for output after the database has been built up. Returns an error if the node has no stats associated
 // which may be the case for the parent of the root node but nothing else
 func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err error) {
+	logInfo("")
 	data = []Aggregates{}
 	// all keys mapping this node to sets of aggregate stats
 	aggregateKeys, err := ts.StatMappingsDB.GetKeySet(nodekey)
@@ -407,39 +417,31 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 		return
 	}
 
+	logInfo(fmt.Sprintf("got %d aggregate Keys", len(aggregateKeys)))
 	for i := range aggregateKeys {
-
+		logInfo(fmt.Sprintf("loop %d key %b", i, aggregateKeys[i]))
 		x := aggregateKeys[i].(*Md5Key)
+		logInfo(fmt.Sprintf("loop %d key %b", i, x))
+
+		vals, err := ts.AggregateStatsDB.Get(x)
+
+		nums := vals.(*AggregateNums)
+		temp, err := ts.StatMappingDB.Get(x)
+		s := temp.(*StatMapping)
+		LogError(err)
+
 		ag := Aggregates{}
 
-		vals, err := ts.StatMappingDB.Get(x)
-		LogError(err)
-		ag.Group = vals.(*StatMapping).Group
-		ag.User = vals.(*StatMapping).User
-		ag.Tag = vals.(*StatMapping).Tag
+		ag.Group = s.Group
+		ag.User = s.User
+		ag.Tag = s.Tag
 
-		temp, err := ts.AggregateSizeDB.Get(x)
-		LogError(err)
-		size := temp.(*Bigint)
-		ag.Size = size
-
-		temp, err = ts.AggregateCountDB.Get(x)
-		LogError(err)
-
-		count := temp.(*Bigint)
-		ag.Count = count
-
-		temp, err = ts.AggregateAccessCostDB.Get(x)
-		LogError(err)
-		ag.AccessCost = temp.(*Bigint)
-
-		temp, err = ts.AggregateModifyCostDB.Get(x)
-		LogError(err)
-		ag.ModifyCost = temp.(*Bigint)
-
-		temp, err = ts.AggregateCreateCostDB.Get(x)
-		LogError(err)
-		ag.CreationCost = temp.(*Bigint)
+		ag.Size = nums.Size
+		ag.Count = nums.Count
+		ag.AccessCost = nums.AccessCost
+		ag.ModifyCost = nums.ModifyCost
+		ag.CreationCost = nums.CreateCost
+		logInfo(fmt.Sprintf("****%+v", ag))
 		data = append(data, ag)
 
 	}
@@ -462,29 +464,29 @@ func logInfo(str string) {
 		buf := os.Stdout
 		_, f, l, _ := runtime.Caller(1)
 		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-		logger.Println(str)*/
+		logger.Println(str) */
 }
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)
 // This one uses Big package to keep sizes in bytes and times in seconds
 // The conversion factor was #150 per tebibyte year. If the value is
 // below threshold, make it zero
-func convertstatsForOutput(b *Bigint) (s string) {
-	threshold := float64(0.000000001)
-	sizeConv := NewBigint()
-	sizeConv.SetInt64(1024 * 1024 * 1024 * 1024) // tebibytes
-	timeConv := NewBigint()
-	timeConv.SetInt64(secondsInYear / 150) // divisible
-	// we need b divided size conv and seconds in a year and multiplied by 150
-	overallConv := NewBigint()
-	overallConv.Mul(sizeConv, timeConv)
+func convertstatsForOutput(b *big.Int) (s string) {
+	//threshold := float64(0.00001)
 
-	s = Divide(b, overallConv)
-	sVal, err := strconv.ParseFloat(s, 64)
-	LogError(err)
-	if sVal < threshold {
-		s = "0"
-	}
+	sizeConv := big.NewFloat(1024 * 1024 * 1024 * 1024) // tebibytes
+	timeConv := big.NewFloat(secondsInYear / 150)       // divisible
+	// we need b divided size conv and seconds in a year and multiplied by 150
+
+	b2 := big.NewFloat(0).SetInt(b)
+
+	ans := big.NewFloat(0)
+
+	ans.Quo(b2, sizeConv)
+	ans.Quo(ans, timeConv)
+
+	s = ans.Text('e', 6)
+
 	return
 }
 
@@ -507,24 +509,24 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 		c.Tag = a.Tag
 	}
 
-	temp := NewBigint()
+	temp := big.NewInt(0)
 
 	temp.Add(a.Count, b.Count)
 	c.Count = temp
 
-	temp2 := NewBigint()
+	temp2 := big.NewInt(0)
 	temp2.Add(a.Size, b.Size)
 	c.Size = temp2
 
-	temp3 := NewBigint()
+	temp3 := big.NewInt(0)
 	temp3.Add(a.AccessCost, b.AccessCost)
 	c.AccessCost = temp3
 
-	temp4 := NewBigint()
+	temp4 := big.NewInt(0)
 	temp4.Add(a.CreationCost, b.CreationCost)
 	c.CreationCost = temp4
 
-	temp5 := NewBigint()
+	temp5 := big.NewInt(0)
 	temp5.Add(a.ModifyCost, b.ModifyCost)
 	c.ModifyCost = temp5
 	return

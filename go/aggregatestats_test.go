@@ -2,8 +2,24 @@ package treeserve
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 )
+
+func TestMarshalBinary(t *testing.T) {
+
+	x := big.NewInt(30)
+
+	a := AggregateNums{Count: x}
+	b, err := a.MarshalBinary()
+	fmt.Println(string(b), err)
+
+	c := AggregateNums{}
+	err = c.UnmarshalBinary(b)
+
+	fmt.Println(*c.Count, err)
+
+}
 
 func TestCombineAggregateStats(t *testing.T) {
 	testdata := []*AggregateStats{}
@@ -20,17 +36,12 @@ func TestCombineAggregateStats(t *testing.T) {
 	stat2 := NewStatMappings()
 	stat2.Add(cat1Key, &categories1)
 
-	b1 := NewBigint()
-	b1.SetInt64(1)
+	b1 := big.NewInt(1)
 
-	b2 := NewBigint()
-	b2.SetInt64(2)
-	b3 := NewBigint()
-	b3.SetInt64(3)
-	b4 := NewBigint()
-	b4.SetInt64(4)
-	b5 := NewBigint()
-	b5.SetInt64(5)
+	b2 := big.NewInt(2)
+	b3 := big.NewInt(3)
+	b4 := big.NewInt(4)
+	b5 := big.NewInt(5)
 
 	testdata = append(testdata, &AggregateStats{stat1, b1, b2, b3, b4, b5})
 	//testdata = append(testdata, &AggregateStats{stat1, b1, b1, b1, b1, b1})

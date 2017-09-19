@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"testing"
 )
@@ -55,10 +56,10 @@ func TestSubtractAggregateMap(t *testing.T) {
 }*/
 
 func TestOrganiseAggregates(t *testing.T) {
-	b1 := NewBigint()
-	b1.SetInt64(100)
-	b2 := NewBigint()
-	b2.SetInt64(10000)
+	b1 := big.NewInt(65)
+
+	b2 := big.NewInt(7000)
+
 	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
 	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
 	f := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
@@ -79,10 +80,9 @@ func TestOrganiseAggregates(t *testing.T) {
 
 func TestAddAggregates(t *testing.T) {
 
-	b1 := NewBigint()
-	b1.SetInt64(100)
-	b2 := NewBigint()
-	b2.SetInt64(10000)
+	b1 := big.NewInt(65)
+
+	b2 := big.NewInt(7000)
 	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
 	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
 
@@ -92,9 +92,9 @@ func TestAddAggregates(t *testing.T) {
 	}
 	fmt.Println(c)
 
-	c1 := NewBigint()
-	c1.SetInt64(10100)
-	if !c.Count.Equals(c1) {
+	c1 := big.NewInt(7065)
+
+	if c.Count.Cmp(c1) != 0 {
 		t.Errorf("wanted %+v, got %+v", c1, c.Count)
 	}
 
@@ -183,3 +183,8 @@ func TestMapFromAggregateArray(t *testing.T) {
 		fmt.Println(k, v.Count.Text(10))
 	}
 }*/
+
+func TestConvertstatsForOutput(t *testing.T) {
+	b := big.NewInt(400000000)
+	fmt.Println(convertstatsForOutput(b))
+}

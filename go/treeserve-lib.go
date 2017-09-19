@@ -25,6 +25,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path"
 	"strconv"
@@ -59,17 +60,20 @@ type TreeServe struct {
 	TreeNodeDB               GenericDB // maps path Md5Key to non-aggregated TreeNode data
 	StatMappingDB            GenericDB // maps statmapping Md5Key back to StatMapping data
 	ChildrenDB               KeySetDB  // maps node Md5Key to set of child Md5Keys
-	StatMappingsDB           KeySetDB  // maps  node+aggregateData Md5Key to set of statMapping Md5Keys
-	AggregateSizeDB          GenericDB // maps  node+aggregateData Md5Key to aggregated size for that node
-	AggregateCountDB         GenericDB // maps  node+aggregateData  to aggregated count for that node
-	AggregateCreateCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since created for that node
-	AggregateModifyCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since modified for that node
-	AggregateAccessCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since accessed for that node
-	NodesCreated             int64
-	NodesFinalized           int64
-	StopInputAfterNLines     int64
-	StopFinalizeAfterNNodes  int64
-	Debug                    bool
+
+	StatMappingsDB KeySetDB // maps  node+aggregateData Md5Key to set of statMapping Md5Keys
+	/*
+		AggregateSizeDB          GenericDB // maps  node+aggregateData Md5Key to aggregated size for that node
+		AggregateCountDB         GenericDB // maps  node+aggregateData  to aggregated count for that node
+		AggregateCreateCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since created for that node
+		AggregateModifyCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since modified for that node
+		AggregateAccessCostDB    GenericDB // maps  node+aggregateData  to aggregated cost since accessed for that node */
+	AggregateStatsDB        GenericDB // all aggregate stats for a node and set of aggregate data (one node has several)
+	NodesCreated            int64
+	NodesFinalized          int64
+	StopInputAfterNLines    int64
+	StopFinalizeAfterNNodes int64
+	Debug                   bool
 }
 
 // BinaryMarshallerUnmarshaller is used to make sure every
@@ -98,6 +102,18 @@ func NewTreeServe(lmdbPath string, lmdbMapSize int64, costReferenceTime int64, n
 
 func (ts *TreeServe) NewTreeNodeDB(dbName string) (gdb GenericDB, err error) {
 	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewTreeNode() }}
+	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
+
+	log.WithFields(log.Fields{
+		"ts":     ts,
+		"dbName": dbName,
+	}).Debug("opened TreeNode database")
+
+	return
+}
+
+func (ts *TreeServe) NewAggregateStatsDB(dbName string) (gdb GenericDB, err error) {
+	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewAggregateNums() }}
 	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
 
 	log.WithFields(log.Fields{
@@ -234,30 +250,35 @@ func (ts *TreeServe) OpenLMDB() (err error) {
 	if err != nil {
 		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open StatMappings database")
 	}
+	/*
+		ts.AggregateSizeDB, err = ts.NewBigintDB("AggregateSize")
+		if err != nil {
+			log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateSize database")
+		}
 
-	ts.AggregateSizeDB, err = ts.NewBigintDB("AggregateSize")
-	if err != nil {
-		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateSize database")
-	}
+		ts.AggregateCountDB, err = ts.NewBigintDB("AggregateCount")
+		if err != nil {
+			log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateCount database")
+		}
 
-	ts.AggregateCountDB, err = ts.NewBigintDB("AggregateCount")
-	if err != nil {
-		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateCount database")
-	}
+		ts.AggregateCreateCostDB, err = ts.NewBigintDB("AggregateCreateCost")
+		if err != nil {
+			log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateCreateCost database")
+		}
 
-	ts.AggregateCreateCostDB, err = ts.NewBigintDB("AggregateCreateCost")
-	if err != nil {
-		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateCreateCost database")
-	}
+		ts.AggregateModifyCostDB, err = ts.NewBigintDB("AggregateModifyCost")
+		if err != nil {
+			log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateModifyCost database")
+		}
 
-	ts.AggregateModifyCostDB, err = ts.NewBigintDB("AggregateModifyCost")
+		ts.AggregateAccessCostDB, err = ts.NewBigintDB("AggregateAccessCost")
+		if err != nil {
+			log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateAccessCost database")
+		}
+	*/
+	ts.AggregateStatsDB, err = ts.NewAggregateStatsDB("AggregateStats")
 	if err != nil {
-		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateModifyCost database")
-	}
-
-	ts.AggregateAccessCostDB, err = ts.NewBigintDB("AggregateAccessCost")
-	if err != nil {
-		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateAccessCost database")
+		log.WithFields(log.Fields{"ts": ts}).Fatal("failed to open AggregateStats database")
 	}
 
 	return
@@ -286,6 +307,7 @@ func (ts *TreeServe) GetTreeNode(nodeKey *Md5Key) (treeNode *TreeNode, err error
 	return
 }
 
+/*
 func (ts *TreeServe) GetStatMapping(statMappingKey *Md5Key) (treeNode *StatMapping, err error) {
 	dbData, err := ts.StatMappingDB.Get(statMappingKey)
 	if err != nil {
@@ -296,7 +318,7 @@ func (ts *TreeServe) GetStatMapping(statMappingKey *Md5Key) (treeNode *StatMappi
 	}
 	treeNode = dbData.(*StatMapping)
 	return
-}
+}*/
 
 // ensureDirectoryInTree checks whether a directory node exists and adds it if not
 func (ts *TreeServe) ensureDirectoryInTree(dirPath string) (dirPathKey *Md5Key, err error) {
@@ -763,25 +785,19 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 
 	statMappings := ts.GetStatMappings(treeNode)
 
-	size := NewBigint()
-	size.SetUint64(treeNode.Stats.FileSize)
+	size := big.NewInt(int64(treeNode.Stats.FileSize))
+	count := big.NewInt(1)
 
-	count := NewBigint()
-	count.SetUint64(1)
-
-	secondsSinceCreation := NewBigint()
-	secondsSinceCreation.SetInt64(ts.CostReferenceTime - treeNode.Stats.CreationTime)
-	createCost := NewBigint()
+	secondsSinceCreation := big.NewInt(ts.CostReferenceTime - treeNode.Stats.CreationTime)
+	createCost := big.NewInt(0)
 	createCost.Mul(size, secondsSinceCreation)
 
-	secondsSinceModification := NewBigint()
-	secondsSinceModification.SetInt64(ts.CostReferenceTime - treeNode.Stats.ModificationTime)
-	modifyCost := NewBigint()
+	secondsSinceModification := big.NewInt(ts.CostReferenceTime - treeNode.Stats.ModificationTime)
+	modifyCost := big.NewInt(0)
 	modifyCost.Mul(size, secondsSinceModification)
 
-	secondsSinceAccess := NewBigint()
-	secondsSinceAccess.SetInt64(ts.CostReferenceTime - treeNode.Stats.AccessTime)
-	accessCost := NewBigint()
+	secondsSinceAccess := big.NewInt(ts.CostReferenceTime - treeNode.Stats.AccessTime)
+	accessCost := big.NewInt(0)
 	accessCost.Mul(size, secondsSinceAccess)
 
 	aggregateStats = &AggregateStats{
@@ -950,7 +966,10 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 	x, _ := ts.GetTreeNode(node)
 	logInfo("saving for " + x.Name)
 
-	ts.saveAggregateStats(node, aggregateStats)
+	ts.saveAggregateStats2(node, aggregateStats)
+	// and clear associated variables
+	close(childResults)
+
 	//
 	select {
 	case <-ctx.Done():
@@ -1000,6 +1019,7 @@ func init() {
 }
 
 func (ts *TreeServe) resetAggregationDatabases() (err error) {
+
 	err = ts.StatMappingDB.Reset()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -1007,48 +1027,51 @@ func (ts *TreeServe) resetAggregationDatabases() (err error) {
 			"ts":  ts,
 		}).Fatal("failed to reset stat mapping database")
 	}
-	err = ts.StatMappingsDB.Reset()
+	err = ts.AggregateStatsDB.Reset()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset stat mappings database")
-	}
-	err = ts.AggregateSizeDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate size database")
-	}
-	err = ts.AggregateCountDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate count database")
-	}
-	err = ts.AggregateCreateCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate create cost database")
-	}
-	err = ts.AggregateModifyCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate modify cost database")
-	}
-	err = ts.AggregateAccessCostDB.Reset()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-			"ts":  ts,
-		}).Fatal("failed to reset aggregate access cost database")
+		log.Fatal("failed to reset aggregate stats database for treeserve %+v, with error %s", ts, err.Error())
 	}
 
+	err = ts.StatMappingsDB.Reset()
+	if err != nil {
+		log.Fatal("failed to resetstat mappings database for treeserve %+v, with error %s", ts, err.Error())
+	}
+	/*
+		err = ts.AggregateSizeDB.Reset()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+				"ts":  ts,
+			}).Fatal("failed to reset aggregate size database")
+		}
+		err = ts.AggregateCountDB.Reset()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+				"ts":  ts,
+			}).Fatal("failed to reset aggregate count database")
+		}
+		err = ts.AggregateCreateCostDB.Reset()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+				"ts":  ts,
+			}).Fatal("failed to reset aggregate create cost database")
+		}
+		err = ts.AggregateModifyCostDB.Reset()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+				"ts":  ts,
+			}).Fatal("failed to reset aggregate modify cost database")
+		}
+		err = ts.AggregateAccessCostDB.Reset()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+				"ts":  ts,
+			}).Fatal("failed to reset aggregate access cost database")
+		}
+	*/
 	return
 }

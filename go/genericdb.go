@@ -163,6 +163,7 @@ func (gdb *GenericDB) Update(key encoding.BinaryMarshaler, update UpdateData) (e
 }
 
 func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmarshaler, err error) {
+	logInfo("Get")
 	ts := gdb.TS
 	keyBytes, err := key.MarshalBinary()
 	if err != nil {
@@ -171,8 +172,10 @@ func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmar
 		}).Error("could not marshal key")
 		return
 	}
+	logInfo("Get")
 	var dataBytes []byte
 	data = gdb.NewData()
+	logInfo("Get")
 	err = ts.LMDBEnv.View(func(txn *lmdb.Txn) (err error) {
 		dataBytes, err = txn.Get(gdb.DBI, keyBytes)
 		return
@@ -189,6 +192,7 @@ func (gdb *GenericDB) Get(key encoding.BinaryMarshaler) (data BinaryMarshalUnmar
 			"gdb": gdb,
 		}).Fatal("failed to get node from database")
 	}
+	logInfo("Get")
 	err = data.UnmarshalBinary(dataBytes)
 	if err != nil {
 		log.WithFields(log.Fields{
