@@ -21,40 +21,6 @@ func TestAddChild(t *testing.T) {
 
 }
 
-/*
-func TestSubtractAggregateMap(t *testing.T) {
-
-	b1 := NewBigint()
-	b1.SetInt64(100)
-	b2 := NewBigint()
-	b2.SetInt64(10000)
-
-	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	c := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	d := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-
-	parent := make(map[string]Aggregates)
-	parent["1"] = a
-	parent["2"] = b
-	parent["3"] = c
-
-	child := make(map[string]Aggregates)
-	child["1"] = d
-
-	result, err := subtractAggregateMap(parent, child)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	//fmt.Printf("%T   %+v", result, result)
-
-	if len(result) != 2 {
-		t.Errorf("have %d, wanted %d", len(result), 2)
-	}
-
-}*/
-
 func TestOrganiseAggregates(t *testing.T) {
 	b1 := big.NewInt(65)
 

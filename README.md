@@ -60,5 +60,32 @@ LMDB data persists between runs, to recalculate data remove the cache directory.
 Go version (also using LMDB)
 ============================
 
-There is also a go version. 
+###Requirements
 
+    LMDB
+    
+    Run from shell script which builds and runs the Docker image, mapping the MPIstat file and group and user files into the Docker container. (Needs to build there since Farm has an old version of Docker)
+    
+    The Dockerfile requires a Go executable and is based on an image which includes LMDB. The Go executable should be compiled for a compatible operating system to teh one in the Docker base image.
+    
+    Command line is like
+    
+    <treeserve_script.sh> -lstat <lstatname.dat.gz> -port 8000
+    
+    The shell script then makes group and user mapping files from local information and binds those and the data file to Docker
+    
+###Format of fields in the data file are :
+
+* base64 encoding of the path (to handle unprintable characters in paths)
+* size of the object
+* owner
+* group
+* atime
+* mtime
+* ctime
+* object type (dir, normal file, symlink etc.)
+* inode #
+* number of hardlinks
+* device id
+    
+last 3 not used.

@@ -22,6 +22,10 @@ import (
 // Aggregate values are converted from bytes and seconds to Tebibytes and year on output
 const secondsInYear = 60 * 60 * 24 * 365
 const costPerTibYear = 150.0
+const bytesInTebibytes = 1024 * 1024 * 1024 * 1024
+
+var sizeConv = big.NewFloat(bytesInTebibytes)
+var timeConv = big.NewFloat(secondsInYear / costPerTibYear)
 
 // The files are made using getent group and getent passwd
 // the maps use the files to map GID and UID to the names
@@ -71,21 +75,24 @@ type Aggregates struct {
 //Webserver listens for requests of the form
 // xxxxx/maxdepth=1&path=/lustre/scratch115/projects
 // and returns nodes in json
-func (ts *TreeServe) Webserver(groupFile, userFile string) {
+func (ts *TreeServe) Webserver(groupFile, userFile string, port string) {
 
 	groupMap, userMap = buildUserGroupMaps(groupFile, userFile)
 	logInfo("Built Maps")
 
-	port := "8000"
+	//port := "8000"
+	//ip := "127.0.0.1:"
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/tree", ts.tree)
 	http.HandleFunc("/raw", ts.raw)
+	logInfo("Set handlers")
 	//http.ListenAndServe(":"+port, nil)
-	err := http.ListenAndServe("127.0.0.1:"+port, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux))
-
+	err := http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux))
+	//err := http.ListenAndServe(":9000", nil)
+	logInfo(err.Error())
 	LogError(err)
 
-	logInfo("Webserver started")
+	logInfo(fmt.Sprintf("Webserver started on port %s", "9000"))
 
 }
 
@@ -460,11 +467,11 @@ func LogError(err error) {
 }
 
 func logInfo(str string) {
-	/*
-		buf := os.Stdout
-		_, f, l, _ := runtime.Caller(1)
-		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-		logger.Println(str) */
+
+	buf := os.Stdout
+	_, f, l, _ := runtime.Caller(1)
+	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
+	logger.Println(str)
 }
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)
@@ -473,10 +480,6 @@ func logInfo(str string) {
 // below threshold, make it zero
 func convertstatsForOutput(b *big.Int) (s string) {
 	//threshold := float64(0.00001)
-
-	sizeConv := big.NewFloat(1024 * 1024 * 1024 * 1024) // tebibytes
-	timeConv := big.NewFloat(secondsInYear / 150)       // divisible
-	// we need b divided size conv and seconds in a year and multiplied by 150
 
 	b2 := big.NewFloat(0).SetInt(b)
 

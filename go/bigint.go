@@ -1,7 +1,6 @@
 package treeserve
 
-import "math/big"
-
+/*
 type Bigint struct {
 	I *big.Int
 }
@@ -75,3 +74,5 @@ func (bi *Bigint) Equals(x *Bigint) (ans bool) {
 	ans = (bi.I.Cmp(x.I) == 0)
 	return
 }
+
+*/

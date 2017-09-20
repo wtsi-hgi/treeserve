@@ -668,7 +668,13 @@ func TestNodeJson(t *testing.T) {
 // tree builds from the same data file. Relies on both servers running on ports shown.
 // NOTE depth different check
 func TestCompareTreeJson(t *testing.T) {
-	goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=3"
+	// commands to run go (in and out of docker) and C++
+	//sudo docker run -v /home/sjc/testdata/g:/etc/group -v /home/sjc/testdata/p:/etc/passwd -v /home/sjc/testdata/118sel2.dat.gz:/docker/input.gz -p 9999:80 mercury/treeserve
+	// go run treeserve.go -inputPath=/home/sjc/testdata/118sel2.dat.gz -groupFile=/home/sjc/testdata/g -userFile=/home/sjc/testdata/p
+	// ./ts.sh  ./118sel2.dat.gz 9900
+
+	//goURL := "http://localhost:8000/tree?&path=/lustre/scratch118/compgen&depth=3" non docker
+	goURL := "http://localhost:9000/tree?&path=/lustre/scratch118/compgen&depth=3"
 	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
 
 	tolerance := .01 // using relDif to check floating points near enough equal

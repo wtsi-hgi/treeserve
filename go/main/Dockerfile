@@ -4,9 +4,6 @@ WORKDIR /go/src/app
 COPY . .
 
 
-
-
-
 CMD ./treeserveApp
 
 

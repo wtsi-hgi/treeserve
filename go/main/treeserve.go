@@ -20,7 +20,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"runtime"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -46,11 +48,12 @@ var debug bool
 var cpuProfilePath string
 var memProfilePath string
 var blockProfilePath string
+var port int
 
 func init() {
-	flag.StringVar(&inputPath, "inputPath", "input.dat.gz", "Input file")
-	flag.StringVar(&groupFile, "groupFile", "/tmp/groups.dat", "Input file")
-	flag.StringVar(&userFile, "userFile", "/tmp/users.dat", "Input file")
+	flag.StringVar(&inputPath, "inputPath", "/tmp/input.dat.gz", "Input file")
+	flag.StringVar(&groupFile, "groupFile", "/etc/groups", "Group mapping file")
+	flag.StringVar(&userFile, "userFile", "/etc/users", "User mapping file file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
 	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200*1024*1024*1024, "LMDB map size (maximum)")
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
@@ -65,6 +68,7 @@ func init() {
 	flag.StringVar(&cpuProfilePath, "cpuProfilePath", "", "Write CPU profile to path")
 	flag.StringVar(&memProfilePath, "memProfilePath", "", "Write Memory profile to path")
 	flag.StringVar(&blockProfilePath, "blockProfilePath", "", "Write Block (contention) profile to path")
+	flag.IntVar(&port, "port", 8000, "webserver port")
 }
 
 func main() {
@@ -101,21 +105,17 @@ func main() {
 		runtime.SetBlockProfileRate(1)
 		defer profile.Start(profile.BlockProfile, profile.ProfilePath(blockProfilePath)).Stop()
 	}
-	flag_fields := log.Fields{}
+	flagFields := log.Fields{}
 	flag.VisitAll(func(f *flag.Flag) {
-		flag_fields[f.Name] = f.Value
+		flagFields[f.Name] = f.Value
 	})
 
-	log.WithFields(flag_fields).Debug("entered main()")
+	log.Debug("entered main()")
 
 	ts := treeserve.NewTreeServe(lmdbPath, lmdbMapSize, costReferenceTime, nodesCreatedInfoEveryN, stopInputAfterNLines, nodesFinalizedInfoEveryN, stopFinalizeAfterNNodes, debug)
 	err := ts.OpenLMDB()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"lmdbPath":    lmdbPath,
-			"lmdbMapSize": lmdbMapSize,
-			"ts":          ts,
-		}).Fatal("failed to open TreeServe LMDB")
+		log.Fatal("failed to open TreeServe LMDB")
 	}
 	defer ts.CloseLMDB()
 
@@ -124,7 +124,7 @@ func main() {
 		state, err := ts.GetState()
 
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Fatal("failed to get state")
+			log.Fatal(fmt.Sprintf("failed to get state, %s", err.Error()))
 		}
 
 		nextState := "failed"
@@ -136,7 +136,7 @@ func main() {
 			log.Info("main state machine: inputProcessing")
 			err = ts.ProcessInput(inputPath, inputWorkers)
 			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Fatal("failed to process input")
+				log.Fatal(fmt.Sprintf("failed to process input, %s", err.Error()))
 			} else {
 				nextState = "inputProcessed"
 			}
@@ -147,32 +147,26 @@ func main() {
 			log.Info("main state machine: finalize")
 			err = ts.Finalize("/", finalizeWorkers)
 			if err != nil {
+				log.Error(fmt.Sprintf("failed to finalize input, %s", err.Error()))
+				nextState = "failed"
+			} else {
 				nextState = "treeReady"
 			}
-			nextState = "treeReady"
-			//break MainStateMachine // for development only
+
 		case "treeReady":
 			log.Info("main state machine: tree ready after " + time.Since(starttime).String())
 			//pprof.StopCPUProfile()
-			ts.Webserver(groupFile, userFile)
+			ts.Webserver(groupFile, userFile, strconv.Itoa(port))
 		case "failed":
 
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Fatal("main state machine: failed")
+			log.Fatal(fmt.Sprintf("Treeserve data processing failed, %s", err.Error()))
 		default:
-			log.WithFields(log.Fields{
-				"state": state,
-			}).Fatal("main state machine: unimplemented state transition")
+			log.Fatal("main state machine: unimplemented state transition")
 		}
 		err = ts.SetState(nextState)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"nextState": nextState,
-				"err":       err,
-			}).Fatal("failed to set state")
+			log.Fatal(fmt.Sprintf("failed to set state, %s, %s", nextState, err.Error()))
 		}
 	}
 
-	return
 }

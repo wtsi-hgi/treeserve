@@ -136,6 +136,7 @@ func (ts *TreeServe) NewStatMappingDB(dbName string) (gdb GenericDB, err error) 
 	return
 }
 
+/*
 func (ts *TreeServe) NewBigintDB(dbName string) (gdb GenericDB, err error) {
 	gdb = GenericDB{DBCommon{TS: ts, Name: dbName}, func() BinaryMarshalUnmarshaler { return NewBigint() }}
 	gdb.DBI, err = ts.openLMDBDBI(ts.LMDBEnv, gdb.Name, lmdb.Create)
@@ -146,7 +147,7 @@ func (ts *TreeServe) NewBigintDB(dbName string) (gdb GenericDB, err error) {
 	}).Debug("opened BigintDB")
 
 	return
-}
+}*/
 
 func (ts *TreeServe) NewKeySetDB(dbName string) (ksdb KeySetDB, err error) {
 	ksdb = KeySetDB{DBCommon{TS: ts, Name: dbName}}
@@ -966,7 +967,7 @@ func (ts *TreeServe) aggregateSubtree(ctx context.Context, WorkerID int, subtree
 	x, _ := ts.GetTreeNode(node)
 	logInfo("saving for " + x.Name)
 
-	ts.saveAggregateStats2(node, aggregateStats)
+	ts.saveAggregateStats(node, aggregateStats)
 	// and clear associated variables
 	close(childResults)
 

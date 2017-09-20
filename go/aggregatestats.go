@@ -1,7 +1,6 @@
 package treeserve
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -18,14 +17,6 @@ type AggregateStats struct {
 	CreateCost   *big.Int
 	ModifyCost   *big.Int
 	AccessCost   *big.Int
-}
-
-type AggregateNums struct {
-	Size       *big.Int
-	Count      *big.Int
-	CreateCost *big.Int
-	ModifyCost *big.Int
-	AccessCost *big.Int
 }
 
 // Add adds aggregate values where a set of group/user/tag is in the StatMappings
@@ -142,90 +133,16 @@ func combineAggregateStats(input []*AggregateStats) (combined []*AggregateStats,
 	return
 }
 
-// saveAggregateStats saves a set of stats to the databases.
-/*
+// saveAggregateStats saves a set of stats to the database
 func (ts *TreeServe) saveAggregateStats(node *Md5Key, aggregateStats []*AggregateStats) (err error) {
-	//log.Info("SAVING AGGREGATE STATS")
-
-	for i := range aggregateStats {
-
-		// for each set of aggregate stats, add the stats and the mapping to the database
-		for k, v := range aggregateStats[i].StatMappings.m {
-
-			// get and add the key to link the aggregate stats to a set of Group/User/Tag mappings and aggregate stats
-			if aggregateStats[i].Count.isZero() {
-				err = errors.New("Node with zero count stat")
-				return
-			}
-
-			k1, _, _ := ts.GenerateAggregateKeys(node, &k)
-			err = ts.StatMappingsDB.AddKeyToKeySet(node, k1)
-			if err != nil {
-				LogError(err)
-				return
-			}
-
-			err = ts.StatMappingDB.Add(k1, v, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-
-			err = ts.AggregateAccessCostDB.Add(k1, aggregateStats[i].AccessCost, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-			//err = ts.AggregateAccessCostDB.Add(localKey, aggregateStats.AccessCost, true)
-
-			err = ts.AggregateModifyCostDB.Add(k1, aggregateStats[i].ModifyCost, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-			//err = ts.AggregateModifyCostDB.Add(localKey, aggregateStats.ModifyCost, true)
-
-			err = ts.AggregateCreateCostDB.Add(k1, aggregateStats[i].CreateCost, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-			//err = ts.AggregateCreateCostDB.Add(localKey, aggregateStats.CreateCost, true)
-
-			err = ts.AggregateSizeDB.Add(k1, aggregateStats[i].Size, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-
-			err = ts.AggregateCountDB.Add(k1, aggregateStats[i].Count, true)
-			if err != nil {
-				LogError(err)
-				return
-			}
-			//err = ts.AggregateSizeDB.Add(localKey, aggregateStats.Size, true)
-
-			//err = ts.AggregateCountDB.Add(localKey, aggregateStats.Count, true)
-		}
-
-	}
-
-	return
-}*/
-
-// saveAggregateStats saves a set of stats to one database
-func (ts *TreeServe) saveAggregateStats2(node *Md5Key, aggregateStats []*AggregateStats) (err error) {
-	logInfo("SAVING AGGREGATE STATS")
 
 	for i := range aggregateStats {
 
 		n := GetAggregateNums(aggregateStats[i])
-		logInfo("SAVING AGGREGATE STATS 2")
 
-		logInfo("SAVING AGGREGATE STATS 3")
 		// for each set of aggregate stats, add the stats and the mapping to the database
 		for k, v := range aggregateStats[i].StatMappings.m {
-			logInfo(fmt.Sprintf("SAVING AGGREGATE STATS 4 %+v ", v))
+
 			if aggregateStats[i].Count.Cmp(big.NewInt(0)) == 0 {
 				err = errors.New("Node with zero count stat")
 				return
@@ -255,45 +172,4 @@ func (ts *TreeServe) saveAggregateStats2(node *Md5Key, aggregateStats []*Aggrega
 	}
 
 	return
-}
-
-func GetAggregateNums(s *AggregateStats) (nums *AggregateNums) {
-	logInfo(fmt.Sprintf("Here with %+v", *s))
-	n := AggregateNums{}
-	n.AccessCost = s.AccessCost
-	n.Count = s.Count
-	n.CreateCost = s.CreateCost
-	n.Size = s.Size
-	n.ModifyCost = s.ModifyCost
-
-	nums = &n
-	return
-}
-
-// MarshalBinary returns binary encoding of the AggregateStats struct
-func (stats *AggregateNums) MarshalBinary() (data []byte, err error) {
-	///b := bytes.Buffer{}
-	//e := gob.NewEncoder(&b)
-	//err = e.Encode(stats)
-	//if err != nil {
-	//	fmt.Println(`failed gob Encode`, err)
-	//}
-
-	data, err = json.Marshal(stats)
-	LogError(err)
-
-	return
-}
-
-func (stats *AggregateNums) UnmarshalBinary(data []byte) (err error) {
-
-	err = json.Unmarshal(data, stats)
-
-	LogError(err)
-
-	return
-}
-
-func NewAggregateNums() *AggregateNums {
-	return &AggregateNums{}
 }
