@@ -678,7 +678,7 @@ func TestCompareTreeJson(t *testing.T) {
 	cppURL := "http://localhost:9999/api/v2?&path=/lustre/scratch118/compgen&depth=2"
 
 	tolerance := .01 // using relDif to check floating points near enough equal
-	countSame := 0
+	countSame := 0   /// nodes that exist in both C++ and Go output, with 'near enough' values, allowing for rounding errors
 
 	res, err := http.Get(goURL)
 	if err != nil {
