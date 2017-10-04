@@ -55,7 +55,7 @@ func init() {
 	flag.StringVar(&groupFile, "groupFile", "/etc/groups", "Group mapping file")
 	flag.StringVar(&userFile, "userFile", "/etc/users", "User mapping file file")
 	flag.StringVar(&lmdbPath, "lmdbPath", "/tmp/treeserve_lmdb", "Path to LMDB environment")
-	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 200*1024*1024*1024, "LMDB map size (maximum)")
+	flag.Int64Var(&lmdbMapSize, "lmdbMapSize", 400*1024*1024*1024, "LMDB map size (maximum)")
 	flag.IntVar(&inputWorkers, "inputWorkers", 2, "Number of parallel workers to use for processing lines of input data to build the tree")
 	flag.Int64Var(&costReferenceTime, "costReferenceTime", time.Now().Unix(), "The time to use for cost calculations in seconds since the epoch")
 	flag.Int64Var(&nodesCreatedInfoEveryN, "nodesCreatedInfoEveryN", 10000, "Number of node creations between info logs")

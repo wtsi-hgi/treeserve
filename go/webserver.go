@@ -89,15 +89,15 @@ func (ts *TreeServe) Webserver(groupFile, userFile string, port string) {
 	//http.ListenAndServe(":"+port, nil)
 	err := http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux))
 	//err := http.ListenAndServe(":9000", nil)
-	logInfo(err.Error())
+	//	logInfo(err.Error())
 	LogError(err)
 
-	logInfo(fmt.Sprintf("Webserver started on port %s", "9000"))
+	logInfo(fmt.Sprintf("Webserver started on port %s", port))
 
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Listening on port 8000")
+	io.WriteString(w, "Listening out for requests")
 }
 
 // tree handles requests of the form <url>/api/v2?maxdepth=1&path=/lustre/scratch115/projects
@@ -169,14 +169,14 @@ func (ts *TreeServe) buildTree(rootKey *Md5Key, level int, depth int) (t dirTree
 	if len(stats) == 0 {
 		logInfo(" Blank stats at " + t.Path)
 	}
-	logInfo("About to organise aggregates")
+	//logInfo("About to organise aggregates")
 	a, err := organiseAggregates(stats)
 	if err != nil {
 		LogError(err)
 		return
 	}
 	t.Data = a
-	logInfo("About to retrieve children")
+	//logInfo("About to retrieve children")
 	child, err := ts.children(rootKey)
 	if err != nil {
 		LogError(err)
@@ -467,11 +467,11 @@ func LogError(err error) {
 }
 
 func logInfo(str string) {
-
-	buf := os.Stdout
-	_, f, l, _ := runtime.Caller(1)
-	logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
-	logger.Println(str)
+	/*
+		buf := os.Stdout
+		_, f, l, _ := runtime.Caller(1)
+		logger := log.New(buf, "INFO: "+f+" "+strconv.Itoa(l)+" ", log.LstdFlags)
+		logger.Println(str) */
 }
 
 // The original version had times in years and sizes in tebibytes (2^40 bytes)

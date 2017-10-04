@@ -37,7 +37,10 @@ groupfile="$(readlink -f ${groupfile})"
 passwdfile="$(readlink -f ${passwdfile})"
 
 # make sure image is up to date
-sudo docker build -t local/treeserve-${pid} .
+sudo docker build -t go_treeserve-${pid}  .
 
 # launch docker container 
-sudo docker run -i -t --rm -v ${groupfile}:/etc/groups -v ${passwdfile}:/etc/users -v ${datfile}:/tmp/input.dat.gz -p ${port}:${port} local/treeserve-${pid} 
+#sudo docker run -i -t --rm -v ${groupfile}:/etc/groups -v ${passwdfile}:/etc/users -v ${datfile}:/tmp/input.dat.gz -p ${port}:${port} local/treeserve-${pid} 
+
+# on Opensatck with a mounted volume on /data1 (and check Dockerfile matches)
+sudo docker run -i -t --rm -v /data1:/data1 -v ${groupfile}:/etc/groups -v ${passwdfile}:/etc/users -v ${datfile}:/tmp/input.dat.gz -p 9001:9001 go_treeserve-${pid} 

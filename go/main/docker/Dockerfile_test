@@ -1,0 +1,14 @@
+FROM snormore/lmdb
+
+WORKDIR /go/src/app
+COPY . .
+COPY ./118sel2.dat.gz /tmp/input.dat.gz
+
+EXPOSE 9000
+EXPOSE 9001
+
+#CMD ./treeserveApp -port=9001 inputPath=/go/src/app/118sel2.dat.gz
+
+ENTRYPOINT ["./treeserveApp", "-inputPath", "/go/src/app/118sel2.dat.gz",  "-port", "9001"]
+
+
