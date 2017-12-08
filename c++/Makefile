@@ -56,6 +56,7 @@ src/TestRouter.o: src/TestRouter.cpp src/TestRouter.hpp
 	$(CXX) $(CXXFLAGS) -c -o src/TestRouter.o src/TestRouter.cpp
 
 clean:
+	mkdir -p bin
 	touch src/tmp.o
 	touch bin/treeserve
 	rm src/*.o
