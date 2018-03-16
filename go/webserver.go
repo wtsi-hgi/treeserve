@@ -60,11 +60,11 @@ type Aggregates struct {
 	User  string `json:"user"`
 	Tag   string `json:"tag"`
 
-	Size         *Bigint `json:"size"`
-	Count        *Bigint `json:"count"`
-	CreationCost *Bigint `json:"ccost"`
-	AccessCost   *Bigint `json:"acost"`
-	ModifyCost   *Bigint `json:"mcost"`
+	Size       *Bigint `json:"size"`
+	Count      *Bigint `json:"count"`
+	ChangeCost *Bigint `json:"ccost"`
+	AccessCost *Bigint `json:"acost"`
+	ModifyCost *Bigint `json:"mcost"`
 }
 
 //Webserver listens for requests of the form
@@ -282,7 +282,7 @@ func organiseAggregates(stats []Aggregates) (a webAggData, err error) {
 		updateMap(true, &a.Mtime, b, g, u, tag)
 
 		// Create Cost
-		b = statsItem.CreationCost
+		b = statsItem.ChangeCost
 		updateMap(true, &a.Ctime, b, g, u, tag)
 
 		// Size
@@ -439,7 +439,7 @@ func (ts *TreeServe) retrieveAggregates(nodekey *Md5Key) (data []Aggregates, err
 
 		temp, err = ts.AggregateCreateCostDB.Get(x)
 		LogError(err)
-		ag.CreationCost = temp.(*Bigint)
+		ag.ChangeCost = temp.(*Bigint)
 		data = append(data, ag)
 
 	}
@@ -521,8 +521,8 @@ func addAggregates(a, b Aggregates) (c Aggregates, err error) {
 	c.AccessCost = temp3
 
 	temp4 := NewBigint()
-	temp4.Add(a.CreationCost, b.CreationCost)
-	c.CreationCost = temp4
+	temp4.Add(a.ChangeCost, b.ChangeCost)
+	c.ChangeCost = temp4
 
 	temp5 := NewBigint()
 	temp5.Add(a.ModifyCost, b.ModifyCost)
@@ -565,8 +565,8 @@ func subtractAggregates(a, b Aggregates) (c Aggregates, err error) {
 	c.AccessCost = temp3
 
 	temp4 := NewBigint()
-	temp4.Subtract(a.CreationCost, b.CreationCost)
-	c.CreationCost = temp4
+	temp4.Subtract(a.ChangeCost, b.ChangeCost)
+	c.ChangeCost = temp4
 
 	temp5 := NewBigint()
 	temp5.Subtract(a.ModifyCost, b.ModifyCost)
@@ -727,7 +727,7 @@ func AggregatesFromAggregateStats(a []*AggregateStats) (b []Aggregates) {
 			nextUser := statMappings[j].User
 			nextTag := statMappings[j].Tag
 
-			nextEntry := Aggregates{Group: nextGroup, User: nextUser, Tag: nextTag, Count: nextCount, Size: nextSize, AccessCost: nextACost, ModifyCost: nextMCost, CreationCost: nextCCost}
+			nextEntry := Aggregates{Group: nextGroup, User: nextUser, Tag: nextTag, Count: nextCount, Size: nextSize, AccessCost: nextACost, ModifyCost: nextMCost, ChangeCost: nextCCost}
 			b = append(b, nextEntry)
 		}
 	}

@@ -10,7 +10,7 @@ struct NodeStats {
 	Gid uint64
 	AccessTime int64
 	ModificationTime int64
-	CreationTime int64
+	ChangeTime int64
 	FileType byte
 }
 

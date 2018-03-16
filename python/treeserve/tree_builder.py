@@ -86,7 +86,7 @@ class TreeBuilder:
                     gid = int(row[3])
                     access_time = int(row[4])
                     modification_time = int(row[5])
-                    creation_time = int(row[6])
+                    change_time = int(row[6])
                     file_type = row[7]  # type: str
 
                     user = self.uid_lookup(uid)
@@ -111,8 +111,8 @@ class TreeBuilder:
                         # Modification time
                         mtime_cost = size * (now - modification_time)
                         mapping.set("mtime", group, user, category, mtime_cost)
-                        # Creation time
-                        ctime_cost = size * (now - creation_time)
+                        # Change time
+                        ctime_cost = size * (now - change_time)
                         mapping.set("ctime", group, user, category, ctime_cost)
 
                     if file_type in self.file_types:

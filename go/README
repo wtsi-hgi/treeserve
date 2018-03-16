@@ -9,7 +9,7 @@ statistics for each node (file or directory)
 Local Aggregates are the totals of various types of file in a directory and its immediate children.
 Global Aggregates are the totals for all children from the directory downwards.
 
-The 5 aggregate statistics are count, size, creation cost, access cost and modification cost. 
+The 5 aggregate statistics are count, size, change cost, access cost and modification cost. 
 The costs depend on the time elapsed and the size. They are further broken down into types, such as 
 Uncompressed, compressed, index and so on, listed in the SetFileCategoryPathChecks function.
 

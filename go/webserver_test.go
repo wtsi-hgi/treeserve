@@ -28,10 +28,10 @@ func TestSubtractAggregateMap(t *testing.T) {
 	b2 := NewBigint()
 	b2.SetInt64(10000)
 
-	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	c := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	d := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
+	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
+	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
+	c := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
+	d := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
 
 	parent := make(map[string]Aggregates)
 	parent["1"] = a
@@ -59,9 +59,9 @@ func TestOrganiseAggregates(t *testing.T) {
 	b1.SetInt64(100)
 	b2 := NewBigint()
 	b2.SetInt64(10000)
-	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	f := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
+	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
+	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
+	f := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
 
 	m, err := organiseAggregates([]Aggregates{a, b, f})
 	if err != nil {
@@ -83,8 +83,8 @@ func TestAddAggregates(t *testing.T) {
 	b1.SetInt64(100)
 	b2 := NewBigint()
 	b2.SetInt64(10000)
-	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
+	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
+	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
 
 	c, err := addAggregates(a, b)
 	if err != nil {
@@ -168,10 +168,10 @@ func TestMapFromAggregateArray(t *testing.T) {
 	b2 := NewBigint()
 	b2.SetInt64(10000)
 
-	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
-	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	c := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, CreationCost: b1}
-	d := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, CreationCost: b1}
+	a := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
+	b := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
+	c := Aggregates{Group: "xx", User: "yy", Tag: "aa", Count: b2, Size: b2, AccessCost: b2, ModifyCost: b1, ChangeCost: b1}
+	d := Aggregates{Group: "xx", User: "yy", Tag: "zz", Count: b1, Size: b1, AccessCost: b1, ModifyCost: b1, ChangeCost: b1}
 
 	array := []Aggregates{a, b, c, d}
 

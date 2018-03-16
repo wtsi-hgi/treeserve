@@ -130,7 +130,7 @@ type NodeStats struct {
 	Gid              uint64
 	AccessTime       int64
 	ModificationTime int64
-	CreationTime     int64
+	ChangeTime       int64
 	FileType         byte
 }
 
@@ -247,21 +247,21 @@ func (d *NodeStats) Marshal(buf []byte) ([]byte, error) {
 	}
 	{
 
-		buf[0+40] = byte(d.CreationTime >> 0)
+		buf[0+40] = byte(d.ChangeTime >> 0)
 
-		buf[1+40] = byte(d.CreationTime >> 8)
+		buf[1+40] = byte(d.ChangeTime >> 8)
 
-		buf[2+40] = byte(d.CreationTime >> 16)
+		buf[2+40] = byte(d.ChangeTime >> 16)
 
-		buf[3+40] = byte(d.CreationTime >> 24)
+		buf[3+40] = byte(d.ChangeTime >> 24)
 
-		buf[4+40] = byte(d.CreationTime >> 32)
+		buf[4+40] = byte(d.ChangeTime >> 32)
 
-		buf[5+40] = byte(d.CreationTime >> 40)
+		buf[5+40] = byte(d.ChangeTime >> 40)
 
-		buf[6+40] = byte(d.CreationTime >> 48)
+		buf[6+40] = byte(d.ChangeTime >> 48)
 
-		buf[7+40] = byte(d.CreationTime >> 56)
+		buf[7+40] = byte(d.ChangeTime >> 56)
 
 	}
 	{
@@ -300,7 +300,7 @@ func (d *NodeStats) Unmarshal(buf []byte) (uint64, error) {
 	}
 	{
 
-		d.CreationTime = 0 | (int64(buf[0+40]) << 0) | (int64(buf[1+40]) << 8) | (int64(buf[2+40]) << 16) | (int64(buf[3+40]) << 24) | (int64(buf[4+40]) << 32) | (int64(buf[5+40]) << 40) | (int64(buf[6+40]) << 48) | (int64(buf[7+40]) << 56)
+		d.ChangeTime = 0 | (int64(buf[0+40]) << 0) | (int64(buf[1+40]) << 8) | (int64(buf[2+40]) << 16) | (int64(buf[3+40]) << 24) | (int64(buf[4+40]) << 32) | (int64(buf[5+40]) << 40) | (int64(buf[6+40]) << 48) | (int64(buf[7+40]) << 56)
 
 	}
 	{

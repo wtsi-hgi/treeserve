@@ -290,8 +290,8 @@ func (ts *TreeServe) GetStatMapping(statMappingKey *Md5Key) (treeNode *StatMappi
 	dbData, err := ts.StatMappingDB.Get(statMappingKey)
 	if err != nil {
 		log.WithFields(log.Fields{
-		//"ts":             ts,
-		//"statMappingKey": statMappingKey,
+			//"ts":             ts,
+			//"statMappingKey": statMappingKey,
 		}).Error("failed to get stat mapping")
 	}
 	treeNode = dbData.(*StatMapping)
@@ -493,15 +493,15 @@ func (ts *TreeServe) processLine(line string) (err error) {
 	if err != nil {
 		log.WithFields(log.Fields{"s[5]": s[1]}).Fatal("failed to parse modificationTime as int")
 	}
-	creationTime, err := strconv.ParseInt(s[6], 10, 64)
+	changeTime, err := strconv.ParseInt(s[6], 10, 64)
 	if err != nil {
-		log.WithFields(log.Fields{"s[6]": s[1]}).Fatal("failed to parse creationTime as int")
+		log.WithFields(log.Fields{"s[6]": s[1]}).Fatal("failed to parse changeTime as int")
 	}
 	fileType := s[7]
 	//iNode := s[8]
 	//linkCount := s[9]
 	//devId := s[10]
-	nodeStats := NodeStats{size, uid, gid, accessTime, modificationTime, creationTime, fileType[0]}
+	nodeStats := NodeStats{size, uid, gid, accessTime, modificationTime, changeTime, fileType[0]}
 
 	log.WithFields(log.Fields{
 		"nodePath":  nodePath,
@@ -751,7 +751,7 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 		return
 	}
 
-	if treeNode.Stats.CreationTime == 0 {
+	if treeNode.Stats.ChangeTime == 0 {
 		LogError(fmt.Errorf("No file entry, or empty file entry, for node %s ", treeNode.Name))
 		return
 	}
@@ -769,10 +769,10 @@ func (ts *TreeServe) CalculateAggregateStats(nodeKey *Md5Key) (aggregateStats *A
 	count := NewBigint()
 	count.SetUint64(1)
 
-	secondsSinceCreation := NewBigint()
-	secondsSinceCreation.SetInt64(ts.CostReferenceTime - treeNode.Stats.CreationTime)
+	secondsSinceChange := NewBigint()
+	secondsSinceChange.SetInt64(ts.CostReferenceTime - treeNode.Stats.ChangeTime)
 	createCost := NewBigint()
-	createCost.Mul(size, secondsSinceCreation)
+	createCost.Mul(size, secondsSinceChange)
 
 	secondsSinceModification := NewBigint()
 	secondsSinceModification.SetInt64(ts.CostReferenceTime - treeNode.Stats.ModificationTime)
